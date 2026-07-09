@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { RouterView } from "vue-router";
+import MainLayout from '@/components/layout/MainLayout.vue'
 </script>
 
 <template>
-  <RouterView v-slot="{ Component }">
-    <Transition name="fade" mode="out-in">
-      <component :is="Component" />
-    </Transition>
-  </RouterView>
+  <MainLayout />
 </template>
