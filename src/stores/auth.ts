@@ -60,8 +60,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     loading.value = true
     try {
-      const profile = await authApi.getProfile()
-      setUser(profile)
+      const data = await authApi.getProfile()
+      setUser(data.user)
+      setPermissions(data.permissions)
     } catch {
       clearSession()
     } finally {

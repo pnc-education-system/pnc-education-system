@@ -18,4 +18,11 @@ export interface AuthResponse {
   user: User
 }
 
+export interface ProfileResponse {
+  status: string
+  message: string
+  user: User
+  permissions: string[]
+}
+
 

@@ -4,19 +4,25 @@ import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import PageSkeleton from '@/components/layout/PageSkeleton.vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import { useToast } from '@/composables/useToast'
 
 const { initTheme } = useTheme()
 const { toasts, removeToast } = useToast()
+const authStore = useAuthStore()
 
 onMounted(() => {
   initTheme()
+  if (authStore.isAuthenticated && !authStore.user) {
+    authStore.fetchProfile()
+  }
 })
 
 const route = useRoute()
 const router = useRouter()
-const isLoginPage = computed(() => route.path === '/login')
+const publicPaths = ['/login', '/forgot-password', '/reset-password']
+const isLoginPage = computed(() => publicPaths.includes(route.path))
 const sidebarOpen = ref(false)
 const routeLoading = ref(false)
 let isFirstLoad = true

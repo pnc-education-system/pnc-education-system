@@ -38,15 +38,10 @@ async function handleLogin() {
 
     router.push('/dashboard')
   } catch (err: unknown) {
-    const error = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }
-    if (error.response?.data?.message) {
-      errorMessage.value = error.response.data.message
-    } else if (error.response?.data?.errors) {
-      const errors = error.response.data.errors
-      errorMessage.value = Object.values(errors).flat().join(', ')
-    } else {
-      errorMessage.value = 'Login failed. Please try again.'
-    }
+    const apiErr = err as { response?: { data?: { error?: { message?: string }; message?: string; errors?: Record<string, string[]> } } }
+    errorMessage.value = apiErr.response?.data?.error?.message
+      || apiErr.response?.data?.message
+      || 'Login failed. Please try again.'
   } finally {
     isSubmitting.value = false
   }

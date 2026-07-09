@@ -1,5 +1,5 @@
 import axiosInstance from '@/services/axios'
-import type { AuthResponse, LoginCredentials, User } from '@/types'
+import type { AuthResponse, LoginCredentials, ProfileResponse } from '@/types'
 
 export const authApi = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -7,8 +7,8 @@ export const authApi = {
     return data
   },
 
-  async getProfile(): Promise<User> {
-    const { data } = await axiosInstance.get<User>('/auth/me')
+  async getProfile(): Promise<ProfileResponse> {
+    const { data } = await axiosInstance.get<ProfileResponse>('/auth/me')
     return data
   },
 

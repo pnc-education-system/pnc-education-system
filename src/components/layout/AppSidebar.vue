@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { label: 'Students', icon: 'pi pi-users', route: '/students', permission: 'students.view' },
   { label: 'Users', icon: 'pi pi-user', route: '/users', permission: 'users.manage' },
   { label: 'Roles', icon: 'pi pi-shield', route: '/roles', permission: 'roles.manage' },
-  { label: 'Settings', icon: 'pi pi-cog', route: '/settings', permission: 'settings.view' },
+  { label: 'Settings', icon: 'pi pi-cog', route: '/settings', permission: 'settings.manage' },
 ]
 
 const visibleNavItems = computed(() =>

@@ -2,7 +2,6 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const routes: RouteRecordRaw[] = [
-  // Public routes
   {
     path: '/login',
     name: 'Login',
@@ -21,16 +20,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/auth/ResetPassword.vue'),
     meta: { requiresAuth: false },
   },
-
-  // Authenticated routes
-  {
-    path: '/',
-    redirect: '/dashboard',
-  },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/Dashboard.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/forbidden',
+    name: 'Forbidden',
+    component: () => import('@/views/ForbiddenView.vue'),
     meta: { requiresAuth: true },
   },
   {
@@ -55,23 +54,11 @@ const routes: RouteRecordRaw[] = [
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/settings/SettingsView.vue'),
-    meta: { requiresAuth: true, permission: 'settings.view' },
+    meta: { requiresAuth: true, permission: 'settings.manage' },
   },
-
-  // 403 Forbidden
   {
-    path: '/forbidden',
-    name: 'Forbidden',
-    component: () => import('@/views/errors/ForbiddenView.vue'),
-    meta: { requiresAuth: false },
-  },
-
-  // 404 catch-all
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/errors/NotFoundView.vue'),
-    meta: { requiresAuth: false },
+    path: '/',
+    redirect: '/dashboard',
   },
 ]
 
@@ -80,22 +67,19 @@ const router = createRouter({
   routes,
 })
 
-const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword', 'Forbidden', 'NotFound']
+const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
 
 router.beforeEach((to) => {
   const authStore = useAuthStore()
 
-  // Redirect to login if not authenticated on a protected route
   if (!authStore.isAuthenticated && !publicRoutes.includes(to.name as string)) {
     return { name: 'Login' }
   }
 
-  // Redirect away from auth pages if already logged in
-  if (authStore.isAuthenticated && ['Login', 'ForgotPassword', 'ResetPassword'].includes(to.name as string)) {
+  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string)) {
     return { name: 'Dashboard' }
   }
 
-  // Check route-level permission
   const requiredPermission = to.meta?.permission as string | undefined
   if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return { name: 'Forbidden' }
