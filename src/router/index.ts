@@ -1,35 +1,34 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { h } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/auth/LoginView.vue'),
+    component: () => import('@/views/auth/Login.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/auth/ForgotPassword.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/views/auth/ResetPassword.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: {
-      render: () => h('div', { class: 'p-8' }, [
-        h('h1', { class: 'text-2xl font-bold text-gray-900 dark:text-white' }, 'Dashboard'),
-        h('p', { class: 'text-sm text-gray-500 mt-2 dark:text-gray-400' }, 'Welcome to your dashboard.'),
-      ]),
-    },
+    component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/',
-    name: 'Home',
-    component: {
-      render: () => h('div', { class: 'p-8' }, [
-        h('h1', { class: 'text-2xl font-bold text-gray-900 dark:text-white' }, 'Welcome to PNC Education System'),
-        h('p', { class: 'text-sm text-gray-500 mt-2 dark:text-gray-400' }, 'App shell is ready.'),
-      ]),
-    },
-    meta: { requiresAuth: true },
+    redirect: '/dashboard',
   },
 ]
 
@@ -38,17 +37,17 @@ const router = createRouter({
   routes,
 })
 
-// Route guard - check authentication
+const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
+
 router.beforeEach((to) => {
   const authStore = useAuthStore()
-  const requiresAuth = (to.meta as { requiresAuth?: boolean }).requiresAuth !== false
 
-  if (requiresAuth && !authStore.isAuthenticated) {
-    return '/login'
+  if (!authStore.isAuthenticated && !publicRoutes.includes(to.name as string)) {
+    return { name: 'Login' }
   }
 
-  if (to.path === '/login' && authStore.isAuthenticated) {
-    return '/dashboard'
+  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string)) {
+    return { name: 'Dashboard' }
   }
 })
 

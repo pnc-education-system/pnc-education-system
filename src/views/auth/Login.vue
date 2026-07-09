@@ -1,11 +1,13 @@
 <script setup lang="ts">
+defineOptions({ name: 'LoginPage' })
+
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import pnLogo from '@/assets/images/PN_logo_clear.png'
-import pncBackground from '@/assets/images/pnc.background.png'
+import { useAuthStore } from '@/stores/auth'
 import { authApi, type LoginCredentials } from '@/api/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const form = ref<LoginCredentials>({
   email: '',
@@ -29,10 +31,14 @@ async function handleLogin() {
     localStorage.setItem('user', JSON.stringify(response.user))
     localStorage.setItem('permissions', JSON.stringify(response.permissions))
 
-    // Redirect to dashboard
+    authStore.setToken(response.access_token)
+    authStore.setRefreshToken(response.refresh_token)
+    authStore.setUser(response.user)
+    authStore.setPermissions(response.permissions)
+
     router.push('/dashboard')
-  } catch (error: any) {
-    console.error('Login error:', error)
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }
     if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message
     } else if (error.response?.data?.errors) {

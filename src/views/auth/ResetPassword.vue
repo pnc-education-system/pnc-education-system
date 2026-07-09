@@ -38,8 +38,8 @@ async function handleSubmit() {
     setTimeout(() => {
       router.push('/login')
     }, 2000)
-  } catch (error: any) {
-    console.error('Password reset error:', error)
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }
     if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message
     } else if (error.response?.data?.errors) {

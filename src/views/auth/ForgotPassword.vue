@@ -22,8 +22,8 @@ async function handleSubmit() {
     const response = await authApi.requestPasswordReset(form.value)
     successMessage.value = response.message
     form.value.email = ''
-  } catch (error: any) {
-    console.error('Password reset request error:', error)
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }
     if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message
     } else if (error.response?.data?.errors) {
