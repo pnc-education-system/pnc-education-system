@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App header component with search, profile menu, and theme toggle
 import { ref, inject, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
