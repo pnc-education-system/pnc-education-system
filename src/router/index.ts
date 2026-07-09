@@ -15,28 +15,24 @@ const router = createRouter({
     {
       path: '/forgot-password',
       name: 'forgot-password',
-      component: () => import('@/views/auth/ForgotPasswordView.vue')
+      component: () => import('@/views/auth/ForgotPassword.vue')
     },
     {
       path: '/reset-password',
       name: 'reset-password',
-      component: () => import('@/views/auth/ResetPasswordView.vue')
-    },
-    {
-      path: '/password-success',
-      name: 'password-success',
-      component: () => import('@/views/auth/PasswordSuccessView.vue')
+      component: () => import('@/views/auth/ResetPassword.vue')
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('@/views/DashboardView.vue')
-    }
+      component: () => import('@/views/Dashboard.vue')
+    },
+
   ],
 })
 
 // Navigation guard — redirect to /login if not authenticated
-const publicRoutes = ['login', 'forgot-password', 'reset-password', 'password-success']
+const publicRoutes = ['login', 'forgot-password', 'reset-password']
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('access_token')
