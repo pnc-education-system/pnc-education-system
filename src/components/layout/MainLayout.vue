@@ -6,12 +6,19 @@ import PageSkeleton from '@/components/layout/PageSkeleton.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 
 const { initTheme } = useTheme()
 const { toasts, removeToast } = useToast()
 
 onMounted(() => {
   initTheme()
+
+  // Restore auth session from stored token on page refresh
+  const authStore = useAuthStore()
+  if (authStore.token) {
+    authStore.initSession()
+  }
 })
 
 const route = useRoute()
@@ -75,17 +82,19 @@ onUnmounted(() => {
 
           <!-- Page transition when route is ready -->
           <div v-else>
-            <Transition
-              mode="out-in"
-              enter-active-class="transition-all duration-300 ease-out"
-              enter-from-class="opacity-0 translate-y-2"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition-all duration-200 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 -translate-y-1"
-            >
-              <router-view :key="route.fullPath" />
-            </Transition>
+            <router-view v-slot="{ Component }">
+              <Transition
+                mode="out-in"
+                enter-active-class="transition-all duration-300 ease-out"
+                enter-from-class="opacity-0 translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition-all duration-200 ease-in"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-1"
+              >
+                <component :is="Component" :key="route.fullPath" />
+              </Transition>
+            </router-view>
           </div>
         </div>
       </main>

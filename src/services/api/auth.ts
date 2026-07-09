@@ -7,9 +7,9 @@ export const authApi = {
     return data
   },
 
-  async getProfile(): Promise<User> {
-    const { data } = await axiosInstance.get<User>('/auth/me')
-    return data
+  async getProfile(): Promise<{ user: User; permissions: string[] }> {
+    const { data } = await axiosInstance.get('/auth/me')
+    return { user: data.user as User, permissions: data.permissions as string[] }
   },
 
   async logout(): Promise<void> {

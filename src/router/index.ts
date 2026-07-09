@@ -31,6 +31,48 @@ const routes: RouteRecordRaw[] = [
     },
     meta: { requiresAuth: true },
   },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('@/views/settings/SettingsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/users',
+    name: 'UsersList',
+    component: () => import('@/views/admin/UsersListView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
+  },
+  {
+    path: '/admin/roles',
+    name: 'RolesList',
+    component: () => import('@/views/admin/RolesListView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
+  },
+  {
+    path: '/admin/users/new',
+    name: 'UserCreate',
+    component: () => import('@/views/admin/UserFormView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
+  },
+  {
+    path: '/admin/users/:id/edit',
+    name: 'UserEdit',
+    component: () => import('@/views/admin/UserFormView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
+  },
+  {
+    path: '/admin/roles/new',
+    name: 'RoleCreate',
+    component: () => import('@/views/admin/RoleFormView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
+  },
+  {
+    path: '/admin/roles/:id/edit',
+    name: 'RoleEdit',
+    component: () => import('@/views/admin/RoleFormView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
+  },
 ]
 
 const router = createRouter({
@@ -38,7 +80,7 @@ const router = createRouter({
   routes,
 })
 
-// Route guard - check authentication
+// Route guard - check authentication and permissions
 router.beforeEach((to) => {
   const authStore = useAuthStore()
   const requiresAuth = (to.meta as { requiresAuth?: boolean }).requiresAuth !== false
@@ -48,6 +90,12 @@ router.beforeEach((to) => {
   }
 
   if (to.path === '/login' && authStore.isAuthenticated) {
+    return '/dashboard'
+  }
+
+  // Check permission
+  const requiredPermission = (to.meta as { permission?: string }).permission
+  if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return '/dashboard'
   }
 })

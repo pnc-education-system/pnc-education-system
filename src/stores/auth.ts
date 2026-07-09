@@ -17,11 +17,45 @@ function getApiErrorMessage(err: unknown): string {
   return 'Login failed'
 }
 
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(key)
+    return stored ? (JSON.parse(stored) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function saveToStorage(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('access_token'))
-  const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
-  const user = ref<User | null>(null)
-  const permissions = ref<string[]>([])
+  // ── Detect and purge stale demo tokens on startup ──
+  const storedToken = localStorage.getItem('access_token')
+  if (storedToken && storedToken.startsWith('demo_token_')) {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('auth_user')
+    localStorage.removeItem('auth_permissions')
+  }
+
+  const token = ref<string | null>(
+    storedToken?.startsWith('demo_token_') ? null : storedToken
+  )
+  const refreshToken = ref<string | null>(
+    token.value ? localStorage.getItem('refresh_token') : null
+  )
+  const user = ref<User | null>(
+    token.value ? loadFromStorage<User | null>('auth_user', null) : null
+  )
+  const permissions = ref<string[]>(
+    token.value ? loadFromStorage<string[]>('auth_permissions', []) : []
+  )
   const loading = ref(false)
   const error = ref<string | null>(null)
   const isDemoMode = ref(false)
@@ -42,10 +76,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setUser = (userData: User | null) => {
     user.value = userData
+    saveToStorage('auth_user', userData)
   }
 
   const setPermissions = (perms: string[]) => {
     permissions.value = perms
+    saveToStorage('auth_permissions', perms)
   }
 
   const login = async (credentials: LoginCredentials) => {
@@ -76,20 +112,25 @@ export const useAuthStore = defineStore('auth', () => {
       id: '1',
       email: 'admin@pnc.edu',
       name: 'Admin User',
-      role: 'admin',
+      role: 'administrator',
     }
 
     const mockPermissions = [
-      'users.view',
-      'users.create',
-      'users.edit',
-      'users.delete',
-      'dashboard.view',
-      'teachers.view',
+      'users.manage',
+      'roles.manage',
+      'audit.view',
+      'settings.manage',
       'students.view',
-      'subjects.view',
-      'schedules.view',
-      'classes.view',
+      'students.edit',
+      'students.import',
+      'enrollment.manage',
+      'cards.generate',
+      'records.view',
+      'records.manage',
+      'evaluation.view',
+      'evaluation.manage',
+      'evaluation.submit',
+      'reports.view',
     ]
 
     setToken('demo_token_' + Date.now())
@@ -101,14 +142,35 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
+  /**
+   * Restore session from stored tokens and attempt to verify with the backend.
+   * Called once on app startup if a token exists.
+   */
+  const initSession = async () => {
+    if (!token.value) return
+
+    // If we already have user/permissions from localStorage, the route guard
+    // will allow navigation. Try to verify with backend in background.
+    if (user.value && permissions.value.length > 0) {
+      // Silently re-verify in the background
+      fetchProfile()
+      return
+    }
+
+    // No cached user/permissions — must fetch from API
+    await fetchProfile()
+  }
+
   const fetchProfile = async () => {
     if (!token.value) return
 
     loading.value = true
     try {
-      const profile = await authApi.getProfile()
+      const { user: profile, permissions: perms } = await authApi.getProfile()
       setUser(profile)
-    } catch {
+      setPermissions(perms)
+    } catch (err) {
+      console.error('[auth store] fetchProfile failed:', err)
       clearSession()
     } finally {
       loading.value = false
@@ -121,9 +183,12 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await authApi.refresh(refreshToken.value)
       setToken(data.access_token)
       setRefreshToken(data.refresh_token)
-      setPermissions(data.permissions || [])
+      if (data.permissions) {
+        setPermissions(data.permissions)
+      }
       return true
-    } catch {
+    } catch (err) {
+      console.error('[auth store] refreshAuth failed:', err)
       return false
     }
   }
@@ -136,6 +201,8 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+    localStorage.removeItem('auth_user')
+    localStorage.removeItem('auth_permissions')
   }
 
   const logout = () => {
@@ -158,6 +225,7 @@ export const useAuthStore = defineStore('auth', () => {
     setPermissions,
     login,
     demoLogin,
+    initSession,
     fetchProfile,
     refreshAuth,
     clearSession,
