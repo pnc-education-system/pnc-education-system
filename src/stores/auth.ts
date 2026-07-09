@@ -7,13 +7,15 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
-  const permissions = ref<string[]>([])
+  const permissions = ref<string[]>(JSON.parse(localStorage.getItem('permissions') || '[]'))
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!token.value)
 
   const hasPermission = (perm: string) => permissions.value.includes(perm)
+
+  const hasAnyPermission = (perms: string[]) => perms.some(p => permissions.value.includes(p))
 
   const setToken = (newToken: string) => {
     token.value = newToken
@@ -31,6 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setPermissions = (perms: string[]) => {
     permissions.value = perms
+    localStorage.setItem('permissions', JSON.stringify(perms))
   }
 
   const login = async (credentials: LoginCredentials) => {
@@ -87,6 +90,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+    localStorage.removeItem('permissions')
   }
 
   const logout = () => {
@@ -102,6 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isAuthenticated,
     hasPermission,
+    hasAnyPermission,
     setToken,
     setRefreshToken,
     setUser,

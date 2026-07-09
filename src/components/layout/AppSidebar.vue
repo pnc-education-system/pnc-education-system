@@ -28,11 +28,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-  { label: 'Students', icon: 'students', route: '/students', permission: 'students:list' },
-  { label: 'Teachers', icon: 'teachers', route: '/teachers', permission: 'teachers:list' },
-  { label: 'Courses', icon: 'courses', route: '/courses', permission: 'courses:list' },
-  { label: 'Settings', icon: 'settings', route: '/settings' },
+  { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
+  { label: 'Students', icon: 'pi pi-users', route: '/students', permission: 'students.view' },
+  { label: 'Users', icon: 'pi pi-user', route: '/users', permission: 'users.manage' },
+  { label: 'Roles', icon: 'pi pi-shield', route: '/roles', permission: 'roles.manage' },
+  { label: 'Settings', icon: 'pi pi-cog', route: '/settings', permission: 'settings.view' },
 ]
 
 const visibleNavItems = computed(() =>
@@ -118,7 +118,7 @@ const isActive = (path: string) => route.path === path
           ? 'bg-blue-500/10 text-blue-400 shadow-sm'
           : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
       >
-        <span class="w-5 h-5 flex items-center justify-center flex-shrink-0">{{ item.label[0] }}</span>
+        <span class="w-5 h-5 flex items-center justify-center flex-shrink-0"><i :class="item.icon"></i></span>
         <span>{{ item.label }}</span>
       </button>
     </nav>
