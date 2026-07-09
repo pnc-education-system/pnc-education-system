@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { computed, inject, type Ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 const sidebarOpen = inject('sidebarOpen') as Ref<boolean>
 const closeSidebar = inject('closeSidebar') as () => void
@@ -16,6 +19,32 @@ const userInitials = computed(() => {
     .toUpperCase()
     .slice(0, 2)
 })
+
+interface NavItem {
+  label: string
+  icon: string
+  route: string
+  permission?: string
+}
+
+const navItems: NavItem[] = [
+  { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+  { label: 'Students', icon: 'students', route: '/students', permission: 'students:list' },
+  { label: 'Teachers', icon: 'teachers', route: '/teachers', permission: 'teachers:list' },
+  { label: 'Courses', icon: 'courses', route: '/courses', permission: 'courses:list' },
+  { label: 'Settings', icon: 'settings', route: '/settings' },
+]
+
+const visibleNavItems = computed(() =>
+  navItems.filter(item => !item.permission || authStore.hasPermission(item.permission))
+)
+
+const navigate = (path: string) => {
+  router.push(path)
+  closeSidebar()
+}
+
+const isActive = (path: string) => route.path === path
 </script>
 
 <template>
@@ -35,7 +64,7 @@ const userInitials = computed(() => {
     ></div>
   </transition>
 
-  <!-- Sidebar (single element: slides on mobile, always visible on desktop) -->
+  <!-- Sidebar -->
   <aside
     class="fixed left-0 top-0 bottom-0 w-[260px] bg-[#0F172A] z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-out -translate-x-full lg:translate-x-0"
     :class="{ 'translate-x-0': sidebarOpen }"
@@ -78,8 +107,21 @@ const userInitials = computed(() => {
       </svg>
     </button>
 
-    <!-- Spacer -->
-    <div class="flex-1"></div>
+    <!-- Navigation Links -->
+    <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+      <button
+        v-for="item in visibleNavItems"
+        :key="item.route"
+        @click="navigate(item.route)"
+        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+        :class="isActive(item.route)
+          ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+      >
+        <span class="w-5 h-5 flex items-center justify-center flex-shrink-0">{{ item.label[0] }}</span>
+        <span>{{ item.label }}</span>
+      </button>
+    </nav>
 
     <!-- Profile Card -->
     <div class="flex-shrink-0 px-3 pb-5 pt-3">
@@ -95,7 +137,7 @@ const userInitials = computed(() => {
           <p class="text-sm font-semibold text-slate-200 truncate leading-tight">
             {{ authStore.user?.name || 'System Admin' }}
           </p>
-          <p class="text-[11px] text-slate-500 font-medium mt-0.5">System Admin</p>
+          <p class="text-[11px] text-slate-500 font-medium mt-0.5">{{ authStore.user?.role || 'System Admin' }}</p>
         </div>
         <svg
           class="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors duration-200 flex-shrink-0"

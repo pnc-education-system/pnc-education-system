@@ -16,15 +16,22 @@ const profileMenuRef = ref<HTMLElement | null>(null)
 const toggleSidebar = inject('toggleSidebar') as () => void
 const { isDark, toggleTheme } = useTheme()
 
+const labelMap: Record<string, string> = {
+  Dashboard: 'Dashboard',
+  Home: 'Home',
+  Login: 'Login',
+}
+
 const pageTitle = computed(() => {
   const name = route.name
-  if (typeof name === 'string') return name
+  if (typeof name === 'string') return labelMap[name] || name
   return 'Dashboard'
 })
 
 const handleLogout = () => {
   showProfileMenu.value = false
   authStore.logout()
+  router.push('/login')
 }
 
 const toggleProfileMenu = () => {
@@ -212,7 +219,7 @@ const userInitials = authStore.user?.name
               <p class="text-sm font-semibold text-gray-900 leading-tight dark:text-white">
                 {{ authStore.user?.name || 'System Admin' }}
               </p>
-              <p class="text-[11px] text-gray-500 font-medium dark:text-gray-400">System Admin</p>
+              <p class="text-[11px] text-gray-500 font-medium dark:text-gray-400">{{ authStore.user?.role || 'System Admin' }}</p>
             </div>
             <div
               class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"

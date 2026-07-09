@@ -10,6 +10,17 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: {
+      render: () => h('div', { class: 'p-8' }, [
+        h('h1', { class: 'text-2xl font-bold text-gray-900 dark:text-white' }, 'Dashboard'),
+        h('p', { class: 'text-sm text-gray-500 mt-2 dark:text-gray-400' }, 'Welcome to your dashboard.'),
+      ]),
+    },
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/',
     name: 'Home',
     component: {
@@ -37,7 +48,7 @@ router.beforeEach((to) => {
   }
 
   if (to.path === '/login' && authStore.isAuthenticated) {
-    return '/'
+    return '/dashboard'
   }
 })
 

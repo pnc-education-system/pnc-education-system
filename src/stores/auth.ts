@@ -4,20 +4,33 @@ import { authApi } from '@/services/api'
 import type { User, LoginCredentials } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('token'))
+  const token = ref<string | null>(localStorage.getItem('access_token'))
+  const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
+  const permissions = ref<string[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!token.value)
 
+  const hasPermission = (perm: string) => permissions.value.includes(perm)
+
   const setToken = (newToken: string) => {
     token.value = newToken
-    localStorage.setItem('token', newToken)
+    localStorage.setItem('access_token', newToken)
+  }
+
+  const setRefreshToken = (newToken: string) => {
+    refreshToken.value = newToken
+    localStorage.setItem('refresh_token', newToken)
   }
 
   const setUser = (userData: User | null) => {
     user.value = userData
+  }
+
+  const setPermissions = (perms: string[]) => {
+    permissions.value = perms
   }
 
   const login = async (credentials: LoginCredentials) => {
@@ -26,7 +39,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const response = await authApi.login(credentials)
-      setToken(response.token)
+      setToken(response.access_token)
+      setRefreshToken(response.refresh_token)
+      setPermissions(response.permissions)
       setUser(response.user)
       return true
     } catch (err) {
@@ -51,11 +66,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const refreshAuth = async () => {
+    if (!refreshToken.value) return false
+    try {
+      const data = await authApi.refresh(refreshToken.value)
+      setToken(data.access_token)
+      setRefreshToken(data.refresh_token)
+      setPermissions(data.permissions || [])
+      return true
+    } catch {
+      return false
+    }
+  }
+
   const clearSession = () => {
     token.value = null
+    refreshToken.value = null
     user.value = null
+    permissions.value = []
     error.value = null
-    localStorage.removeItem('token')
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
   }
 
   const logout = () => {
@@ -64,14 +95,20 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token,
+    refreshToken,
     user,
+    permissions,
     loading,
     error,
     isAuthenticated,
+    hasPermission,
     setToken,
+    setRefreshToken,
     setUser,
+    setPermissions,
     login,
     fetchProfile,
+    refreshAuth,
     clearSession,
     logout,
   }

@@ -8,11 +8,16 @@ export const authApi = {
   },
 
   async getProfile(): Promise<User> {
-    const { data } = await axiosInstance.get<User>('/auth/profile')
+    const { data } = await axiosInstance.get<User>('/auth/me')
     return data
   },
 
   async logout(): Promise<void> {
     await axiosInstance.post('/auth/logout')
+  },
+
+  async refresh(refreshToken: string) {
+    const { data } = await axiosInstance.post('/auth/refresh', { refresh_token: refreshToken })
+    return data
   },
 }
