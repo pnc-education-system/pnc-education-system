@@ -68,15 +68,14 @@ const userInitials = authStore.user?.name
 <template>
   <header
     class="fixed top-0 right-0 h-16 bg-white border-b border-gray-200/80 z-30 flex items-center transition-all duration-300 dark:bg-[#0B1120] dark:border-gray-800"
-    :class="[
-      'lg:left-[260px] left-0',
-    ]"
+    :class="['lg:left-[260px] left-0']"
   >
     <div class="flex items-center justify-between h-full w-full px-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-3">
         <button
-          class="flex items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer lg:hidden"
+          class="flex items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-all duration-200 cursor-pointer lg:hidden"
           @click="toggleSidebar"
+          title="Toggle sidebar"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" x2="21" y1="6" y2="6" />
@@ -85,7 +84,7 @@ const userInitials = authStore.user?.name
           </svg>
         </button>
         <!-- Breadcrumb: Pages > Current Page -->
-        <div class="flex items-center gap-2 text-sm">
+        <div class="flex items-center gap-2 text-sm select-none">
           <button
             class="text-gray-400 font-medium hidden sm:inline cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors dark:text-gray-500"
             @click="router.push('/dashboard')"
@@ -133,7 +132,7 @@ const userInitials = authStore.user?.name
 
         <!-- Mobile Search Icon -->
         <button
-          class="flex sm:hidden items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer"
+          class="flex sm:hidden items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-all duration-200 cursor-pointer"
           title="Search"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -203,7 +202,7 @@ const userInitials = authStore.user?.name
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
           </svg>
-          <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+          <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-gray-800"></span>
         </button>
 
         <!-- Profile Menu (with dropdown) -->
@@ -271,7 +270,7 @@ const userInitials = authStore.user?.name
 
               <!-- Menu Items -->
               <div class="p-1.5">
-                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer dark:text-gray-300 dark:hover:bg-white/[0.04]">
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3" />
                     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
@@ -296,7 +295,7 @@ const userInitials = authStore.user?.name
                   </svg>
                   <span>Security</span>
                 </button>
-                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer dark:text-gray-300 dark:hover:bg-white/[0.04]">
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
@@ -307,7 +306,7 @@ const userInitials = authStore.user?.name
               <!-- Logout -->
               <div class="border-t border-gray-100 p-1.5 dark:border-gray-700/80">
                 <button
-                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer dark:hover:bg-red-500/10"
                   @click="handleLogout"
                 >
                   <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

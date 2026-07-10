@@ -10,7 +10,6 @@ const router = useRouter()
 const sidebarOpen = inject('sidebarOpen') as Ref<boolean>
 const closeSidebar = inject('closeSidebar') as () => void
 
-const adminHovered = ref(false)
 const adminDropdown = ref(false)
 
 const userInitials = computed(() => {
@@ -23,22 +22,6 @@ const userInitials = computed(() => {
     .slice(0, 2)
 })
 
-interface NavItem {
-  label: string
-  icon: string
-  route: string
-  permission?: string
-}
-
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-  { label: 'Admin', icon: 'admin', route: '/admin' },
-]
-
-const visibleNavItems = computed(() =>
-  navItems.filter(item => !item.permission || authStore.hasPermission(item.permission))
-)
-
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
 
@@ -46,26 +29,11 @@ const navigate = (path: string) => {
   router.push(path)
   closeSidebar()
   adminDropdown.value = false
-  adminHovered.value = false
 }
 
 const isActive = (path: string) => route.path === path
 
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
-
-const onAdminEnter = () => {
-  adminHovered.value = true
-  adminDropdown.value = true
-}
-
-const onAdminLeave = () => {
-  adminHovered.value = false
-  setTimeout(() => {
-    if (!adminHovered.value) {
-      adminDropdown.value = false
-    }
-  }, 100)
-}
 
 const onAdminClick = () => {
   adminDropdown.value = !adminDropdown.value
@@ -122,27 +90,26 @@ const onAdminClick = () => {
     </button>
 
     <!-- Navigation Links -->
-    <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-      <!-- Regular nav items (except Admin) -->
+    <nav class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
+      <!-- Dashboard nav item -->
       <button
-        v-for="item in visibleNavItems.filter(i => i.label !== 'Admin')"
-        :key="item.route"
-        @click="navigate(item.route)"
+        @click="navigate('/dashboard')"
         class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-        :class="isActive(item.route)
+        :class="isActive('/dashboard')
           ? 'bg-blue-500/10 text-blue-400 shadow-sm'
           : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
       >
-        <span class="w-5 h-5 flex items-center justify-center flex-shrink-0"><i :class="item.icon"></i></span>
-        <span>{{ item.label }}</span>
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>Dashboard</span>
       </button>
 
-      <!-- Admin with hover dropdown -->
-      <div
-        class="relative"
-        @mouseenter="onAdminEnter"
-        @mouseleave="onAdminLeave"
-      >
+      <!-- Admin with dropdown -->
+      <div class="relative">
         <button
           @click="onAdminClick"
           class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
@@ -150,7 +117,11 @@ const onAdminClick = () => {
             ? 'bg-blue-500/10 text-blue-400 shadow-sm'
             : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
         >
-          <span class="w-5 h-5 flex items-center justify-center flex-shrink-0">A</span>
+          <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20V10" />
+            <path d="M18 20V4" />
+            <path d="M6 20v-4" />
+          </svg>
           <span class="flex-1">Admin</span>
           <svg
             class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
@@ -177,12 +148,8 @@ const onAdminClick = () => {
         >
           <div
             v-if="adminDropdown"
-            class="ml-4 mt-1 space-y-0.5"
+            class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
           >
-            <!-- Users Section -->
-            <div class="pt-2 pb-1 px-1">
-              <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Users</p>
-            </div>
             <button
               v-if="canManageUsers"
               @click="navigate('/admin/users')"
@@ -196,11 +163,6 @@ const onAdminClick = () => {
               </svg>
               <span>Manage Users</span>
             </button>
-
-            <!-- Roles Section -->
-            <div class="pt-3 pb-1 px-1">
-              <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Roles</p>
-            </div>
             <button
               v-if="canManageRoles"
               @click="navigate('/admin/roles')"
