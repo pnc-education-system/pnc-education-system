@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// App header component with search, profile menu, and theme toggle
 import { ref, inject, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
@@ -74,9 +73,7 @@ const userInitials = authStore.user?.name
     ]"
   >
     <div class="flex items-center justify-between h-full w-full px-4 sm:px-6 lg:px-8">
-      <!-- Left: Hamburger + Page Title -->
       <div class="flex items-center gap-3">
-        <!-- Hamburger Menu (mobile only) -->
         <button
           class="flex items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer lg:hidden"
           @click="toggleSidebar"
@@ -281,13 +278,17 @@ const userInitials = authStore.user?.name
                   </svg>
                   <span>Settings</span>
                 </button>
-                <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                <button
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                  @click="showProfileMenu = false; router.push('/profile')"
+                >
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                   <span>Profile</span>
                 </button>
+
                 <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />

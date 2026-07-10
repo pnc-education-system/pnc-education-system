@@ -97,23 +97,12 @@ const onAdminClick = () => {
   >
     <!-- Logo Section -->
     <div class="px-6 pt-7 pb-6 flex-shrink-0">
-      <div class="flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20"
-        >
-          <svg
-            class="w-5 h-5 text-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-            <path d="M6 12v5c3 3 9 3 12 0v-5" />
-          </svg>
-        </div>
+      <div class="flex items-center gap-3.5">
+        <img
+          src="@/assets/images/PN_logo_clear.png"
+          alt="PNC Logo"
+          class="w-9 h-9 object-contain"
+        />
         <div>
           <h1 class="text-base font-bold text-white tracking-tight leading-tight">PNC Education</h1>
           <p class="text-[11px] text-slate-400 font-medium mt-0.5">System Management</p>
