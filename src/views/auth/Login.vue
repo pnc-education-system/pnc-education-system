@@ -4,7 +4,8 @@ defineOptions({ name: 'LoginPage' })
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { authApi, type LoginCredentials } from '@/api/auth'
+import { authApi } from '@/services/api'
+import type { LoginCredentials } from '@/types'
 
 const router = useRouter()
 const authStore = useAuthStore()
