@@ -116,7 +116,7 @@ onUnmounted(() => {
     <Teleport to="body">
       <div
         id="toast-container"
-        class="fixed top-5 right-5 z-[60] max-h-[80vh] overflow-y-auto space-y-3 pointer-events-none"
+        class="fixed top-4 right-4 z-[60] max-h-[90vh] overflow-y-auto space-y-3 pointer-events-none"
         style="scrollbar-width: none;"
       >
         <TransitionGroup
@@ -127,7 +127,7 @@ onUnmounted(() => {
           <div
             v-for="toast in toasts"
             :key="toast.id"
-            class="flex items-start gap-3 max-w-sm bg-white rounded-2xl shadow-xl border p-4 dark:bg-[#131B2E]"
+            class="flex items-start gap-3 max-w-sm bg-white rounded-2xl shadow-lg border p-4 dark:bg-[#131B2E] shadow-gray-200/50 dark:shadow-gray-900/50"
             :class="toast.type === 'success' ? 'border-emerald-100 dark:border-emerald-500/20' : 'border-red-100 dark:border-red-500/20'"
           >
             <div
@@ -168,7 +168,7 @@ onUnmounted(() => {
             </div>
             <button
               @click="removeToast(toast.id)"
-              class="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer flex-shrink-0 dark:hover:text-gray-300 dark:hover:bg-gray-800"
+              class="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 cursor-pointer flex-shrink-0 dark:hover:text-gray-300 dark:hover:bg-gray-800"
             >
               <svg
                 class="w-4 h-4"
@@ -199,7 +199,7 @@ onUnmounted(() => {
 }
 .toast-enter-from {
   opacity: 0;
-  transform: translateX(1rem) translateY(-1rem);
+  transform: translateX(1rem) translateY(-0.5rem);
 }
 .toast-leave-to {
   opacity: 0;
@@ -209,4 +209,3 @@ onUnmounted(() => {
   transition: transform 0.3s ease;
 }
 </style>
-
