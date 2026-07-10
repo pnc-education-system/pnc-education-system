@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
-import { computed, inject, type Ref } from 'vue'
+import { ref, computed, inject, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
@@ -9,6 +9,9 @@ const router = useRouter()
 
 const sidebarOpen = inject('sidebarOpen') as Ref<boolean>
 const closeSidebar = inject('closeSidebar') as () => void
+
+const adminHovered = ref(false)
+const adminDropdown = ref(false)
 
 const userInitials = computed(() => {
   if (!authStore.user?.name) return 'SA'
@@ -28,23 +31,45 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
-  { label: 'Students', icon: 'pi pi-users', route: '/students', permission: 'students.view' },
-  { label: 'Users', icon: 'pi pi-user', route: '/users', permission: 'users.manage' },
-  { label: 'Roles', icon: 'pi pi-shield', route: '/roles', permission: 'roles.manage' },
-  { label: 'Settings', icon: 'pi pi-cog', route: '/settings', permission: 'settings.manage' },
+  { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+  { label: 'Admin', icon: 'admin', route: '/admin' },
 ]
 
 const visibleNavItems = computed(() =>
   navItems.filter(item => !item.permission || authStore.hasPermission(item.permission))
 )
 
+const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
+const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
+
 const navigate = (path: string) => {
   router.push(path)
   closeSidebar()
+  adminDropdown.value = false
+  adminHovered.value = false
 }
 
 const isActive = (path: string) => route.path === path
+
+const isAdminActive = computed(() => route.path.startsWith('/admin'))
+
+const onAdminEnter = () => {
+  adminHovered.value = true
+  adminDropdown.value = true
+}
+
+const onAdminLeave = () => {
+  adminHovered.value = false
+  setTimeout(() => {
+    if (!adminHovered.value) {
+      adminDropdown.value = false
+    }
+  }, 100)
+}
+
+const onAdminClick = () => {
+  adminDropdown.value = !adminDropdown.value
+}
 </script>
 
 <template>
@@ -109,8 +134,9 @@ const isActive = (path: string) => route.path === path
 
     <!-- Navigation Links -->
     <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+      <!-- Regular nav items (except Admin) -->
       <button
-        v-for="item in visibleNavItems"
+        v-for="item in visibleNavItems.filter(i => i.label !== 'Admin')"
         :key="item.route"
         @click="navigate(item.route)"
         class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
@@ -121,6 +147,87 @@ const isActive = (path: string) => route.path === path
         <span class="w-5 h-5 flex items-center justify-center flex-shrink-0"><i :class="item.icon"></i></span>
         <span>{{ item.label }}</span>
       </button>
+
+      <!-- Admin with hover dropdown -->
+      <div
+        class="relative"
+        @mouseenter="onAdminEnter"
+        @mouseleave="onAdminLeave"
+      >
+        <button
+          @click="onAdminClick"
+          class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+          :class="isAdminActive || adminDropdown
+            ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+        >
+          <span class="w-5 h-5 flex items-center justify-center flex-shrink-0">A</span>
+          <span class="flex-1">Admin</span>
+          <svg
+            class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+            :class="{ 'rotate-180': adminDropdown }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+
+        <!-- Dropdown sub-menu -->
+        <transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="adminDropdown"
+            class="ml-4 mt-1 space-y-0.5"
+          >
+            <!-- Users Section -->
+            <div class="pt-2 pb-1 px-1">
+              <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Users</p>
+            </div>
+            <button
+              v-if="canManageUsers"
+              @click="navigate('/admin/users')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path.startsWith('/admin/users')
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <span>Manage Users</span>
+            </button>
+
+            <!-- Roles Section -->
+            <div class="pt-3 pb-1 px-1">
+              <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Roles</p>
+            </div>
+            <button
+              v-if="canManageRoles"
+              @click="navigate('/admin/roles')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path.startsWith('/admin/roles')
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Manage Roles</span>
+            </button>
+          </div>
+        </transition>
+      </div>
     </nav>
 
     <!-- Profile Card -->

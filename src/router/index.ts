@@ -32,6 +32,47 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ForbiddenView.vue'),
     meta: { requiresAuth: true },
   },
+
+  // Admin routes
+  {
+    path: '/admin/users',
+    name: 'AdminUsers',
+    component: () => import('@/views/admin/UsersListView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
+  },
+  {
+    path: '/admin/users/new',
+    name: 'AdminUserCreate',
+    component: () => import('@/views/admin/UserFormView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
+  },
+  {
+    path: '/admin/users/:id/edit',
+    name: 'AdminUserEdit',
+    component: () => import('@/views/admin/UserFormView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
+  },
+
+  {
+    path: '/admin/roles',
+    name: 'AdminRoles',
+    component: () => import('@/views/admin/RolesListView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
+  },
+  {
+    path: '/admin/roles/new',
+    name: 'AdminRoleCreate',
+    component: () => import('@/views/admin/RoleFormView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
+  },
+  {
+    path: '/admin/roles/:id/edit',
+    name: 'AdminRoleEdit',
+    component: () => import('@/views/admin/RoleFormView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
+  },
+
+  // Regular routes
   {
     path: '/students',
     name: 'Students',
@@ -56,6 +97,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/settings/SettingsView.vue'),
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
+
+  // Default
   {
     path: '/',
     redirect: '/dashboard',
@@ -67,8 +110,8 @@ const router = createRouter({
   routes,
 })
 
+// Route guard - check authentication and permissions
 const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
-
 router.beforeEach((to) => {
   const authStore = useAuthStore()
 
@@ -80,10 +123,11 @@ router.beforeEach((to) => {
     return { name: 'Dashboard' }
   }
 
-  const requiredPermission = to.meta?.permission as string | undefined
+  const requiredPermission = (to.meta as { permission?: string }).permission
   if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return { name: 'Forbidden' }
   }
 })
 
 export default router
+

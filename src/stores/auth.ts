@@ -3,13 +3,47 @@ import { ref, computed } from 'vue'
 import { authApi } from '@/services/api'
 import type { User, LoginCredentials } from '@/types'
 
+/** Extract meaningful error text from an Axios error response */
+function getApiErrorMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const response = (err as { response: { data: { error?: { message?: string } } } }).response
+    if (response?.data?.error?.message) {
+      return response.data.error.message
+    }
+  }
+  if (err instanceof Error) {
+    return err.message
+  }
+  return 'Login failed'
+}
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(key)
+    return stored ? (JSON.parse(stored) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function saveToStorage(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
+  // Keep the existing login flow and storage keys.
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
   const permissions = ref<string[]>(JSON.parse(localStorage.getItem('permissions') || '[]'))
+
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const isDemoMode = ref(false)
 
   const isAuthenticated = computed(() => !!token.value)
 
@@ -29,6 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setUser = (userData: User | null) => {
     user.value = userData
+    saveToStorage('auth_user', userData)
   }
 
   const setPermissions = (perms: string[]) => {
@@ -48,11 +83,69 @@ export const useAuthStore = defineStore('auth', () => {
       setUser(response.user)
       return true
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Login failed'
+      error.value = getApiErrorMessage(err)
       return false
     } finally {
       loading.value = false
     }
+  }
+
+  /**
+   * Demo login that works without a real backend.
+   * Populates the store with mock user data and permissions.
+   */
+  const demoLogin = () => {
+    const mockUser: User = {
+      id: 1,
+      email: 'admin@pnc.edu',
+      name: 'Admin User',
+      role: 'administrator',
+    }
+
+    const mockPermissions = [
+      'users.manage',
+      'roles.manage',
+      'audit.view',
+      'settings.manage',
+      'students.view',
+      'students.edit',
+      'students.import',
+      'enrollment.manage',
+      'cards.generate',
+      'records.view',
+      'records.manage',
+      'evaluation.view',
+      'evaluation.manage',
+      'evaluation.submit',
+      'reports.view',
+    ]
+
+    setToken('demo_token_' + Date.now())
+    setRefreshToken('demo_refresh_token')
+    setUser(mockUser)
+    setPermissions(mockPermissions)
+    isDemoMode.value = true
+    error.value = null
+    return true
+  }
+
+  /**
+   * Restore session from stored tokens and attempt to verify with the backend.
+   * Called once on app startup if a token exists.
+   */
+  const initSession = async () => {
+    if (!token.value) return
+
+    // If we already have cached user/permissions, try to verify in the background.
+    const cachedUser = loadFromStorage<User | null>('auth_user', null)
+    if (cachedUser) user.value = cachedUser
+
+    if (user.value && permissions.value.length > 0) {
+      fetchProfile()
+      return
+    }
+
+    await fetchProfile()
   }
 
   const fetchProfile = async () => {
@@ -76,9 +169,12 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await authApi.refresh(refreshToken.value)
       setToken(data.access_token)
       setRefreshToken(data.refresh_token)
-      setPermissions(data.permissions || [])
+      if (data.permissions) {
+        setPermissions(data.permissions)
+      }
       return true
-    } catch {
+    } catch (err) {
+      console.error('[auth store] refreshAuth failed:', err)
       return false
     }
   }
@@ -89,9 +185,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     permissions.value = []
     error.value = null
+
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('permissions')
+    saveToStorage('auth_user', null)
   }
 
   const logout = () => {
@@ -106,6 +204,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     isAuthenticated,
+    isDemoMode,
     hasPermission,
     hasAnyPermission,
     setToken,
@@ -113,9 +212,12 @@ export const useAuthStore = defineStore('auth', () => {
     setUser,
     setPermissions,
     login,
+    demoLogin,
+    initSession,
     fetchProfile,
     refreshAuth,
     clearSession,
     logout,
   }
 })
+
