@@ -37,7 +37,7 @@ import {
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const authStore = useAuthStore()
 const router = useRouter()
 
@@ -193,14 +193,21 @@ const batchChartOptions: ChartOptions<'bar'> = {
 
 // ──── Enrollment Distribution (Doughnut Chart) ────
 const doughnutChartData = computed(() => ({
-  labels: ['Computer Science', 'Info Technology', 'Business Admin', 'Engineering', 'Nursing'],
+  labels: [
+    t('program.doughnut_cs'),
+    t('program.doughnut_it'),
+    t('program.doughnut_ba'),
+    t('program.doughnut_eng'),
+    t('program.doughnut_nursing'),
+  ],
   datasets: [
     {
       data: [312, 245, 198, 156, 109],
       backgroundColor: ['#355C8C', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
       borderWidth: 0,
       hoverOffset: 8,
-    },    ],
+    },
+  ],
 }))
 
 const doughnutChartOptions: ChartOptions<'doughnut'> = {
@@ -234,13 +241,21 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
 }
 
 // ──── Recent Enrollment Requests ────
-const recentRequests = [
-  { name: 'Sophia Martinez', id: 'STU-2024-0042', program: 'BS Computer Science', date: 'Dec 12, 2024', status: 'pending' as const },
-  { name: 'James Chen', id: 'STU-2024-0041', program: 'BS Information Technology', date: 'Dec 11, 2024', status: 'approved' as const },
-  { name: 'Emma Williams', id: 'STU-2024-0040', program: 'BS Business Administration', date: 'Dec 10, 2024', status: 'approved' as const },
-  { name: 'Liam Johnson', id: 'STU-2024-0039', program: 'BS Computer Engineering', date: 'Dec 9, 2024', status: 'pending' as const },
-  { name: 'Olivia Brown', id: 'STU-2024-0038', program: 'BS Nursing', date: 'Dec 8, 2024', status: 'rejected' as const },
-  { name: 'Noah Garcia', id: 'STU-2024-0037', program: 'BS Information Systems', date: 'Dec 7, 2024', status: 'pending' as const },
+interface RecentRequest {
+  name: string
+  id: string
+  programKey: string
+  date: string
+  status: 'pending' | 'approved' | 'rejected'
+}
+
+const recentRequests: RecentRequest[] = [
+  { name: 'Sophia Martinez', id: 'STU-2024-0042', programKey: 'program.cs', date: 'Dec 12, 2024', status: 'pending' as const },
+  { name: 'James Chen', id: 'STU-2024-0041', programKey: 'program.it', date: 'Dec 11, 2024', status: 'approved' as const },
+  { name: 'Emma Williams', id: 'STU-2024-0040', programKey: 'program.ba', date: 'Dec 10, 2024', status: 'approved' as const },
+  { name: 'Liam Johnson', id: 'STU-2024-0039', programKey: 'program.ce', date: 'Dec 9, 2024', status: 'pending' as const },
+  { name: 'Olivia Brown', id: 'STU-2024-0038', programKey: 'program.nursing', date: 'Dec 8, 2024', status: 'rejected' as const },
+  { name: 'Noah Garcia', id: 'STU-2024-0037', programKey: 'program.is', date: 'Dec 7, 2024', status: 'pending' as const },
 ]
 
 // ──── Quick Actions (translation keys) ────
@@ -360,12 +375,6 @@ const navigateTo = (path: string) => {
             <span class="flex-1 text-left">{{ t(action.labelKey) }}</span>
             <ChevronRight :size="16" class="text-[#D1D5DB] dark:text-gray-600 group-hover:text-[#9CA3AF] dark:group-hover:text-gray-400 transition-colors" />
           </button>
-        </div>
-        <div class="flex-1 min-w-0">
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Welcome back, {{ user?.name?.split(' ')[0] || 'User' }}</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Here's an overview of your account and system status.
-          </p>
         </div>
       </div>
     </div>
@@ -547,7 +556,7 @@ const navigateTo = (path: string) => {
             </span>
           </div>
           <div class="md:hidden text-xs text-[#9CA3AF] dark:text-gray-500">
-            {{ request.id }} · {{ request.program }} · {{ request.date }}
+            {{ request.id }} · {{ t(request.programKey) }} · {{ request.date }}
           </div>
 
           <div class="hidden md:flex items-center">
@@ -557,7 +566,7 @@ const navigateTo = (path: string) => {
             <span class="text-sm text-[#6B7280] dark:text-gray-400 font-mono">{{ request.id }}</span>
           </div>
           <div class="hidden md:flex items-center">
-            <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ request.program }}</span>
+            <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ t(request.programKey) }}</span>
           </div>
           <div class="hidden md:flex items-center">
             <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ request.date }}</span>

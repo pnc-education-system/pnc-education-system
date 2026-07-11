@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-const authStore = useAuthStore()
+const { t } = useI18n()
+
+const stubTitle = computed(() => t('users_stub.title'))
+const stubSubtitle = computed(() => t('users_stub.subtitle'))
+const stubAddUser = computed(() => t('users_stub.add_user'))
+const stubSectionTitle = computed(() => t('users_stub.section_title'))
+const stubSectionDescription = computed(() => t('users_stub.section_description'))
 </script>
 
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage system users.</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ stubTitle }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ stubSubtitle }}</p>
       </div>
       <button
         v-permission="'users.manage'"
@@ -18,7 +25,7 @@ const authStore = useAuthStore()
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" />
         </svg>
-        Add User
+        {{ stubAddUser }}
       </button>
     </div>
 
@@ -29,11 +36,12 @@ const authStore = useAuthStore()
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
         </div>
-        <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">User Management</p>
+        <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ stubSectionTitle }}</p>
         <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs">
-          User list and management features will be available here.
+          {{ stubSectionDescription }}
         </p>
       </div>
     </div>
   </div>
 </template>
+

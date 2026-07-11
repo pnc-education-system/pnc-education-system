@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 
-const authStore = useAuthStore()
+
+
+const studentsTitle = computed(() => t('students.title'))
+const studentsSubtitle = computed(() => t('students.subtitle'))
+const studentsImport = computed(() => t('students.import'))
+const studentsAddStudent = computed(() => t('students.add_student'))
+const studentsEmptyTitle = computed(() => t('students.empty_title'))
+const studentsEmptyDescription = computed(() => t('students.empty_description'))
 </script>
 
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Students</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage student records.</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ studentsTitle }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ studentsSubtitle }}</p>
       </div>
       <div class="flex items-center gap-3">
         <button
@@ -19,7 +28,7 @@ const authStore = useAuthStore()
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" />
           </svg>
-          Import
+          {{ studentsImport }}
         </button>
         <button
           v-permission="'students.edit'"
@@ -28,7 +37,7 @@ const authStore = useAuthStore()
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" />
           </svg>
-          Add Student
+          {{ studentsAddStudent }}
         </button>
       </div>
     </div>
@@ -40,9 +49,9 @@ const authStore = useAuthStore()
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
           </svg>
         </div>
-        <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">Student Records</p>
+        <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ studentsEmptyTitle }}</p>
         <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs">
-          Student list and management features will be available here.
+          {{ studentsEmptyDescription }}
         </p>
       </div>
     </div>

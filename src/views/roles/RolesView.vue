@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-const authStore = useAuthStore()
+const { t } = useI18n()
+
+const title = computed(() => t('roles.stub.title'))
+const subtitle = computed(() => t('roles.stub.subtitle'))
+const addRole = computed(() => t('roles.stub.button.add_role'))
+const emptyTitle = computed(() => t('roles.stub.empty.title'))
+const emptySubtitle = computed(() => t('roles.stub.empty.subtitle'))
 </script>
 
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Roles & Permissions</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage roles and their permissions.</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ title }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ subtitle }}</p>
       </div>
       <button
         v-permission="'roles.manage'"
@@ -18,7 +25,7 @@ const authStore = useAuthStore()
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" />
         </svg>
-        Add Role
+        {{ addRole }}
       </button>
     </div>
 
@@ -29,11 +36,10 @@ const authStore = useAuthStore()
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
         </div>
-        <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">Role Management</p>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs">
-          Role list and permission management features will be available here.
-        </p>
+        <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ emptyTitle }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs">{{ emptySubtitle }}</p>
       </div>
     </div>
   </div>
 </template>
+
