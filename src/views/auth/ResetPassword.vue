@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { authApi, type PasswordResetConfirm } from '@/api/auth'
+import { authApi } from '@/services/api'
+import type { PasswordResetConfirm } from '@/types'
 
 const router = useRouter()
 const route = useRoute()

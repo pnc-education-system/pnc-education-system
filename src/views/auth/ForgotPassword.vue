@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authApi, type PasswordResetRequest } from '@/api/auth'
+import { authApi } from '@/services/api'
+import type { PasswordResetRequest } from '@/types'
 
 const router = useRouter()
 

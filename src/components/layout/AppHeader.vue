@@ -4,6 +4,7 @@ import { ref, inject, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher.vue'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -168,25 +169,8 @@ const userInitials = authStore.user?.name
           </svg>
         </button>
 
-        <!-- Language Selector -->
-        <button
-          class="hidden sm:flex relative w-9 h-9 lg:w-10 lg:h-10 items-center justify-center rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
-          title="Language"
-        >
-          <svg
-            class="w-[18px] h-[18px]"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" x2="22" y1="12" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          </svg>
-        </button>
+        <!-- Language Switcher -->
+        <LanguageSwitcher />
 
         <!-- Notifications -->
         <button

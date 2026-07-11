@@ -94,6 +94,24 @@ export interface BackendPermission {
   description: string | null
 }
 
+export interface PasswordResetRequest {
+  email: string
+}
+
+export interface PasswordResetConfirm {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+}
+
+export interface PasswordResetResponse {
+  status: string
+  message: string
+}
+
+export type ProfileResponse = AuthResponse
+
 /** Paginated response from Laravel */
 export interface PaginatedData<T> {
   data: T[]
