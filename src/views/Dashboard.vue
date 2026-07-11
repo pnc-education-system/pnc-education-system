@@ -361,6 +361,12 @@ const navigateTo = (path: string) => {
             <ChevronRight :size="16" class="text-[#D1D5DB] dark:text-gray-600 group-hover:text-[#9CA3AF] dark:group-hover:text-gray-400 transition-colors" />
           </button>
         </div>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Welcome back, {{ user?.name?.split(' ')[0] || 'User' }}</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Here's an overview of your account and system status.
+          </p>
+        </div>
       </div>
     </div>
 
