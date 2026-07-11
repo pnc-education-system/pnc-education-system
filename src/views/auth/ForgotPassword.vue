@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { authApi, type PasswordResetRequest } from '@/api/auth'
+import { useI18n } from 'vue-i18n'
+import { authApi } from '@/services/api'
+import type { PasswordResetRequest } from '@/types'
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher.vue'
 
+const { t } = useI18n()
 const router = useRouter()
+
+const forgotTitle = computed(() => t('forgot_password.title'))
+const forgotSubtitle = computed(() => t('forgot_password.subtitle'))
+const forgotEmailLabel = computed(() => t('forgot_password.email_label'))
+const forgotSendLink = computed(() => t('forgot_password.send_link'))
+const forgotSending = computed(() => t('forgot_password.sending'))
+const forgotBackToLogin = computed(() => t('forgot_password.back_to_login'))
 
 const form = ref<PasswordResetRequest>({
   email: '',
@@ -26,7 +37,7 @@ async function handleSubmit() {
     const apiErr = err as { response?: { data?: { error?: { message?: string }; message?: string; errors?: Record<string, string[]> } } }
     errorMessage.value = apiErr.response?.data?.error?.message
       || apiErr.response?.data?.message
-      || 'Failed to send reset link. Please try again.'
+      || t('forgot_password.error.generic')
   } finally {
     isSubmitting.value = false
   }
@@ -38,47 +49,52 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white flex items-center justify-center p-6">
+  <div class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6 transition-colors duration-200">
     <!-- Language selector - top right -->
     <div class="absolute right-6 top-6">
-      <button
-        type="button"
-        class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-md ring-1 ring-slate-200 transition hover:shadow-lg"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-        EN
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
+      <LanguageSwitcher />
     </div>
 
     <!-- Card -->
-    <div class="w-full max-w-[450px] rounded-3xl bg-white p-10 shadow-2xl ring-1 ring-slate-100 lg:max-w-[480px]">
+    <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200">
       <div class="mb-8 text-center">
-        <h2 class="text-2xl font-bold text-slate-900">Forgot Password?</h2>
-        <p class="mt-2 text-sm text-slate-500">Enter your email to receive a password reset link</p>
+        <div class="flex flex-col items-center gap-3 mb-6">
+          <img
+            src="@/assets/images/PN_logo_clear.png"
+            alt="PNC Logo"
+            class="w-14 h-14 object-contain"
+          />
+          <div>
+            <h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">PNC Education</h1>
+            <p class="text-xs text-slate-500 dark:text-gray-400 font-medium">System Management</p>
+          </div>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">{{ forgotTitle }}</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">{{ forgotSubtitle }}</p>
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
         <!-- Success message -->
-        <div v-if="successMessage" class="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-          {{ successMessage }}
+        <div v-if="successMessage" class="flex items-center gap-2.5 rounded-xl bg-green-50 dark:bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400 border border-green-100 dark:border-green-500/20">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span>{{ successMessage }}</span>
         </div>
 
         <!-- Error message -->
-        <div v-if="errorMessage" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-          {{ errorMessage }}
+        <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-500/20">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
+          </svg>
+          <span>{{ errorMessage }}</span>
         </div>
 
         <!-- Email -->
         <div>
-          <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
-          <div class="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 transition focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ forgotEmailLabel }}</label>
+          <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <path d="m22 6-10 7L2 6" />
@@ -90,7 +106,7 @@ function goToLogin() {
               type="email"
               autocomplete="email"
               placeholder="example@gmail.com"
-              class="w-full border-0 bg-transparent p-0 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-0"
+              class="w-full border-0 bg-transparent p-0 text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-0"
             />
           </div>
         </div>
@@ -99,14 +115,14 @@ function goToLogin() {
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
             <path d="M10 17l5-5-5-5" />
             <path d="M15 12H3" />
           </svg>
-          {{ isSubmitting ? 'Sending...' : 'Send Reset Link' }}
+          {{ isSubmitting ? forgotSending : forgotSendLink }}
         </button>
 
         <!-- Back to login -->
@@ -114,9 +130,9 @@ function goToLogin() {
           <button
             type="button"
             @click="goToLogin"
-            class="text-sm font-medium text-blue-600 hover:text-blue-700"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
           >
-            ← Back to Login
+            {{ forgotBackToLogin }}
           </button>
         </div>
       </form>
