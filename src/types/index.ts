@@ -107,6 +107,57 @@ export interface PaginatedData<T> {
   total: number
 }
 
+export type EnrollmentStatus = 'pending' | 'approved' | 'enrolled' | 'rejected'
+
+export interface BackendEnrollment {
+  id: number
+  student_name: string
+  student_id: string
+  program: string
+  batch: string
+  academic_year: string
+  status: EnrollmentStatus
+  submitted_at: string
+  processed_at: string | null
+  processed_by: string | null
+  notes: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Enrollment {
+  id: string
+  studentName: string
+  studentId: string
+  program: string
+  batch: string
+  academicYear: string
+  status: EnrollmentStatus
+  submittedAt: string
+  processedAt?: string
+  processedBy?: string
+  notes?: string
+}
+
+export interface CreateEnrollmentPayload {
+  student_name: string
+  student_id: string
+  program: string
+  batch: string
+  academic_year: string
+  notes?: string
+}
+
+export interface UpdateEnrollmentPayload {
+  student_name?: string
+  student_id?: string
+  program?: string
+  batch?: string
+  academic_year?: string
+  status?: EnrollmentStatus
+  notes?: string
+}
+
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: 'Administration',
