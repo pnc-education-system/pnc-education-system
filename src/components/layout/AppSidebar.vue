@@ -32,6 +32,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
+  { label: 'Students', icon: 'students', route: '/students', permission: 'students.view' },
+  { label: 'Imports', icon: 'imports', route: '/imports', permission: 'students.import' },
   { label: 'Admin', icon: 'admin', route: '/admin' },
 ]
 
