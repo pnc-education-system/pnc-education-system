@@ -53,12 +53,12 @@ const roleFilter = ref<string>('all')
 const selectedUsers = ref<string[]>([])
 const deleteConfirmId = ref<string | null>(null)
 
-const isAllSelected = computed(() =>
-  filteredUsers.value.length > 0 && selectedUsers.value.length === filteredUsers.value.length
+const isAllSelected = computed(
+  () => filteredUsers.value.length > 0 && selectedUsers.value.length === filteredUsers.value.length,
 )
 
-const isIndeterminate = computed(() =>
-  selectedUsers.value.length > 0 && selectedUsers.value.length < filteredUsers.value.length
+const isIndeterminate = computed(
+  () => selectedUsers.value.length > 0 && selectedUsers.value.length < filteredUsers.value.length,
 )
 
 const canCreate = authStore.hasPermission('users.manage') || authStore.hasPermission('users.create')
@@ -68,8 +68,9 @@ const canDelete = authStore.hasPermission('users.manage') || authStore.hasPermis
 const roles = computed(() => rolesStore.roles)
 
 const filteredUsers = computed(() => {
-  return usersStore.users.filter(user => {
-    const matchesSearch = !searchQuery.value ||
+  return usersStore.users.filter((user) => {
+    const matchesSearch =
+      !searchQuery.value ||
       user.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.value.toLowerCase())
 
@@ -84,7 +85,7 @@ function toggleSelectAll() {
   if (isAllSelected.value) {
     selectedUsers.value = []
   } else {
-    selectedUsers.value = filteredUsers.value.map(u => u.id)
+    selectedUsers.value = filteredUsers.value.map((u) => u.id)
   }
 }
 
@@ -125,8 +126,11 @@ async function executeDelete(id: string) {
 
 async function confirmBulkDelete() {
   try {
-    await Promise.all(selectedUsers.value.map(id => usersStore.remove(id)))
-    showSuccessToast(t('users.toast_bulk_deleted', { count: selectedUsers.value.length }), t('users.toast_bulk_deleted_title'))
+    await Promise.all(selectedUsers.value.map((id) => usersStore.remove(id)))
+    showSuccessToast(
+      t('users.toast_bulk_deleted', { count: selectedUsers.value.length }),
+      t('users.toast_bulk_deleted_title'),
+    )
   } catch {
     showErrorToast(t('users.toast_bulk_delete_failed'), t('users.toast_error'))
   }
@@ -154,12 +158,19 @@ function formatLastLogin(dateStr?: string): string {
 }
 
 function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 }
 
 const roleMap = computed(() => {
   const map: Record<string, string> = {}
-  roles.value.forEach(r => { map[r.id] = r.name })
+  roles.value.forEach((r) => {
+    map[r.id] = r.name
+  })
   return map
 })
 </script>
@@ -179,8 +190,18 @@ const roleMap = computed(() => {
           @click="confirmBulkDelete"
           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-all duration-200 cursor-pointer dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400"
         >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+          <svg
+            class="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
           </svg>
           {{ usersDeleteBtn }} ({{ selectedUsers.length }})
         </button>
@@ -188,8 +209,17 @@ const roleMap = computed(() => {
           @click="navigateToCreate"
           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
         >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" />
+          <svg
+            class="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" x2="12" y1="5" y2="19" />
+            <line x1="5" x2="19" y1="12" y2="12" />
           </svg>
           {{ usersNewUser }}
         </button>
@@ -198,8 +228,17 @@ const roleMap = computed(() => {
 
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+        <svg
+          class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
         </svg>
         <input
           v-model="searchQuery"
@@ -226,52 +265,110 @@ const roleMap = computed(() => {
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5">
+      <div
+        class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5"
+      >
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          <div
+            class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center"
+          >
+            <svg
+              class="w-5 h-5 text-blue-600 dark:text-blue-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTotalUsers }}</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">{{ usersStore.totalUsers }}</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {{ usersTotalUsers }}
+            </p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
+              {{ usersStore.totalUsers }}
+            </p>
           </div>
         </div>
       </div>
-      <div class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5">
+      <div
+        class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5"
+      >
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-            <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          <div
+            class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center"
+          >
+            <svg
+              class="w-5 h-5 text-emerald-600 dark:text-emerald-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersCardActive }}</p>
-            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{{ usersStore.activeUsers }}</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {{ usersCardActive }}
+            </p>
+            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+              {{ usersStore.activeUsers }}
+            </p>
           </div>
         </div>
       </div>
-      <div class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5">
+      <div
+        class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5"
+      >
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center">
-            <svg class="w-5 h-5 text-rose-600 dark:text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="15" x2="9" y1="9" y2="15" /><line x1="9" x2="15" y1="9" y2="15" />
+          <div
+            class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center"
+          >
+            <svg
+              class="w-5 h-5 text-rose-600 dark:text-rose-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" x2="9" y1="9" y2="15" />
+              <line x1="9" x2="15" y1="9" y2="15" />
             </svg>
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersCardInactive }}</p>
-            <p class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-0.5">{{ usersStore.inactiveUsers }}</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {{ usersCardInactive }}
+            </p>
+            <p class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+              {{ usersStore.inactiveUsers }}
+            </p>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
+    <div
+      class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden"
+    >
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30">
+            <tr
+              class="border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30"
+            >
               <th class="w-12 px-6 py-4 text-left">
                 <input
                   type="checkbox"
@@ -281,16 +378,44 @@ const roleMap = computed(() => {
                   class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
                 />
               </th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableUser }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableRole }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableStatus }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableCreated }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableLastLogin }}</th>
-              <th class="w-24 px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableActions }}</th>
+              <th
+                class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+              >
+                {{ usersTableUser }}
+              </th>
+              <th
+                class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+              >
+                {{ usersTableRole }}
+              </th>
+              <th
+                class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+              >
+                {{ usersTableStatus }}
+              </th>
+              <th
+                class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+              >
+                {{ usersTableCreated }}
+              </th>
+              <th
+                class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+              >
+                {{ usersTableLastLogin }}
+              </th>
+              <th
+                class="w-24 px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider"
+              >
+                {{ usersTableActions }}
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-800/30">
-            <tr v-for="user in filteredUsers" :key="user.id" class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
+            <tr
+              v-for="user in filteredUsers"
+              :key="user.id"
+              class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20"
+            >
               <td class="px-6 py-4">
                 <input
                   type="checkbox"
@@ -301,39 +426,55 @@ const roleMap = computed(() => {
               </td>
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"
+                  >
                     <span class="text-xs font-bold text-white">{{ getInitials(user.name) }}</span>
                   </div>
                   <div class="min-w-0">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ user.name }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {{ user.name }}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {{ user.email }}
+                    </p>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4">
-                <span class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20">
+                <span
+                  class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20"
+                >
                   {{ roleMap[user.roleId] || user.roleName }}
                 </span>
               </td>
               <td class="px-6 py-4">
                 <span
                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium"
-                  :class="user.status === 'active'
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                    : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+                  :class="
+                    user.status === 'active'
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                  "
                 >
                   <span
                     class="w-1.5 h-1.5 rounded-full"
-                    :class="user.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-500'"
+                    :class="
+                      user.status === 'active' ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-500'
+                    "
                   ></span>
                   {{ user.status }}
                 </span>
               </td>
               <td class="px-6 py-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ formatDate(user.createdAt) }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{
+                  formatDate(user.createdAt)
+                }}</span>
               </td>
               <td class="px-6 py-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ formatLastLogin(user.lastLogin) }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{
+                  formatLastLogin(user.lastLogin)
+                }}</span>
               </td>
               <td class="px-6 py-4">
                 <div class="flex items-center justify-end gap-1">
@@ -343,7 +484,15 @@ const roleMap = computed(() => {
                     class="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10"
                     :title="usersEditTooltip"
                   >
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      class="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
                     </svg>
@@ -354,8 +503,18 @@ const roleMap = computed(() => {
                     class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10"
                     :title="usersDeleteTooltip"
                   >
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <svg
+                      class="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                     </svg>
                   </button>
                 </div>
@@ -364,14 +523,31 @@ const roleMap = computed(() => {
             <tr v-if="filteredUsers.length === 0">
               <td colspan="7" class="px-6 py-16 text-center">
                 <div class="flex flex-col items-center gap-3">
-                  <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <svg class="w-7 h-7 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  <div
+                    class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-7 h-7 text-gray-300 dark:text-gray-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                   </div>
                   <div>
-                    <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ usersEmptyTitle }}</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ usersEmptySubtitle }}</p>
+                    <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">
+                      {{ usersEmptyTitle }}
+                    </p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {{ usersEmptySubtitle }}
+                    </p>
                   </div>
                 </div>
               </td>
@@ -380,7 +556,7 @@ const roleMap = computed(() => {
         </table>
       </div>
     </div>
-    
+
     <Teleport to="body">
       <Transition
         enter-active-class="transition-all duration-200 ease-out"
@@ -392,15 +568,31 @@ const roleMap = computed(() => {
       >
         <div v-if="deleteConfirmId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="cancelDelete"></div>
-          <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-6 border border-gray-100 dark:border-gray-700">
+          <div
+            class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-6 border border-gray-100 dark:border-gray-700"
+          >
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
-                <svg class="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
+              <div
+                class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center"
+              >
+                <svg
+                  class="w-5 h-5 text-red-500"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" x2="12" y1="8" y2="12" />
+                  <line x1="12" x2="12.01" y1="16" y2="16" />
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ usersDeleteConfirmTitle }}</h3>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                  {{ usersDeleteConfirmTitle }}
+                </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   {{ usersDeleteConfirmMessage }}
                 </p>

@@ -77,6 +77,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
+    path: '/students/new',
+    name: 'StudentCreate',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.edit' },
+  },
+  {
     path: '/users',
     name: 'Users',
     component: () => import('@/views/users/UsersView.vue'),
@@ -108,7 +114,6 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
@@ -133,4 +138,3 @@ router.beforeEach((to) => {
 })
 
 export default router
-

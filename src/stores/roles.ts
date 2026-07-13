@@ -8,7 +8,7 @@ function mapBackendRole(backend: BackendRole): Role {
     id: String(backend.id),
     name: backend.name,
     description: backend.description || '',
-    permissions: backend.permissions?.map(p => p.slug) || [],
+    permissions: backend.permissions?.map((p) => p.slug) || [],
     userCount: backend.users_count || 0,
     createdAt: backend.created_at,
   }
@@ -59,7 +59,7 @@ export const useRolesStore = defineStore('roles', () => {
   }
 
   function getById(id: string): Role | undefined {
-    return roles.value.find(r => r.id === id)
+    return roles.value.find((r) => r.id === id)
   }
 
   async function create(role: Omit<Role, 'id' | 'createdAt'>): Promise<Role> {
@@ -74,7 +74,7 @@ export const useRolesStore = defineStore('roles', () => {
   }
 
   async function update(id: string, updates: Partial<Role>): Promise<boolean> {
-    const index = roles.value.findIndex(r => r.id === id)
+    const index = roles.value.findIndex((r) => r.id === id)
     if (index === -1) return false
 
     const payload: { name?: string; description?: string; permissions?: string[] } = {}
@@ -90,12 +90,11 @@ export const useRolesStore = defineStore('roles', () => {
   }
 
   async function remove(id: string): Promise<boolean> {
-    const index = roles.value.findIndex(r => r.id === id)
+    const index = roles.value.findIndex((r) => r.id === id)
     if (index === -1) return false
     try {
       await rolesApi.delete(Number(id))
-    } catch {
-    }
+    } catch {}
     roles.value.splice(index, 1)
     return true
   }

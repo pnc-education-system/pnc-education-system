@@ -88,9 +88,11 @@ onUnmounted(() => {
             @click="switchLanguage(opt.key)"
             @keydown="handleKeydown($event, opt.key)"
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors duration-150 cursor-pointer text-left"
-            :class="activeLocale === opt.key
-              ? 'bg-blue-50 text-[#355C8C] font-semibold dark:bg-[#355C8C]/15 dark:text-blue-300'
-              : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]'"
+            :class="
+              activeLocale === opt.key
+                ? 'bg-blue-50 text-[#355C8C] font-semibold dark:bg-[#355C8C]/15 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/[0.04]'
+            "
           >
             <span class="flex-1">
               <span class="font-medium">{{ opt.label }}</span>

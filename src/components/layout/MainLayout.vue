@@ -68,7 +68,7 @@ onUnmounted(() => {
       <main
         v-if="!isLoginPage"
         class="flex-1 bg-gray-50 lg:ml-[260px] dark:bg-[#0B1120]"
-        style="padding-top: 64px;"
+        style="padding-top: 64px"
         @click="closeSidebar"
       >
         <div class="p-4 sm:p-6 lg:p-8">
@@ -101,22 +101,26 @@ onUnmounted(() => {
       <div
         id="toast-container"
         class="fixed top-4 right-4 z-[60] max-h-[90vh] overflow-y-auto space-y-3 pointer-events-none"
-        style="scrollbar-width: none;"
+        style="scrollbar-width: none"
       >
-        <TransitionGroup
-          name="toast"
-          tag="div"
-          class="space-y-3 pointer-events-auto"
-        >
+        <TransitionGroup name="toast" tag="div" class="space-y-3 pointer-events-auto">
           <div
             v-for="toast in toasts"
             :key="toast.id"
             class="flex items-start gap-3 max-w-sm bg-white rounded-2xl shadow-lg border p-4 dark:bg-[#131B2E] shadow-gray-200/50 dark:shadow-gray-900/50"
-            :class="toast.type === 'success' ? 'border-emerald-100 dark:border-emerald-500/20' : 'border-red-100 dark:border-red-500/20'"
+            :class="
+              toast.type === 'success'
+                ? 'border-emerald-100 dark:border-emerald-500/20'
+                : 'border-red-100 dark:border-red-500/20'
+            "
           >
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-              :class="toast.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-red-50 dark:bg-red-500/10'"
+              :class="
+                toast.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10'
+                  : 'bg-red-50 dark:bg-red-500/10'
+              "
             >
               <svg
                 v-if="toast.type === 'success'"

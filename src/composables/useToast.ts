@@ -24,9 +24,12 @@ export function useToast() {
 
     toasts.value.push({ id, message: msg, type, title })
 
-    toastTimers.set(id, setTimeout(() => {
-      removeToast(id)
-    }, 3500))
+    toastTimers.set(
+      id,
+      setTimeout(() => {
+        removeToast(id)
+      }, 3500),
+    )
     nextTick(() => {
       const container = document.getElementById('toast-container')
       if (container) {

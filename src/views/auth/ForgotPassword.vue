@@ -34,10 +34,15 @@ async function handleSubmit() {
     successMessage.value = response.message
     form.value.email = ''
   } catch (err: unknown) {
-    const apiErr = err as { response?: { data?: { error?: { message?: string }; message?: string; errors?: Record<string, string[]> } } }
-    errorMessage.value = apiErr.response?.data?.error?.message
-      || apiErr.response?.data?.message
-      || t('forgot_password.error.generic')
+    const apiErr = err as {
+      response?: {
+        data?: { error?: { message?: string }; message?: string; errors?: Record<string, string[]> }
+      }
+    }
+    errorMessage.value =
+      apiErr.response?.data?.error?.message ||
+      apiErr.response?.data?.message ||
+      t('forgot_password.error.generic')
   } finally {
     isSubmitting.value = false
   }
@@ -49,12 +54,16 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6 transition-colors duration-200">
+  <div
+    class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6 transition-colors duration-200"
+  >
     <div class="absolute right-6 top-6">
       <LanguageSwitcher />
     </div>
 
-    <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200">
+    <div
+      class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200"
+    >
       <div class="mb-8 text-center">
         <div class="flex flex-col items-center gap-3 mb-6">
           <img
@@ -63,7 +72,9 @@ function goToLogin() {
             class="w-14 h-14 object-contain"
           />
           <div>
-            <h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">PNC Education</h1>
+            <h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              PNC Education
+            </h1>
             <p class="text-xs text-slate-500 dark:text-gray-400 font-medium">System Management</p>
           </div>
         </div>
@@ -72,25 +83,65 @@ function goToLogin() {
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
-        <div v-if="successMessage" class="flex items-center gap-2.5 rounded-xl bg-green-50 dark:bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400 border border-green-100 dark:border-green-500/20">
-          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+        <div
+          v-if="successMessage"
+          class="flex items-center gap-2.5 rounded-xl bg-green-50 dark:bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400 border border-green-100 dark:border-green-500/20"
+        >
+          <svg
+            class="w-4 h-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
           <span>{{ successMessage }}</span>
         </div>
 
-        <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-500/20">
-          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
+        <div
+          v-if="errorMessage"
+          class="flex items-center gap-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-500/20"
+        >
+          <svg
+            class="w-4 h-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" x2="12" y1="8" y2="12" />
+            <line x1="12" x2="12.01" y1="16" y2="16" />
           </svg>
           <span>{{ errorMessage }}</span>
         </div>
 
         <div>
-          <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ forgotEmailLabel }}</label>
-          <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <label
+            for="email"
+            class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300"
+            >{{ forgotEmailLabel }}</label
+          >
+          <div
+            class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20"
+          >
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <path d="m22 6-10 7L2 6" />
               </svg>
@@ -111,7 +162,14 @@ function goToLogin() {
           :disabled="isSubmitting"
           class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
             <path d="M10 17l5-5-5-5" />
             <path d="M15 12H3" />

@@ -127,15 +127,11 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     group: 'Enrollment',
-    permissions: [
-      { key: 'enrollment.manage', label: 'Manage Enrollment' },
-    ],
+    permissions: [{ key: 'enrollment.manage', label: 'Manage Enrollment' }],
   },
   {
     group: 'ID Cards',
-    permissions: [
-      { key: 'cards.generate', label: 'Generate ID Cards' },
-    ],
+    permissions: [{ key: 'cards.generate', label: 'Generate ID Cards' }],
   },
   {
     group: 'Student Records',
@@ -154,8 +150,6 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     group: 'Reports',
-    permissions: [
-      { key: 'reports.view', label: 'View Reports' },
-    ],
+    permissions: [{ key: 'reports.view', label: 'View Reports' }],
   },
 ]
