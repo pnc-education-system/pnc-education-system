@@ -18,7 +18,6 @@ function initTheme() {
     applyTheme(stored === 'dark')
     return
   }
-  // Check system preference
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   applyTheme(prefersDark)
 }
@@ -27,7 +26,6 @@ function toggleTheme() {
   applyTheme(!isDark.value)
 }
 
-// Listen for system preference changes
 if (typeof window !== 'undefined') {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     if (!localStorage.getItem('theme')) {

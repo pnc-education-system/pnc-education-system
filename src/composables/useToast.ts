@@ -7,7 +7,6 @@ export interface Toast {
   title: string
 }
 
-// Singleton state shared across all components
 const toasts = ref<Toast[]>([])
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
@@ -25,12 +24,9 @@ export function useToast() {
 
     toasts.value.push({ id, message: msg, type, title })
 
-    // Schedule auto-dismiss
     toastTimers.set(id, setTimeout(() => {
       removeToast(id)
     }, 3500))
-
-    // Auto-scroll to show newest toast
     nextTick(() => {
       const container = document.getElementById('toast-container')
       if (container) {

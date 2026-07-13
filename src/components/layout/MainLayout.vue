@@ -14,13 +14,9 @@ const authStore = useAuthStore()
 
 onMounted(() => {
   initTheme()
-
-  // Restore auth session from stored token on page refresh
   if (authStore.token) {
     authStore.initSession()
   }
-
-  // If user is already authenticated, ensure profile is loaded.
   if (authStore.isAuthenticated && !authStore.user) {
     authStore.fetchProfile()
   }
@@ -46,7 +42,6 @@ provide('sidebarOpen', sidebarOpen)
 provide('toggleSidebar', toggleSidebar)
 provide('closeSidebar', closeSidebar)
 
-// Track route loading state for skeleton
 const removeBeforeGuard = router.beforeEach(() => {
   if (isFirstLoad) return
   routeLoading.value = true
@@ -54,7 +49,6 @@ const removeBeforeGuard = router.beforeEach(() => {
 
 const removeAfterGuard = router.afterEach(() => {
   isFirstLoad = false
-  // Small delay so skeleton is visible even for fast loads
   setTimeout(() => {
     routeLoading.value = false
   }, 150)
@@ -68,15 +62,9 @@ onUnmounted(() => {
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-[#0B1120]">
-    <!-- Sidebar -->
     <AppSidebar v-if="!isLoginPage" />
-
-    <!-- Main Content Area -->
     <div :class="[isLoginPage ? '' : 'min-h-screen', 'flex flex-col']">
-      <!-- Header -->
       <AppHeader v-if="!isLoginPage" />
-
-      <!-- Main Content -->
       <main
         v-if="!isLoginPage"
         class="flex-1 bg-gray-50 lg:ml-[260px] dark:bg-[#0B1120]"
@@ -84,10 +72,8 @@ onUnmounted(() => {
         @click="closeSidebar"
       >
         <div class="p-4 sm:p-6 lg:p-8">
-          <!-- Skeleton while route is loading -->
           <PageSkeleton v-if="routeLoading" />
 
-          <!-- Page transition when route is ready -->
           <div v-else>
             <router-view v-slot="{ Component }">
               <Transition
@@ -106,17 +92,15 @@ onUnmounted(() => {
         </div>
       </main>
 
-      <!-- Login page - full screen -->
       <main v-else class="flex-1">
         <router-view />
       </main>
     </div>
 
-    <!-- Global Toast Notifications (stacked) -->
     <Teleport to="body">
       <div
         id="toast-container"
-        class="fixed top-5 right-5 z-[60] max-h-[80vh] overflow-y-auto space-y-3 pointer-events-none"
+        class="fixed top-4 right-4 z-[60] max-h-[90vh] overflow-y-auto space-y-3 pointer-events-none"
         style="scrollbar-width: none;"
       >
         <TransitionGroup
@@ -127,7 +111,7 @@ onUnmounted(() => {
           <div
             v-for="toast in toasts"
             :key="toast.id"
-            class="flex items-start gap-3 max-w-sm bg-white rounded-2xl shadow-xl border p-4 dark:bg-[#131B2E]"
+            class="flex items-start gap-3 max-w-sm bg-white rounded-2xl shadow-lg border p-4 dark:bg-[#131B2E] shadow-gray-200/50 dark:shadow-gray-900/50"
             :class="toast.type === 'success' ? 'border-emerald-100 dark:border-emerald-500/20' : 'border-red-100 dark:border-red-500/20'"
           >
             <div
@@ -168,7 +152,7 @@ onUnmounted(() => {
             </div>
             <button
               @click="removeToast(toast.id)"
-              class="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer flex-shrink-0 dark:hover:text-gray-300 dark:hover:bg-gray-800"
+              class="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 cursor-pointer flex-shrink-0 dark:hover:text-gray-300 dark:hover:bg-gray-800"
             >
               <svg
                 class="w-4 h-4"
@@ -199,7 +183,7 @@ onUnmounted(() => {
 }
 .toast-enter-from {
   opacity: 0;
-  transform: translateX(1rem) translateY(-1rem);
+  transform: translateX(1rem) translateY(-0.5rem);
 }
 .toast-leave-to {
   opacity: 0;
@@ -209,4 +193,3 @@ onUnmounted(() => {
   transition: transform 0.3s ease;
 }
 </style>
-

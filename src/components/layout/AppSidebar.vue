@@ -10,7 +10,6 @@ const router = useRouter()
 const sidebarOpen = inject('sidebarOpen') as Ref<boolean>
 const closeSidebar = inject('closeSidebar') as () => void
 
-const adminHovered = ref(false)
 const adminDropdown = ref(false)
 
 const userInitials = computed(() => {
@@ -23,22 +22,6 @@ const userInitials = computed(() => {
     .slice(0, 2)
 })
 
-interface NavItem {
-  label: string
-  icon: string
-  route: string
-  permission?: string
-}
-
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-  { label: 'Admin', icon: 'admin', route: '/admin' },
-]
-
-const visibleNavItems = computed(() =>
-  navItems.filter(item => !item.permission || authStore.hasPermission(item.permission))
-)
-
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
 
@@ -46,26 +29,11 @@ const navigate = (path: string) => {
   router.push(path)
   closeSidebar()
   adminDropdown.value = false
-  adminHovered.value = false
 }
 
 const isActive = (path: string) => route.path === path
 
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
-
-const onAdminEnter = () => {
-  adminHovered.value = true
-  adminDropdown.value = true
-}
-
-const onAdminLeave = () => {
-  adminHovered.value = false
-  setTimeout(() => {
-    if (!adminHovered.value) {
-      adminDropdown.value = false
-    }
-  }, 100)
-}
 
 const onAdminClick = () => {
   adminDropdown.value = !adminDropdown.value
@@ -73,7 +41,6 @@ const onAdminClick = () => {
 </script>
 
 <template>
-  <!-- Backdrop overlay (mobile only) -->
   <transition
     enter-active-class="transition-opacity duration-300 ease-out"
     enter-from-class="opacity-0"
@@ -89,39 +56,25 @@ const onAdminClick = () => {
     ></div>
   </transition>
 
-  <!-- Sidebar -->
+
   <aside
     class="fixed left-0 top-0 bottom-0 w-[260px] bg-[#0F172A] z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-out -translate-x-full lg:translate-x-0"
     :class="{ 'translate-x-0': sidebarOpen }"
     style="border-radius: 0 20px 20px 0; box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);"
   >
-    <!-- Logo Section -->
     <div class="px-6 pt-7 pb-6 flex-shrink-0">
-      <div class="flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20"
-        >
-          <svg
-            class="w-5 h-5 text-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-            <path d="M6 12v5c3 3 9 3 12 0v-5" />
-          </svg>
-        </div>
+      <div class="flex items-center gap-3.5">
+        <img
+          src="@/assets/images/PN_logo_clear.png"
+          alt="PNC Logo"
+          class="w-9 h-9 object-contain"
+        />
         <div>
           <h1 class="text-base font-bold text-white tracking-tight leading-tight">PNC Education</h1>
           <p class="text-[11px] text-slate-400 font-medium mt-0.5">System Management</p>
         </div>
       </div>
     </div>
-
-    <!-- Close button (mobile only) -->
     <button
       class="absolute top-6 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors lg:hidden cursor-pointer"
       @click="closeSidebar"
@@ -131,29 +84,23 @@ const onAdminClick = () => {
         <path d="m6 6 12 12" />
       </svg>
     </button>
-
-    <!-- Navigation Links -->
-    <nav class="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-      <!-- Regular nav items (except Admin) -->
+    <nav class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
       <button
-        v-for="item in visibleNavItems.filter(i => i.label !== 'Admin')"
-        :key="item.route"
-        @click="navigate(item.route)"
+        @click="navigate('/dashboard')"
         class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-        :class="isActive(item.route)
+        :class="isActive('/dashboard')
           ? 'bg-blue-500/10 text-blue-400 shadow-sm'
           : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
       >
-        <span class="w-5 h-5 flex items-center justify-center flex-shrink-0"><i :class="item.icon"></i></span>
-        <span>{{ item.label }}</span>
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>Dashboard</span>
       </button>
-
-      <!-- Admin with hover dropdown -->
-      <div
-        class="relative"
-        @mouseenter="onAdminEnter"
-        @mouseleave="onAdminLeave"
-      >
+      <div class="relative">
         <button
           @click="onAdminClick"
           class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
@@ -161,7 +108,11 @@ const onAdminClick = () => {
             ? 'bg-blue-500/10 text-blue-400 shadow-sm'
             : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
         >
-          <span class="w-5 h-5 flex items-center justify-center flex-shrink-0">A</span>
+          <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20V10" />
+            <path d="M18 20V4" />
+            <path d="M6 20v-4" />
+          </svg>
           <span class="flex-1">Admin</span>
           <svg
             class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
@@ -176,8 +127,6 @@ const onAdminClick = () => {
             <path d="m6 9 6 6 6-6" />
           </svg>
         </button>
-
-        <!-- Dropdown sub-menu -->
         <transition
           enter-active-class="transition-all duration-200 ease-out"
           enter-from-class="opacity-0 -translate-y-1"
@@ -188,12 +137,8 @@ const onAdminClick = () => {
         >
           <div
             v-if="adminDropdown"
-            class="ml-4 mt-1 space-y-0.5"
+            class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
           >
-            <!-- Users Section -->
-            <div class="pt-2 pb-1 px-1">
-              <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Users</p>
-            </div>
             <button
               v-if="canManageUsers"
               @click="navigate('/admin/users')"
@@ -207,11 +152,6 @@ const onAdminClick = () => {
               </svg>
               <span>Manage Users</span>
             </button>
-
-            <!-- Roles Section -->
-            <div class="pt-3 pb-1 px-1">
-              <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Roles</p>
-            </div>
             <button
               v-if="canManageRoles"
               @click="navigate('/admin/roles')"
@@ -229,8 +169,6 @@ const onAdminClick = () => {
         </transition>
       </div>
     </nav>
-
-    <!-- Profile Card -->
     <div class="flex-shrink-0 px-3 pb-5 pt-3">
       <div
         class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-colors duration-200 cursor-pointer group"
