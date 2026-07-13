@@ -4,7 +4,6 @@ import { usersApi } from '@/services/api'
 import type { AdminUser, BackendUser } from '@/types'
 import type { CreateUserPayload, UpdateUserPayload } from '@/services/api/users'
 
-/** Map a backend user to the frontend AdminUser format */
 function mapBackendUser(backend: BackendUser): AdminUser {
   return {
     id: String(backend.id),
@@ -27,7 +26,6 @@ export const useUsersStore = defineStore('users', () => {
   const activeUsers = computed(() => users.value.filter(u => u.status === 'active').length)
   const inactiveUsers = computed(() => users.value.filter(u => u.status === 'inactive').length)
 
-  /** Fetch users from the backend API */
   async function fetchAll() {
     loading.value = true
     error.value = null
@@ -35,7 +33,6 @@ export const useUsersStore = defineStore('users', () => {
       const paginated = await usersApi.list()
       users.value = paginated.data.map(mapBackendUser)
     } catch (err: any) {
-      // Non-admin users are expected to be forbidden from users.manage
       const status = err?.response?.status
       if (status === 403) {
         users.value = []

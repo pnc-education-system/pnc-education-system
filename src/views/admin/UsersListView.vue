@@ -166,7 +166,6 @@ const roleMap = computed(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ usersTitle }}</h1>
@@ -197,7 +196,6 @@ const roleMap = computed(() => {
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -227,7 +225,6 @@ const roleMap = computed(() => {
       </select>
     </div>
 
-    <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5">
         <div class="flex items-center gap-3">
@@ -270,7 +267,6 @@ const roleMap = computed(() => {
       </div>
     </div>
 
-    <!-- Users Table -->
     <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -384,8 +380,7 @@ const roleMap = computed(() => {
         </table>
       </div>
     </div>
-
-    <!-- Delete Confirmation Modal -->
+    
     <Teleport to="body">
       <Transition
         enter-active-class="transition-all duration-200 ease-out"

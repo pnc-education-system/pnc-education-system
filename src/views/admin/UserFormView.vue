@@ -8,7 +8,6 @@ import { useToast } from '@/composables/useToast'
 
 const { t } = useI18n()
 
-// Pre-computed translations
 const formEditTitle = computed(() => t('user_form.edit_title'))
 const formNewTitle = computed(() => t('user_form.new_title'))
 const formEditSubtitle = computed(() => t('user_form.edit_subtitle'))
@@ -124,7 +123,7 @@ function goBack() {
 
 <template>
   <div class="max-w-2xl mx-auto">
-    <!-- Header -->
+
     <div class="flex items-center gap-4 mb-6">
       <button
         @click="goBack"
@@ -142,15 +141,15 @@ function goBack() {
       </div>
     </div>
 
-    <!-- Form -->
+
     <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
-      <!-- Section Header -->
+
       <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50">
         <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{{ formSectionAccount }}</h2>
       </div>
 
       <div class="p-6 space-y-5">
-        <!-- Name -->
+
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelName }} <span class="text-red-400">{{ formRequired }}</span>
@@ -163,7 +162,7 @@ function goBack() {
           />
         </div>
 
-        <!-- Email -->
+
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelEmail }} <span class="text-red-400">{{ formRequired }}</span>
@@ -176,7 +175,6 @@ function goBack() {
           />
         </div>
 
-        <!-- Password -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ isEdit ? formLabelNewPassword : formLabelPassword }}
@@ -194,7 +192,6 @@ function goBack() {
           </p>
         </div>
 
-        <!-- Role -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelRole }} <span class="text-red-400">{{ formRequired }}</span>
@@ -210,7 +207,6 @@ function goBack() {
           </select>
         </div>
 
-        <!-- Status -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2.5">            {{ formLabelStatus }}</label>
           <div class="flex items-center gap-6">
@@ -232,7 +228,6 @@ function goBack() {
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-end gap-3">
         <button
           @click="goBack"
