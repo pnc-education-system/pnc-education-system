@@ -72,7 +72,11 @@ interface StatCard {
 }
 
 const statCards = computed<StatCard[]>(() => {
-  const all = enrollments.value as Array<{ initials: string; date: string; status: 'enrolled' | 'pending' | 'completed' | 'rejected' }>
+  const all = enrollments.value as Array<{
+    initials: string
+    date: string
+    status: 'enrolled' | 'pending' | 'completed' | 'rejected'
+  }>
   const total = all.length
   const enrolled = all.filter((e) => e.status === 'enrolled').length
   const pending = all.filter((e) => e.status === 'pending').length
@@ -82,10 +86,30 @@ const statCards = computed<StatCard[]>(() => {
 
   return [
     { titleKey: 'dashboard.total', value: String(total), subtitleKey: 'dashboard.all_intakes' },
-    { titleKey: 'dashboard.pending', value: String(pending), subtitleKey: 'dashboard.awaiting_review', filter: 'pending' },
-    { titleKey: 'dashboard.enrolled', value: String(enrolled), subtitleKey: 'dashboard.active_students', filter: 'enrolled' },
-    { titleKey: 'dashboard.completed', value: String(completed), subtitleKey: 'dashboard.finished', filter: 'completed' },
-    { titleKey: 'dashboard.rejected', value: String(rejected), subtitleKey: 'dashboard.rejected_students', filter: 'rejected' },
+    {
+      titleKey: 'dashboard.pending',
+      value: String(pending),
+      subtitleKey: 'dashboard.awaiting_review',
+      filter: 'pending',
+    },
+    {
+      titleKey: 'dashboard.enrolled',
+      value: String(enrolled),
+      subtitleKey: 'dashboard.active_students',
+      filter: 'enrolled',
+    },
+    {
+      titleKey: 'dashboard.completed',
+      value: String(completed),
+      subtitleKey: 'dashboard.finished',
+      filter: 'completed',
+    },
+    {
+      titleKey: 'dashboard.rejected',
+      value: String(rejected),
+      subtitleKey: 'dashboard.rejected_students',
+      filter: 'rejected',
+    },
     {
       titleKey: 'dashboard.enroll_rate',
       value: `${rate}%`,
@@ -279,7 +303,10 @@ interface Enrollment {
 }
 
 const enrollments = computed(() => useStudentsStore().students)
-const enrollmentStatusStyles: Record<string, { bg: string; text: string; dot: string; border: string }> = {
+const enrollmentStatusStyles: Record<
+  string,
+  { bg: string; text: string; dot: string; border: string }
+> = {
   enrolled: { bg: '#F3F4F6', text: '#374151', dot: '#6B7280', border: '#E5E7EB' },
   pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316', border: '#FED7AA' },
   completed: { bg: '#EFF6FF', text: '#1E40AF', dot: '#3B82F6', border: '#BFDBFE' },
@@ -292,11 +319,29 @@ const programFilter = ref('all')
 const currentPage = ref(1)
 const pageSize = 5
 
-const uniquePrograms = computed(() => Array.from(new Set((enrollments.value as Array<{ program: string; initials: string; date: string }>).map((e) => e.program))))
+const uniquePrograms = computed(() =>
+  Array.from(
+    new Set(
+      (enrollments.value as Array<{ program: string; initials: string; date: string }>).map(
+        (e) => e.program,
+      ),
+    ),
+  ),
+)
 
 const filteredEnrollments = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
-  return (enrollments.value as Array<{ name: string; id: string; email: string; status: 'enrolled' | 'pending' | 'completed' | 'rejected'; program: string; initials: string; date: string }>).filter((e) => {
+  return (
+    enrollments.value as Array<{
+      name: string
+      id: string
+      email: string
+      status: 'enrolled' | 'pending' | 'completed' | 'rejected'
+      program: string
+      initials: string
+      date: string
+    }>
+  ).filter((e) => {
     const matchesSearch =
       !q ||
       e.name.toLowerCase().includes(q) ||
@@ -359,7 +404,9 @@ function deleteStudent(enrollment: Enrollment) {
   const confirmed = window.confirm(`Delete ${enrollment.name}? This cannot be undone.`)
   if (!confirmed) return
 
-  const index = (enrollments.value as Array<{ id: string }>).findIndex((e) => e.id === enrollment.id)
+  const index = (enrollments.value as Array<{ id: string }>).findIndex(
+    (e) => e.id === enrollment.id,
+  )
   if (index === -1) return
 
   enrollments.value.splice(index, 1)

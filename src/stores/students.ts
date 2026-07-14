@@ -68,6 +68,15 @@ export const useStudentsStore = defineStore('students', () => {
       date: '2026-07-09',
       status: 'rejected',
     },
+    {
+      id: 'STU-2026-07',
+      name: 'Kim Hour',
+      email: 'kim.h@gmail.com',
+      initials: 'KH',
+      program: 'SNAC',
+      date: '2026-07-08',
+      status: 'enrolled',
+    },
   ])
 
   const total = computed(() => students.value.length)

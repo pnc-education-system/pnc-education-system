@@ -311,7 +311,10 @@ const userInitials = authStore.user?.name
                 </button>
                 <button
                   class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                  @click="showProfileMenu = false; router.push('/profile')"
+                  @click="
+                    showProfileMenu = false
+                    router.push('/profile')
+                  "
                 >
                   <svg
                     class="w-4 h-4 text-gray-400 dark:text-gray-500"

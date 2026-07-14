@@ -14,8 +14,12 @@ const { showSuccessToast, showErrorToast } = useToast()
 const isEditing = computed(() => !!route.query.id)
 const editingId = computed(() => (route.query.id as string | undefined) || null)
 
-const title = computed(() => (isEditing.value ? t('student_form.edit_title') : t('student_form.new_title')))
-const subtitle = computed(() => (isEditing.value ? t('student_form.edit_subtitle') : t('student_form.new_subtitle')))
+const title = computed(() =>
+  isEditing.value ? t('student_form.edit_title') : t('student_form.new_title'),
+)
+const subtitle = computed(() =>
+  isEditing.value ? t('student_form.edit_subtitle') : t('student_form.new_subtitle'),
+)
 const sectionDetails = computed(() => t('student_form.section_details'))
 const labelName = computed(() => t('student_form.label_name'))
 const labelEmail = computed(() => t('student_form.label_email'))
@@ -26,7 +30,9 @@ const labelStatus = computed(() => t('student_form.label_status'))
 const required = computed(() => t('student_form.required'))
 const cancel = computed(() => t('student_form.cancel'))
 const saving = computed(() => t('student_form.saving'))
-const createLabel = computed(() => (isEditing.value ? t('student_form.update') : t('student_form.create')))
+const createLabel = computed(() =>
+  isEditing.value ? t('student_form.update') : t('student_form.create'),
+)
 const toastCreated = computed(() => t('student_form.toast_created'))
 const toastCreatedTitle = computed(() => t('student_form.toast_created_title'))
 const toastUpdated = computed(() => t('student_form.toast_updated'))
@@ -40,7 +46,9 @@ const form = ref({
   email: editingId.value ? studentsStore.getById(editingId.value)?.email || '' : '',
   phone: editingId.value ? studentsStore.getById(editingId.value)?.phone || '' : '',
   program: editingId.value ? studentsStore.getById(editingId.value)?.program || '' : '',
-  status: (editingId.value ? studentsStore.getById(editingId.value)?.status || 'enrolled' : 'enrolled') as 'enrolled' | 'pending' | 'completed',
+  status: (editingId.value
+    ? studentsStore.getById(editingId.value)?.status || 'enrolled'
+    : 'enrolled') as 'enrolled' | 'pending' | 'completed',
 })
 
 const isSaving = ref(false)
