@@ -12,16 +12,6 @@ const closeSidebar = inject('closeSidebar') as () => void
 
 const adminDropdown = ref(false)
 
-const userInitials = computed(() => {
-  if (!authStore.user?.name) return 'SA'
-  return authStore.user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-})
-
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
 
@@ -55,8 +45,6 @@ const onAdminClick = () => {
       @click="closeSidebar"
     ></div>
   </transition>
-
-
   <aside
     class="fixed left-0 top-0 bottom-0 w-[260px] bg-[#0F172A] z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-out -translate-x-full lg:translate-x-0"
     :class="{ 'translate-x-0': sidebarOpen }"
@@ -169,35 +157,5 @@ const onAdminClick = () => {
         </transition>
       </div>
     </nav>
-    <div class="flex-shrink-0 px-3 pb-5 pt-3">
-      <div
-        class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-colors duration-200 cursor-pointer group"
-      >
-        <div
-          class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"
-        >
-          <span class="text-xs font-bold text-white">{{ userInitials }}</span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-slate-200 truncate leading-tight">
-            {{ authStore.user?.name || 'System Admin' }}
-          </p>
-          <p class="text-[11px] text-slate-500 font-medium mt-0.5">{{ authStore.user?.role || 'System Admin' }}</p>
-        </div>
-        <svg
-          class="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors duration-200 flex-shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="1" />
-          <circle cx="19" cy="12" r="1" />
-          <circle cx="5" cy="12" r="1" />
-        </svg>
-      </div>
-    </div>
   </aside>
 </template>
