@@ -10,20 +10,38 @@ const router = useRouter()
 const sidebarOpen = inject('sidebarOpen') as Ref<boolean>
 const closeSidebar = inject('closeSidebar') as () => void
 
+const enrollmentDropdown = ref(false)
 const adminDropdown = ref(false)
 
+const userInitials = computed(() => {
+  if (!authStore.user?.name) return 'SA'
+  return authStore.user.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+})
+
+const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
 
 const navigate = (path: string) => {
   router.push(path)
   closeSidebar()
+  enrollmentDropdown.value = false
   adminDropdown.value = false
 }
 
 const isActive = (path: string) => route.path === path
 
+const isEnrollmentActive = computed(() => route.path.startsWith('/enrollment'))
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
+
+const onEnrollmentClick = () => {
+  enrollmentDropdown.value = !enrollmentDropdown.value
+}
 
 const onAdminClick = () => {
   adminDropdown.value = !adminDropdown.value
@@ -88,6 +106,88 @@ const onAdminClick = () => {
         </svg>
         <span>Dashboard</span>
       </button>
+      <div class="relative" v-if="canManageEnrollments">
+        <button
+          @click="onEnrollmentClick"
+          class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+          :class="isEnrollmentActive || enrollmentDropdown
+            ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+        >
+          <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" x2="8" y1="13" y2="13" />
+            <line x1="16" x2="8" y1="17" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          <span class="flex-1">Enrollment</span>
+          <svg
+            class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+            :class="{ 'rotate-180': enrollmentDropdown }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        <transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="enrollmentDropdown"
+            class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
+          >
+            <button
+              @click="navigate('/enrollment?tab=upload')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path.startsWith('/enrollment') && route.query.tab === 'upload'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+              </svg>
+              <span>Import Upload</span>
+            </button>
+            <button
+              @click="navigate('/enrollment?tab=views')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path.startsWith('/enrollment') && route.query.tab === 'views'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+              </svg>
+              <span>Import Views</span>
+            </button>
+            <button
+              @click="navigate('/enrollment?tab=history')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path.startsWith('/enrollment') && route.query.tab === 'history'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>Import History</span>
+            </button>
+          </div>
+        </transition>
+      </div>
+
+      <!-- Admin Dropdown -->
       <div class="relative">
         <button
           @click="onAdminClick"

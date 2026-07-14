@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/enrollment',
+    name: 'Enrollment',
+    component: () => import('@/views/EnrollmentPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/forbidden',
     name: 'Forbidden',
     component: () => import('@/views/ForbiddenView.vue'),
@@ -97,6 +103,30 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
+  {
+    path: '/enrollments',
+    name: 'Enrollments',
+    component: () => import('@/views/enrollments/EnrollmentsView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollments/new',
+    name: 'EnrollmentCreate',
+    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollments/:id/edit',
+    name: 'EnrollmentEdit',
+    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollment/history',
+    name: 'ImportHistory',
+    component: () => import('@/views/enrollments/ImportHistoryView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
   {
     path: '/',
     redirect: '/dashboard',
