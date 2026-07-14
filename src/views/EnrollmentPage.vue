@@ -3,7 +3,7 @@ defineOptions({ name: 'EnrollmentPage' })
 
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { History } from 'lucide-vue-next'
+import { History, AlertCircle } from 'lucide-vue-next'
 
 import { useFileUpload, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_MB } from '@/composables/useFileUpload'
 import ImportDropzone from '@/components/import/ImportDropzone.vue'
@@ -119,9 +119,7 @@ function onContinueToMapping(): void {
           v-if="uploadError && !selectedFile"
           class="mt-4 flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
         >
-          <svg class="w-4 h-4 text-red-500 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
-          </svg>
+          <AlertCircle class="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
           <div class="flex-1 min-w-0">
             <p class="text-xs font-medium text-red-700 dark:text-red-400 leading-relaxed">{{ uploadError }}</p>
           </div>
@@ -132,8 +130,8 @@ function onContinueToMapping(): void {
           >
             <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-          </svg>
-        </button>
+            </svg>
+          </button>
         </div>
 
         <!-- Bottom actions -->
