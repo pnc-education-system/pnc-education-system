@@ -9,8 +9,10 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const { toasts } = useToast()
 
+
 const name = ref('')
 const email = ref('')
+
 
 const submitting = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
@@ -65,12 +67,13 @@ const submit = async () => {
       message: res?.message || t('profile.toast.message.updated_default'),
     })
 
+
     fieldErrors.value = {}
   } catch (err: unknown) {
     const e = err as { response?: { data?: { message?: string } }; message?: string }
 
-    const msg =
-      e?.response?.data?.message || e?.message || t('profile.toast.message.update_failed_default')
+    const msg = e?.response?.data?.message || e?.message || t('profile.toast.message.update_failed_default')
+
 
     toasts.value.push({
       id: String(Date.now()),
@@ -78,6 +81,7 @@ const submit = async () => {
       title: t('profile.toast.title.update_failed'),
       message: msg,
     })
+
   } finally {
     submitting.value = false
   }
@@ -99,9 +103,7 @@ const submit = async () => {
     >
       <div class="grid grid-cols-1 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{
-            t('profile.label.name')
-          }}</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ t('profile.label.name') }}</label>
           <input
             v-model="name"
             type="text"
@@ -113,9 +115,7 @@ const submit = async () => {
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{
-            t('profile.label.email')
-          }}</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ t('profile.label.email') }}</label>
           <input
             v-model="email"
             type="email"
@@ -139,3 +139,4 @@ const submit = async () => {
     </form>
   </div>
 </template>
+
