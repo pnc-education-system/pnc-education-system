@@ -27,13 +27,17 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/enrollment',
+    name: 'Enrollment',
+    component: () => import('@/views/EnrollmentPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/forbidden',
     name: 'Forbidden',
     component: () => import('@/views/ForbiddenView.vue'),
     meta: { requiresAuth: true },
   },
-
-  // Admin routes
   {
     path: '/admin/users',
     name: 'AdminUsers',
@@ -72,7 +76,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'roles.manage' },
   },
 
-  // Regular routes
   {
     path: '/students',
     name: 'Students',
@@ -104,19 +107,44 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
-  // Default
+  {
+    path: '/enrollments',
+    name: 'Enrollments',
+    component: () => import('@/views/enrollments/EnrollmentsView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollments/new',
+    name: 'EnrollmentCreate',
+    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollments/:id/edit',
+    name: 'EnrollmentEdit',
+    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/profile/ProfileView.vue'),
+    meta: { requiresAuth: true },
+  },
+
   {
     path: '/',
     redirect: '/dashboard',
   },
 ]
 
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
-// Route guard - check authentication and permissions
 const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
 router.beforeEach((to) => {
   const authStore = useAuthStore()

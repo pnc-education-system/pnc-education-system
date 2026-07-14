@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { authApi, type PasswordResetConfirm } from '@/api/auth'
+import { authApi } from '@/services/api'
+import type { PasswordResetConfirm } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,7 +21,6 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 onMounted(() => {
-  // Get email and token from query params
   form.value.email = (route.query.email as string) || ''
   form.value.token = (route.query.token as string) || ''
 })
@@ -33,8 +33,6 @@ async function handleSubmit() {
   try {
     const response = await authApi.confirmPasswordReset(form.value)
     successMessage.value = response.message
-    
-    // Redirect to login after successful reset
     setTimeout(() => {
       router.push('/login')
     }, 2000)
@@ -55,7 +53,6 @@ function goToLogin() {
 
 <template>
   <div class="min-h-screen bg-white flex items-center justify-center p-6">
-    <!-- Language selector - top right -->
     <div class="absolute right-6 top-6">
       <button
         type="button"
@@ -71,33 +68,36 @@ function goToLogin() {
         </svg>
       </button>
     </div>
-
-    <!-- Card -->
-    <div class="w-full max-w-[450px] rounded-3xl bg-white p-10 shadow-2xl ring-1 ring-slate-100 lg:max-w-[480px]">
+    <div class="w-full max-w-[440px] rounded-3xl bg-white p-10 shadow-2xl ring-1 ring-slate-100">
       <div class="mb-8 text-center">
-        <h2 class="text-2xl font-bold text-slate-900">Reset Password</h2>
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/20">
+          <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-900">Reset password</h2>
         <p class="mt-2 text-sm text-slate-500">Enter your new password below</p>
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
-        <!-- Success message -->
-        <div v-if="successMessage" class="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-          {{ successMessage }}
+        <div v-if="successMessage" class="flex items-center gap-2.5 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700 border border-green-100">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span>{{ successMessage }}</span>
         </div>
-
-        <!-- Error message -->
-        <div v-if="errorMessage" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-          {{ errorMessage }}
-        </div>
-
-        <!-- Email (hidden, from query param) -->
+        <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-100">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
+          </svg>
+          <span>{{ errorMessage }}</span>
         <input type="hidden" v-model="form.email" />
         <input type="hidden" v-model="form.token" />
 
-        <!-- New Password -->
         <div>
           <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700">New Password</label>
-          <div class="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 transition focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div class="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="11" width="18" height="10" rx="2" />
@@ -114,7 +114,7 @@ function goToLogin() {
             />
             <button
               type="button"
-              class="shrink-0 text-slate-400 hover:text-slate-600"
+              class="shrink-0 text-slate-400 hover:text-slate-600 transition-colors p-1"
               :aria-label="showPassword ? 'Hide password' : 'Show password'"
               @click="showPassword = !showPassword"
             >
@@ -129,11 +129,9 @@ function goToLogin() {
             </button>
           </div>
         </div>
-
-        <!-- Confirm Password -->
         <div>
           <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-slate-700">Confirm Password</label>
-          <div class="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 transition focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div class="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="11" width="18" height="10" rx="2" />
@@ -150,7 +148,7 @@ function goToLogin() {
             />
             <button
               type="button"
-              class="shrink-0 text-slate-400 hover:text-slate-600"
+              class="shrink-0 text-slate-400 hover:text-slate-600 transition-colors p-1"
               :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
               @click="showConfirmPassword = !showConfirmPassword"
             >
@@ -165,12 +163,10 @@ function goToLogin() {
             </button>
           </div>
         </div>
-
-        <!-- Submit -->
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -179,13 +175,11 @@ function goToLogin() {
           </svg>
           {{ isSubmitting ? 'Resetting...' : 'Reset Password' }}
         </button>
-
-        <!-- Back to login -->
         <div class="text-center">
           <button
             type="button"
             @click="goToLogin"
-            class="text-sm font-medium text-blue-600 hover:text-blue-700"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
           >
             ← Back to Login
           </button>

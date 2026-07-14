@@ -8,7 +8,6 @@ const axiosInstance = axios.create({
   },
 })
 
-// ── Public endpoints that should never receive an Authorization header ──
 const PUBLIC_ENDPOINTS = [
   '/auth/login',
   '/auth/password/reset',
@@ -20,11 +19,9 @@ function isPublicEndpoint(url: string | undefined): boolean {
   return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint))
 }
 
-// Request interceptor - attach Bearer token (skip for public endpoints)
 axiosInstance.interceptors.request.use(
   (config) => {
     if (isPublicEndpoint(config.url)) {
-      // Never send Authorization header to public endpoints
       delete config.headers.Authorization
       return config
     }
@@ -40,7 +37,6 @@ axiosInstance.interceptors.request.use(
   }
 )
 
-// Response interceptor - handle 401 errors with token refresh
 let isRefreshing = false
 let failedQueue: Array<{
   resolve: (value: unknown) => void
