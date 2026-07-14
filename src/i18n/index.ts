@@ -11,12 +11,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'dashboard.total': 'TOTAL',
     'dashboard.pending': 'PENDING',
     'dashboard.enrolled': 'ENROLLED',
+    'dashboard.completed': 'COMPLETED',
     'dashboard.rejected': 'REJECTED',
-    'dashboard.enroll_rate': 'ENROLL. RATE',
+    'dashboard.not_admitted': 'rejected students',
     'dashboard.all_intakes': 'all intakes',
     'dashboard.awaiting_review': 'awaiting review',
-    'dashboard.active_students': 'active students',
-    'dashboard.not_admitted': 'not admitted',
+    'dashboard.active_students': 'enrolled students',
+    'dashboard.finished': 'completed students',
     'dashboard.enrolled_total': 'enrolled / total',
     'dashboard.updated_ago': 'Updated 2m ago',
 
@@ -73,11 +74,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'program.doughnut_nursing': 'Nursing',
 
     // Roles / staff
-    'admin': 'Admin',
-    'staff': 'Staff',
-    'pending': 'pending',
-    'approved': 'approved',
-    'rejected': 'rejected',
+    admin: 'Admin',
+    staff: 'Staff',
+    pending: 'pending',
+    approved: 'approved',
+    rejected: 'rejected',
 
     // Login page
     'login.title': 'Welcome back!',
@@ -94,8 +95,10 @@ const messages: Record<Locale, Record<string, string>> = {
     'login.error.email_required': 'Email is required',
     'login.error.invalid_email': 'Please enter a valid email address',
     'login.error.password_required': 'Password is required',
-    'login.error.account_deactivated': 'This account has been deactivated. Please contact your administrator.',
-    'login.error.invalid_credentials': 'Invalid email or password. Please check your credentials and try again.',
+    'login.error.account_deactivated':
+      'This account has been deactivated. Please contact your administrator.',
+    'login.error.invalid_credentials':
+      'Invalid email or password. Please check your credentials and try again.',
     'login.error.correct_fields': 'Please correct the fields below.',
     'login.error.generic': 'Login failed. Please try again later.',
 
@@ -194,6 +197,34 @@ const messages: Record<Locale, Record<string, string>> = {
     'students.empty_title': 'Student Records',
     'students.empty_description': 'Student list and management features will be available here.',
 
+    // Student form
+    'student_form.new_title': 'New Student',
+    'student_form.new_subtitle': 'Create a new student record.',
+    'student_form.section_details': 'Student Details',
+    'student_form.label_name': 'Full Name',
+    'student_form.label_email': 'Email',
+    'student_form.label_phone': 'Phone Number',
+    'student_form.label_program': 'Program',
+    'student_form.placeholder_program': 'e.g. BS Computer Science',
+    'student_form.label_status': 'Status',
+    'student_form.radio_active': 'Active',
+    'student_form.radio_inactive': 'Inactive',
+    'student_form.optional': '(optional)',
+    'student_form.required': '*',
+    'student_form.cancel': 'Cancel',
+    'student_form.saving': 'Saving...',
+    'student_form.create': 'Create Student',
+    'student_form.update': 'Update Student',
+    'student_form.edit_title': 'Edit Student',
+    'student_form.edit_subtitle': 'Update student information.',
+    'student_form.toast_updated': 'Student record updated successfully.',
+    'student_form.toast_updated_title': 'Student Updated',
+    'student_form.toast_created': 'New student has been created successfully.',
+    'student_form.toast_created_title': 'Student Created',
+    'student_form.toast_save_error': 'An error occurred while saving.',
+    'student_form.toast_validation': 'Please fill in all required fields.',
+    'student_form.toast_validation_title': 'Validation Error',
+
     // Profile page
     'profile.title': 'My Profile',
     'profile.subtitle': 'Manage your account information',
@@ -232,7 +263,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'roles.stub.subtitle': 'Manage roles and their permissions.',
     'roles.stub.button.add_role': 'Add Role',
     'roles.stub.empty.title': 'Role Management',
-    'roles.stub.empty.subtitle': 'Role list and permission management features will be available here.',
+    'roles.stub.empty.subtitle':
+      'Role list and permission management features will be available here.',
 
     // Admin roles list (RolesView / RolesListView)
     'admin.roles.list.title': 'Roles & Permissions',
@@ -249,7 +281,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'admin.roles.empty.subtitle': 'Try adjusting your search criteria.',
 
     'admin.roles.modal.confirm_delete.title': 'Confirm Delete',
-    'admin.roles.modal.confirm_delete.message': 'Users assigned this role may be affected. This action cannot be undone.',
+    'admin.roles.modal.confirm_delete.message':
+      'Users assigned this role may be affected. This action cannot be undone.',
     'admin.roles.modal.confirm_delete.cancel': 'Cancel',
     'admin.roles.modal.confirm_delete.delete': 'Delete',
 
@@ -295,12 +328,14 @@ const messages: Record<Locale, Record<string, string>> = {
     'dashboard.total': 'សរុប',
     'dashboard.pending': 'កំពុងរង់ចាំ',
     'dashboard.enrolled': 'បានចុះឈ្មោះ',
+    'dashboard.completed': 'បានបញ្ចប់',
     'dashboard.rejected': 'ត្រូវបានច្រានចោល',
     'dashboard.enroll_rate': 'អត្រាចុះឈ្មោះ',
     'dashboard.all_intakes': 'រាល់ការទទួល',
     'dashboard.awaiting_review': 'កំពុងរង់ចាំការពិនិត្យ',
-    'dashboard.active_students': 'និស្សិតសកម្ម',
-    'dashboard.not_admitted': 'មិនត្រូវបានទទួល',
+    'dashboard.active_students': 'និស្សិតបានចុះឈ្មោះ',
+    'dashboard.not_admitted': 'និស្សិតត្រូវបានច្រានចោល',
+    'dashboard.finished': 'និស្សិតបានបញ្ចប់',
     'dashboard.enrolled_total': 'បានចុះឈ្មោះ / សរុប',
     'dashboard.updated_ago': 'បានធ្វើបច្ចុប្បន្នភាព ២ នាទីមុន',
 
@@ -357,11 +392,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'program.doughnut_nursing': 'គិលានុបដ្ឋាយិកា',
 
     // Roles / staff
-    'admin': 'អ្នកគ្រប់គ្រង',
-    'staff': 'បុគ្គលិក',
-    'pending': 'កំពុងរង់ចាំ',
-    'approved': 'បានអនុម័ត',
-    'rejected': 'ត្រូវបានច្រានចោល',
+    admin: 'អ្នកគ្រប់គ្រង',
+    staff: 'បុគ្គលិក',
+    pending: 'កំពុងរង់ចាំ',
+    approved: 'បានអនុម័ត',
+    rejected: 'ត្រូវបានច្រានចោល',
 
     // Login
     'login.title': 'សូមស្វាគមន៍!',
@@ -475,8 +510,36 @@ const messages: Record<Locale, Record<string, string>> = {
     'students.subtitle': 'គ្រប់គ្រងកំណត់ត្រានិស្សិត។',
     'students.import': 'នាំចូល',
     'students.add_student': 'បន្ថែមនិស្សិត',
-    'students.empty_title': 'កំណត់ត្រានិស្សិត',
+    'students.empty_title': 'កំ�ត់ត្រានិស្សិត',
     'students.empty_description': 'បញ្ជីនិស្សិត និងមុខងារគ្រប់គ្រងនឹងមាននៅទីនេះ។',
+
+    // Student form
+    'student_form.new_title': 'និស្សិតថ្មី',
+    'student_form.new_subtitle': 'បង្កើតកំណត់ត្រានិស្សិតថ្មី។',
+    'student_form.section_details': 'ព័ត៌មាននិស្សិត',
+    'student_form.label_name': 'ឈ្មោះពេញ',
+    'student_form.label_email': 'អ៊ីមែល',
+    'student_form.label_phone': 'លេខទូរស័ព្ទ',
+    'student_form.label_program': 'វគ្គសិក្សា',
+    'student_form.placeholder_program': 'ឧទាហរណ៍ BS វិទ្យាសាស្ត្រកុំព្យូទ័រ',
+    'student_form.label_status': 'ស្ថានភាព',
+    'student_form.radio_active': 'សកម្ម',
+    'student_form.radio_inactive': 'មិនសកម្ម',
+    'student_form.optional': '(ស្រេចចិត្ត)',
+    'student_form.required': '*',
+    'student_form.cancel': 'បោះបង់',
+    'student_form.saving': 'កំពុងរក្សាទុក...',
+    'student_form.create': 'បង្កើតនិស្សិត',
+    'student_form.update': 'កែប្រែនិស្សិត',
+    'student_form.edit_title': 'កែប្រែនិស្សិត',
+    'student_form.edit_subtitle': 'ធ្វើបច្ចុប្បន្នភាពព័ត៌មាននិស្សិត។',
+    'student_form.toast_updated': 'កំណត់ត្រានិស្សិតត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ។',
+    'student_form.toast_updated_title': 'បានធ្វើបច្ចុប្បន្នភាពនិស្សិត',
+    'student_form.toast_created': 'និស្សិតថ្មីត្រូវបានបង្កើតដោយជោគជ័យ។',
+    'student_form.toast_created_title': 'បានបង្កើតនិស្សិត',
+    'student_form.toast_save_error': 'មានកំហុសកើតឡើងពេលរក្សាទុក។',
+    'student_form.toast_validation': 'សូមបំពេញព័ត៌មានគ្រប់ជំពូកដែលត្រូវការ។',
+    'student_form.toast_validation_title': 'កំហុសការផ្ទៀងផ្ទាត់',
 
     // Profile page
     'profile.title': 'ប្រវត្តិរូបរបស់ខ្ញុំ',
@@ -506,10 +569,10 @@ const messages: Record<Locale, Record<string, string>> = {
 
     // Errors
     'errors.403.title': '403',
-    'errors.403.message': "អ្នកមិនមានសិទ្ធិដើម្បីចូលមើលទំព័រនេះទេ។",
+    'errors.403.message': 'អ្នកមិនមានសិទ្ធិដើម្បីចូលមើលទំព័រនេះទេ។',
     'errors.back_to_dashboard': 'ត្រឡប់ទៅផ្ទាំងគ្រប់គ្រង',
     'errors.404.title': '404',
-    'errors.404.message': "ទំព័រដែលអ្នកកំពុងស្វែងរកមិនមានទេ។",
+    'errors.404.message': 'ទំព័រដែលអ្នកកំពុងស្វែងរកមិនមានទេ។',
 
     // Roles stub
     'roles.stub.title': 'តួនាទី និងសិទ្ធិ',
@@ -532,7 +595,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'admin.roles.empty.title': 'រកមិនឃើញតួនាទី',
     'admin.roles.empty.subtitle': 'សូមព្យាយាមកែប្រែលក្ខណៈស្វែងរក។',
     'admin.roles.modal.confirm_delete.title': 'បញ្ជាក់ការលុប',
-    'admin.roles.modal.confirm_delete.message': 'អ្នកប្រើប្រាស់ដែលត្រូវបានភ្ជាប់ទៅតួនាទីនេះអាចនឹងរងផលប៉ះពាល់។ សកម្មភាពនេះមិនអាចដកវិញបានទេ។',
+    'admin.roles.modal.confirm_delete.message':
+      'អ្នកប្រើប្រាស់ដែលត្រូវបានភ្ជាប់ទៅតួនាទីនេះអាចនឹងរងផលប៉ះពាល់។ សកម្មភាពនេះមិនអាចដកវិញបានទេ។',
     'admin.roles.modal.confirm_delete.cancel': 'បោះបង់',
     'admin.roles.modal.confirm_delete.delete': 'លុប',
     'admin.roles.action.edit': 'កែសម្រួលតួនាទី',
@@ -575,8 +639,7 @@ function getSavedLocale(): Locale {
   try {
     const saved = localStorage.getItem('locale')
     if (saved === 'en' || saved === 'kh') return saved
-  } catch {
-  }
+  } catch {}
   return 'en'
 }
 
@@ -591,7 +654,5 @@ export function setLocale(locale: Locale): void {
   i18n.global.locale.value = locale
   try {
     localStorage.setItem('locale', locale)
-  } catch {
-  }
+  } catch {}
 }
-

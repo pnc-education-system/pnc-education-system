@@ -8,15 +8,11 @@ const axiosInstance = axios.create({
   },
 })
 
-const PUBLIC_ENDPOINTS = [
-  '/auth/login',
-  '/auth/password/reset',
-  '/auth/password/reset/confirm',
-]
+const PUBLIC_ENDPOINTS = ['/auth/login', '/auth/password/reset', '/auth/password/reset/confirm']
 
 function isPublicEndpoint(url: string | undefined): boolean {
   if (!url) return false
-  return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint))
+  return PUBLIC_ENDPOINTS.some((endpoint) => url.includes(endpoint))
 }
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -33,7 +29,7 @@ axiosInstance.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 let isRefreshing = false
@@ -87,7 +83,7 @@ axiosInstance.interceptors.response.use(
     }
 
     return Promise.reject(error)
-  }
+  },
 )
 
 export default axiosInstance

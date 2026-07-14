@@ -128,20 +128,35 @@ function goBack() {
         @click="goBack"
         class="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-800"
       >
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          class="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ isEdit ? formEditTitle : formNewTitle }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          {{ isEdit ? formEditTitle : formNewTitle }}
+        </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {{ isEdit ? formEditSubtitle : formNewSubtitle }}
         </p>
       </div>
     </div>
-    <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
+
+    <div
+      class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden"
+    >
       <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{{ formSectionAccount }}</h2>
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+          {{ formSectionAccount }}
+        </h2>
       </div>
 
       <div class="p-6 space-y-5">
@@ -156,6 +171,7 @@ function goBack() {
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelEmail }} <span class="text-red-400">{{ formRequired }}</span>
@@ -167,6 +183,7 @@ function goBack() {
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ isEdit ? formLabelNewPassword : formLabelPassword }}
@@ -183,6 +200,7 @@ function goBack() {
             {{ formPasswordHint }}
           </p>
         </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelRole }} <span class="text-red-400">{{ formRequired }}</span>
@@ -197,27 +215,41 @@ function goBack() {
             </option>
           </select>
         </div>
+
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2.5">            {{ formLabelStatus }}</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2.5">
+            {{ formLabelStatus }}</label
+          >
           <div class="flex items-center gap-6">
             <label class="relative flex items-center gap-3 cursor-pointer group">
               <input type="radio" v-model="form.status" value="active" class="peer sr-only" />
-              <div class="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 peer-checked:border-blue-500 peer-checked:bg-blue-500 transition-all duration-200 group-hover:border-gray-400">
-                <div class="w-full h-full rounded-full scale-0 peer-checked:scale-100 transition-transform duration-200 bg-white"></div>
+              <div
+                class="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 peer-checked:border-blue-500 peer-checked:bg-blue-500 transition-all duration-200 group-hover:border-gray-400"
+              >
+                <div
+                  class="w-full h-full rounded-full scale-0 peer-checked:scale-100 transition-transform duration-200 bg-white"
+                ></div>
               </div>
               <span class="text-sm text-gray-700 dark:text-gray-300">{{ formRadioActive }}</span>
             </label>
             <label class="relative flex items-center gap-3 cursor-pointer group">
               <input type="radio" v-model="form.status" value="inactive" class="peer sr-only" />
-              <div class="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 peer-checked:border-gray-500 peer-checked:bg-gray-500 transition-all duration-200 group-hover:border-gray-400">
-                <div class="w-full h-full rounded-full scale-0 peer-checked:scale-100 transition-transform duration-200 bg-white"></div>
+              <div
+                class="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 peer-checked:border-gray-500 peer-checked:bg-gray-500 transition-all duration-200 group-hover:border-gray-400"
+              >
+                <div
+                  class="w-full h-full rounded-full scale-0 peer-checked:scale-100 transition-transform duration-200 bg-white"
+                ></div>
               </div>
               <span class="text-sm text-gray-700 dark:text-gray-300">{{ formRadioInactive }}</span>
             </label>
           </div>
         </div>
       </div>
-      <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-end gap-3">
+
+      <div
+        class="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-end gap-3"
+      >
         <button
           @click="goBack"
           class="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 cursor-pointer"
@@ -229,7 +261,7 @@ function goBack() {
           :disabled="saving"
           class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {{ saving ? formSaving : (isEdit ? formUpdate : formCreate) }}
+          {{ saving ? formSaving : isEdit ? formUpdate : formCreate }}
         </button>
       </div>
     </div>

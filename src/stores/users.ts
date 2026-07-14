@@ -23,8 +23,8 @@ export const useUsersStore = defineStore('users', () => {
   const error = ref<string | null>(null)
 
   const totalUsers = computed(() => users.value.length)
-  const activeUsers = computed(() => users.value.filter(u => u.status === 'active').length)
-  const inactiveUsers = computed(() => users.value.filter(u => u.status === 'inactive').length)
+  const activeUsers = computed(() => users.value.filter((u) => u.status === 'active').length)
+  const inactiveUsers = computed(() => users.value.filter((u) => u.status === 'inactive').length)
 
   async function fetchAll() {
     loading.value = true
@@ -48,10 +48,12 @@ export const useUsersStore = defineStore('users', () => {
   }
 
   function getById(id: string): AdminUser | undefined {
-    return users.value.find(u => u.id === id)
+    return users.value.find((u) => u.id === id)
   }
 
-  async function create(payload: Omit<AdminUser, 'id' | 'createdAt'> & { password?: string }): Promise<AdminUser> {
+  async function create(
+    payload: Omit<AdminUser, 'id' | 'createdAt'> & { password?: string },
+  ): Promise<AdminUser> {
     const apiPayload: CreateUserPayload = {
       name: payload.name,
       email: payload.email,
@@ -61,7 +63,7 @@ export const useUsersStore = defineStore('users', () => {
     }
     const backend = await usersApi.create(apiPayload)
     const mapped = mapBackendUser(backend)
-    const existingIdx = users.value.findIndex(u => u.id === mapped.id)
+    const existingIdx = users.value.findIndex((u) => u.id === mapped.id)
     if (existingIdx === -1) {
       users.value.push(mapped)
     } else {
@@ -70,8 +72,11 @@ export const useUsersStore = defineStore('users', () => {
     return mapped
   }
 
-  async function update(id: string, updates: Partial<AdminUser> & { password?: string }): Promise<boolean> {
-    const index = users.value.findIndex(u => u.id === id)
+  async function update(
+    id: string,
+    updates: Partial<AdminUser> & { password?: string },
+  ): Promise<boolean> {
+    const index = users.value.findIndex((u) => u.id === id)
     if (index === -1) return false
 
     const apiPayload: UpdateUserPayload = {
@@ -89,7 +94,7 @@ export const useUsersStore = defineStore('users', () => {
   }
 
   async function remove(id: string): Promise<boolean> {
-    const index = users.value.findIndex(u => u.id === id)
+    const index = users.value.findIndex((u) => u.id === id)
     if (index === -1) return false
 
     await usersApi.delete(Number(id))
