@@ -22,12 +22,16 @@ export const authApi = {
   },
 
   async requestPasswordReset(payload: PasswordResetRequest): Promise<PasswordResetResponse> {
-    const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/forgot-password', payload)
+    const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/password/reset', payload)
+    return data
+  },
+
+  async resetPassword(payload: PasswordResetConfirm): Promise<PasswordResetResponse> {
+    const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/password/reset/confirm', payload)
     return data
   },
 
   async confirmPasswordReset(payload: PasswordResetConfirm): Promise<PasswordResetResponse> {
-    const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/reset-password', payload)
-    return data
+    return this.resetPassword(payload)
   },
 }
