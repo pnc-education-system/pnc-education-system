@@ -1,0 +1,48 @@
+<script setup lang="ts">
+import { FileSpreadsheet, CheckCircle } from 'lucide-vue-next'
+import { formatFileSize } from '@/composables/useFileUpload'
+
+defineOptions({ name: 'FilePreview' })
+
+const props = defineProps<{
+  file: File
+}>()
+
+const emit = defineEmits<{
+  remove: []
+}>()
+
+function getFormattedSize(): string {
+  return formatFileSize(props.file.size)
+}
+</script>
+
+<template>
+  <div class="flex flex-col items-center gap-3 py-8">
+    <div class="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+      <FileSpreadsheet class="w-7 h-7 text-green-600 dark:text-green-400" />
+    </div>
+    <div class="text-center">
+      <p class="text-sm font-medium text-[#111827] dark:text-white">{{ file.name }}</p>
+      <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-1">{{ getFormattedSize() }}</p>
+    </div>
+    <div class="flex items-center gap-1.5 mt-1">
+      <CheckCircle class="w-4 h-4 text-green-500" />
+      <span class="text-xs font-medium text-green-600 dark:text-green-400">File is ready to upload</span>
+    </div>
+    <div class="flex gap-3 mt-2">
+      <button
+        @click.stop="emit('remove')"
+        class="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors cursor-pointer"
+      >
+        Remove
+      </button>
+      <button
+        @click.stop
+        class="px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-colors cursor-pointer"
+      >
+        Upload File
+      </button>
+    </div>
+  </div>
+</template>
