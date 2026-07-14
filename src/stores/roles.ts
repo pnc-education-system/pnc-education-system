@@ -2,8 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { rolesApi } from '@/services/api'
 import type { Role, BackendRole, BackendPermission } from '@/types'
-
-/** Map a backend role to the frontend Role format */
 function mapBackendRole(backend: BackendRole): Role {
   return {
     id: String(backend.id),
@@ -23,7 +21,6 @@ export const useRolesStore = defineStore('roles', () => {
 
   const totalRoles = computed(() => roles.value.length)
 
-  /** Fetch roles from the backend API */
   async function fetchAll() {
     loading.value = true
     error.value = null
@@ -31,7 +28,6 @@ export const useRolesStore = defineStore('roles', () => {
       const data = await rolesApi.list()
       roles.value = data.map(mapBackendRole)
     } catch (err: any) {
-      // Non-admin users are expected to be forbidden from roles.manage
       const status = err?.response?.status
       if (status === 403) {
         roles.value = []
@@ -45,13 +41,10 @@ export const useRolesStore = defineStore('roles', () => {
       loading.value = false
     }
   }
-
-  /** Fetch available permissions from the backend API */
   async function fetchPermissions() {
     try {
       permissions.value = await rolesApi.permissions()
     } catch (err: any) {
-      // If forbidden, just treat as no permissions loaded.
       const status = err?.response?.status
       if (status === 403) {
         permissions.value = []
@@ -97,12 +90,9 @@ export const useRolesStore = defineStore('roles', () => {
   async function remove(id: string): Promise<boolean> {
     const index = roles.value.findIndex(r => r.id === id)
     if (index === -1) return false
-
-    // Always try the API first
     try {
       await rolesApi.delete(Number(id))
     } catch {
-      // fall through to local delete
     }
     roles.value.splice(index, 1)
     return true

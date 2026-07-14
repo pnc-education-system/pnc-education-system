@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { authApi } from '@/services/api'
 import type { User, LoginCredentials } from '@/types'
 
-/** Extract meaningful error text from an Axios error response */
 function getApiErrorMessage(err: unknown): string {
   if (err && typeof err === 'object' && 'response' in err) {
     const response = (err as { response: { data: { error?: { message?: string } } } }).response
@@ -30,12 +29,10 @@ function saveToStorage(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch {
-    // Storage full or unavailable — silently fail
   }
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  // Keep the existing login flow and storage keys.
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const refreshToken = ref<string | null>(localStorage.getItem('refresh_token'))
   const user = ref<User | null>(null)
@@ -89,11 +86,6 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = false
     }
   }
-
-  /**
-   * Demo login that works without a real backend.
-   * Populates the store with mock user data and permissions.
-   */
   const demoLogin = () => {
     const mockUser: User = {
       id: 1,
@@ -129,14 +121,8 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
-  /**
-   * Restore session from stored tokens and attempt to verify with the backend.
-   * Called once on app startup if a token exists.
-   */
   const initSession = async () => {
     if (!token.value) return
-
-    // If we already have cached user/permissions, try to verify in the background.
     const cachedUser = loadFromStorage<User | null>('auth_user', null)
     if (cachedUser) user.value = cachedUser
 

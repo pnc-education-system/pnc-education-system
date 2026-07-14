@@ -112,7 +112,6 @@ function goBack() {
 
 <template>
   <div class="max-w-3xl mx-auto">
-    <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
       <button
         @click="goBack"
@@ -131,13 +130,11 @@ function goBack() {
     </div>
 
     <div class="space-y-6">
-      <!-- Role Details -->
       <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50">
           <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Role Details</h2>
         </div>
         <div class="p-6 space-y-5">
-          <!-- Name -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Role Name <span class="text-red-400">*</span>
@@ -149,8 +146,6 @@ function goBack() {
               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
-
-          <!-- Description -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
             <textarea
@@ -162,8 +157,6 @@ function goBack() {
           </div>
         </div>
       </div>
-
-      <!-- Permissions -->
       <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
           <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Permissions</h2>
@@ -173,7 +166,6 @@ function goBack() {
         </div>
         <div class="p-6 space-y-4">
           <div v-for="group in permissionGroups" :key="group.group" class="border border-gray-100 dark:border-gray-700/50 rounded-xl overflow-hidden">
-            <!-- Group Header -->
             <button
               @click="selectAllInGroup(group)"
               class="w-full flex items-center justify-between px-5 py-3.5 bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-all duration-200 cursor-pointer text-left"
@@ -195,8 +187,6 @@ function goBack() {
               </div>
               <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">{{ group.permissions.filter(p => form.permissions.includes(p.key)).length }}/{{ group.permissions.length }}</span>
             </button>
-
-            <!-- Permissions in Group -->
             <div class="px-3 py-2">
               <label
                 v-for="perm in group.permissions"
@@ -215,8 +205,6 @@ function goBack() {
           </div>
         </div>
       </div>
-
-      <!-- Actions -->
       <div class="flex items-center justify-end gap-3">
         <button
           @click="goBack"

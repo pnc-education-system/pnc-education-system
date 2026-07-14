@@ -55,7 +55,6 @@ onUnmounted(() => {
 
 <template>
   <div ref="dropdownRef" class="relative" @keydown="handleEscape">
-    <!-- Globe Icon Button -->
     <button
       @click="toggleDropdown"
       class="relative w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
@@ -66,8 +65,6 @@ onUnmounted(() => {
     >
       <Globe :size="18" />
     </button>
-
-    <!-- Dropdown -->
     <transition
       enter-active-class="transition-all duration-200 ease-out"
       enter-from-class="opacity-0 scale-95 translate-y-[-4px]"

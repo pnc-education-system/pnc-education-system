@@ -40,7 +40,6 @@ function goToLogin() {
 
 <template>
   <div class="min-h-screen bg-white flex items-center justify-center p-6">
-    <!-- Language selector - top right -->
     <div class="absolute right-6 top-6">
       <button
         type="button"
@@ -56,8 +55,6 @@ function goToLogin() {
         </svg>
       </button>
     </div>
-
-    <!-- Card -->
     <div class="w-full max-w-[440px] rounded-3xl bg-white p-10 shadow-2xl ring-1 ring-slate-100">
       <div class="mb-8 text-center">
         <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/20">
@@ -71,23 +68,18 @@ function goToLogin() {
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
-        <!-- Success message -->
         <div v-if="successMessage" class="flex items-center gap-2.5 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700 border border-green-100">
           <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
           </svg>
           <span>{{ successMessage }}</span>
         </div>
-
-        <!-- Error message -->
         <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-100">
           <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
           </svg>
           <span>{{ errorMessage }}</span>
         </div>
-
-        <!-- Email -->
         <div>
           <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
           <div class="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
@@ -107,8 +99,6 @@ function goToLogin() {
             />
           </div>
         </div>
-
-        <!-- Submit -->
         <button
           type="submit"
           :disabled="isSubmitting"
@@ -121,8 +111,6 @@ function goToLogin() {
           </svg>
           {{ isSubmitting ? 'Sending...' : 'Send Reset Link' }}
         </button>
-
-        <!-- Back to login -->
         <div class="text-center">
           <button
             type="button"

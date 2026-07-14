@@ -68,15 +68,9 @@ onUnmounted(() => {
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-[#0B1120]">
-    <!-- Sidebar -->
     <AppSidebar v-if="!isLoginPage" />
-
-    <!-- Main Content Area -->
     <div :class="[isLoginPage ? '' : 'min-h-screen', 'flex flex-col']">
-      <!-- Header -->
       <AppHeader v-if="!isLoginPage" />
-
-      <!-- Main Content -->
       <main
         v-if="!isLoginPage"
         class="flex-1 bg-gray-50 lg:ml-[260px] dark:bg-[#0B1120]"
@@ -84,10 +78,7 @@ onUnmounted(() => {
         @click="closeSidebar"
       >
         <div class="p-4 sm:p-6 lg:p-8">
-          <!-- Skeleton while route is loading -->
           <PageSkeleton v-if="routeLoading" />
-
-          <!-- Page transition when route is ready -->
           <div v-else>
             <router-view v-slot="{ Component }">
               <Transition
@@ -105,14 +96,10 @@ onUnmounted(() => {
           </div>
         </div>
       </main>
-
-      <!-- Login page - full screen -->
       <main v-else class="flex-1">
         <router-view />
       </main>
     </div>
-
-    <!-- Global Toast Notifications (stacked) -->
     <Teleport to="body">
       <div
         id="toast-container"

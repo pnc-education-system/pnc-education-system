@@ -41,7 +41,6 @@ const onAdminClick = () => {
 </script>
 
 <template>
-  <!-- Backdrop overlay (mobile only) -->
   <transition
     enter-active-class="transition-opacity duration-300 ease-out"
     enter-from-class="opacity-0"
@@ -56,14 +55,11 @@ const onAdminClick = () => {
       @click="closeSidebar"
     ></div>
   </transition>
-
-  <!-- Sidebar -->
   <aside
     class="fixed left-0 top-0 bottom-0 w-[260px] bg-[#0F172A] z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-out -translate-x-full lg:translate-x-0"
     :class="{ 'translate-x-0': sidebarOpen }"
     style="border-radius: 0 20px 20px 0; box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);"
   >
-    <!-- Logo Section -->
     <div class="px-6 pt-7 pb-6 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div
@@ -88,8 +84,6 @@ const onAdminClick = () => {
         </div>
       </div>
     </div>
-
-    <!-- Close button (mobile only) -->
     <button
       class="absolute top-6 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors lg:hidden cursor-pointer"
       @click="closeSidebar"
@@ -99,10 +93,7 @@ const onAdminClick = () => {
         <path d="m6 6 12 12" />
       </svg>
     </button>
-
-    <!-- Navigation Links -->
     <nav class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
-      <!-- Dashboard nav item -->
       <button
         @click="navigate('/dashboard')"
         class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
@@ -119,7 +110,6 @@ const onAdminClick = () => {
         <span>Dashboard</span>
       </button>
 
-      <!-- Admin with dropdown -->
       <div class="relative">
         <button
           @click="onAdminClick"
@@ -148,7 +138,6 @@ const onAdminClick = () => {
           </svg>
         </button>
 
-        <!-- Dropdown sub-menu -->
         <transition
           enter-active-class="transition-all duration-200 ease-out"
           enter-from-class="opacity-0 -translate-y-1"
@@ -192,7 +181,6 @@ const onAdminClick = () => {
       </div>
     </nav>
 
-    <!-- Profile Card -->
     <div class="flex-shrink-0 px-3 pb-5 pt-3">
       <div
         class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-colors duration-200 cursor-pointer group"

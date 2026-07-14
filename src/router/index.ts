@@ -33,7 +33,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
 
-  // Admin routes
   {
     path: '/admin/users',
     name: 'AdminUsers',
@@ -72,7 +71,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'roles.manage' },
   },
 
-  // Regular routes
   {
     path: '/students',
     name: 'Students',
@@ -98,7 +96,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
-  // Default
   {
     path: '/',
     redirect: '/dashboard',
@@ -110,7 +107,6 @@ const router = createRouter({
   routes,
 })
 
-// Route guard - check authentication and permissions
 const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
 router.beforeEach((to) => {
   const authStore = useAuthStore()

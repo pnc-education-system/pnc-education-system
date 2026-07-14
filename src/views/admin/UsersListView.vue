@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUsersStore } from '@/stores/users'
 import { useRolesStore } from '@/stores/roles'
@@ -75,6 +75,11 @@ function navigateToEdit(id: string) {
   router.push(`/admin/users/${id}/edit`)
 }
 
+function canDeleteUser(userId: string): boolean {
+  if (authStore.user?.id && Number(userId) === authStore.user.id) return false
+  return true
+}
+
 function confirmDelete(id: string) {
   deleteConfirmId.value = id
 }
@@ -132,11 +137,64 @@ const roleMap = computed(() => {
   roles.value.forEach(r => { map[r.id] = r.name })
   return map
 })
+
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / pageSize.value)))
+
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredUsers.value.slice(start, end)
+})
+
+watch(filteredUsers, () => {
+  currentPage.value = 1
+})
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push(-1)
+
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    for (let i = start; i <= end; i++) pages.push(i)
+
+    if (current < total - 2) pages.push(-2)
+    pages.push(total)
+  }
+  return pages
+})
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
@@ -166,8 +224,6 @@ const roleMap = computed(() => {
         </button>
       </div>
     </div>
-
-    <!-- Filters -->
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -196,8 +252,6 @@ const roleMap = computed(() => {
         <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
       </select>
     </div>
-
-    <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5">
         <div class="flex items-center gap-3">
@@ -239,8 +293,6 @@ const roleMap = computed(() => {
         </div>
       </div>
     </div>
-
-    <!-- Users Table -->
     <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -264,7 +316,7 @@ const roleMap = computed(() => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-800/30">
-            <tr v-for="user in filteredUsers" :key="user.id" class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
+            <tr v-for="user in paginatedUsers" :key="user.id" class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
               <td class="px-6 py-4">
                 <input
                   type="checkbox"
@@ -323,7 +375,7 @@ const roleMap = computed(() => {
                     </svg>
                   </button>
                   <button
-                    v-if="canDelete"
+                    v-if="canDelete && canDeleteUser(user.id)"
                     @click="confirmDelete(user.id)"
                     class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10"
                     title="Delete user"
@@ -353,9 +405,49 @@ const roleMap = computed(() => {
           </tbody>
         </table>
       </div>
-    </div>
+      <div v-if="filteredUsers.length > 0" class="flex items-center justify-between px-6 py-3 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, filteredUsers.length) }} of {{ filteredUsers.length }}
+        </p>
+        <div class="flex items-center gap-1">
+          <button
+            :disabled="currentPage === 1"
+            @click="prevPage"
+            class="p-1.5 rounded-md transition-all duration-200 cursor-pointer"
+            :class="currentPage === 1 ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50'"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
 
-    <!-- Delete Confirmation Modal -->
+          <template v-for="page in visiblePages" :key="page">
+            <span v-if="page < 0" class="px-1 text-gray-400 dark:text-gray-500 text-xs select-none">…</span>
+            <button
+              v-else
+              @click="goToPage(page)"
+              class="min-w-[32px] px-2.5 py-1 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer"
+              :class="page === currentPage
+                ? 'text-white bg-blue-600 dark:bg-blue-500 cursor-default'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'"
+            >
+              {{ page }}
+            </button>
+          </template>
+
+          <button
+            :disabled="currentPage === totalPages"
+            @click="nextPage"
+            class="p-1.5 rounded-md transition-all duration-200 cursor-pointer"
+            :class="currentPage === totalPages ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50'"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
     <Teleport to="body">
       <Transition
         enter-active-class="transition-all duration-200 ease-out"

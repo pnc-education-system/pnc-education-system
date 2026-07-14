@@ -6,8 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { User } from '@/types'
-
-// Lucide Icons
 import {
   FileDown,
   UserCheck,
@@ -21,7 +19,6 @@ import {
   Clock,
 } from 'lucide-vue-next'
 
-// Chart.js
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -51,8 +48,6 @@ onMounted(() => {
     if (userData) user.value = JSON.parse(userData)
   }
 })
-
-// ──── Stat Cards (translation keys) ────
 interface StatCard {
   titleKey: string
   value: string
@@ -68,7 +63,6 @@ const statCards: StatCard[] = [
   { titleKey: 'dashboard.enroll_rate', value: '71%', subtitleKey: 'dashboard.enrolled_total', highlighted: true },
 ]
 
-// ──── Enrollment Flow (Chart.js Grouped Bar) ────
 const flowChartData = computed(() => ({
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   datasets: [
@@ -136,7 +130,6 @@ const flowChartOptions: ChartOptions<'bar'> = {
   },
 }
 
-// ──── Enrollment by Batch (Chart.js Bar) ────
 const batchChartData = computed(() => ({
   labels: ['2022', '2023', '2024', '2025', '2026'],
   datasets: [
@@ -191,7 +184,6 @@ const batchChartOptions: ChartOptions<'bar'> = {
   },
 }
 
-// ──── Enrollment Distribution (Doughnut Chart) ────
 const doughnutChartData = computed(() => ({
   labels: ['Computer Science', 'Info Technology', 'Business Admin', 'Engineering', 'Nursing'],
   datasets: [
@@ -233,8 +225,6 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
     },
   },
 }
-
-// ──── Recent Enrollment Requests ────
 const recentRequests = [
   { name: 'Sophia Martinez', id: 'STU-2024-0042', program: 'BS Computer Science', date: 'Dec 12, 2024', status: 'pending' as const },
   { name: 'James Chen', id: 'STU-2024-0041', program: 'BS Information Technology', date: 'Dec 11, 2024', status: 'approved' as const },
@@ -243,8 +233,6 @@ const recentRequests = [
   { name: 'Olivia Brown', id: 'STU-2024-0038', program: 'BS Nursing', date: 'Dec 8, 2024', status: 'rejected' as const },
   { name: 'Noah Garcia', id: 'STU-2024-0037', program: 'BS Information Systems', date: 'Dec 7, 2024', status: 'pending' as const },
 ]
-
-// ──── Quick Actions (translation keys) ────
 interface QuickAction {
   labelKey: string
   icon: string
@@ -275,7 +263,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
 
 <template>
   <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
-    <!-- Header -->
     <div class="flex items-start justify-between">
       <div>
         <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('dashboard.title') }}</h1>
@@ -288,8 +275,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         </span>
       </div>
     </div>
-
-    <!-- Row 1: Top Statistics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
       <div
         v-for="card in statCards"
@@ -316,10 +301,7 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         <p class="text-[13px] text-[#9CA3AF] dark:text-gray-500 mt-1">{{ t(card.subtitleKey) }}</p>
       </div>
     </div>
-
-    <!-- Row 2: Enrollment Flow + Quick Actions -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <!-- Enrollment Flow Chart -->
       <div
         class="lg:col-span-2 rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -340,8 +322,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
           <Bar :data="flowChartData" :options="flowChartOptions" />
         </div>
       </div>
-
-      <!-- Quick Actions -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -368,10 +348,7 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         </div>
       </div>
     </div>
-
-    <!-- Row 3: Enrollment by Batch (65%) + Doughnut Chart (35%) -->
     <div class="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-5">
-      <!-- Left: Bar Chart -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -392,8 +369,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
           <Bar :data="batchChartData" :options="batchChartOptions" />
         </div>
       </div>
-
-      <!-- Right: Doughnut Chart -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -412,8 +387,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         </div>
       </div>
     </div>
-
-    <!-- Row 4: Recent Activity Timeline -->
     <div
       class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
       style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -435,7 +408,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         <div class="absolute left-[19px] top-3 bottom-3 w-[2px] bg-[#E5E7EB] dark:bg-gray-700 rounded-full"></div>
 
         <div class="space-y-0">
-          <!-- Activity 1 -->
           <div class="relative flex gap-5 pb-7">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#EFF6FF] dark:bg-[#355C8C]/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -453,8 +425,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
               <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('recent_activity.students_added', { count: 487 }) }}</p>
             </div>
           </div>
-
-          <!-- Activity 2 -->
           <div class="relative flex gap-5 pb-7">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#F0FDF4] dark:bg-emerald-500/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -478,8 +448,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
               </div>
             </div>
           </div>
-
-          <!-- Activity 3 -->
           <div class="relative flex gap-5">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FFF7ED] dark:bg-amber-500/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -498,8 +466,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         </div>
       </div>
     </div>
-
-    <!-- Row 5: Recent Enrollment Requests -->
     <div
       class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800"
       style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"

@@ -3,7 +3,6 @@
 
 <template>
   <div class="space-y-6 animate-pulse">
-    <!-- Header skeleton -->
     <div class="flex items-center justify-between">
       <div class="space-y-3">
         <div class="h-6 w-64 bg-gray-200 rounded-lg dark:bg-gray-700"></div>
@@ -14,8 +13,6 @@
         <div class="w-8 h-8 rounded-full bg-gray-200"></div>
       </div>
     </div>
-
-    <!-- Stats cards skeleton -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <div v-for="i in 4" :key="i" class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
         <div class="flex items-start gap-4">
@@ -28,8 +25,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Charts section skeleton -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div class="xl:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
         <div class="flex items-center justify-between mb-6">
@@ -50,8 +45,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Bottom section skeleton -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div class="xl:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
         <div class="flex items-center justify-between mb-6">

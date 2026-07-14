@@ -18,7 +18,6 @@ export interface AuthResponse {
   user: User
 }
 
-/** Extended user record for the admin management UI */
 export interface AdminUser {
   id: string
   email: string
@@ -30,8 +29,6 @@ export interface AdminUser {
   lastLogin?: string
   avatar?: string
 }
-
-/** A role that bundles a set of permissions */
 export interface Role {
   id: string
   name: string
@@ -41,15 +38,11 @@ export interface Role {
   createdAt: string
 }
 
-/** A permission grouped under a category for the UI picker */
 export interface PermissionGroup {
   group: string
   permissions: { key: string; label: string }[]
 }
 
-// ──────────────────────────────────────────────
-// Backend API response types
-// ──────────────────────────────────────────────
 
 export interface ApiResponse<T> {
   status: 'success' | 'error'
@@ -57,8 +50,6 @@ export interface ApiResponse<T> {
   data?: T
   errors?: Record<string, string[]>
 }
-
-/** User as returned by the backend UserController */
 export interface BackendUser {
   id: number
   role_id: number | null
@@ -70,8 +61,6 @@ export interface BackendUser {
   updated_at: string
   role?: BackendRole | null
 }
-
-/** Role as returned by the backend RoleController */
 export interface BackendRole {
   id: number
   name: string
@@ -83,7 +72,6 @@ export interface BackendRole {
   users_count?: number
 }
 
-/** Permission as returned by the backend Permission model */
 export interface BackendPermission {
   id: number
   name: string
@@ -112,7 +100,6 @@ export interface PasswordResetResponse {
 
 export type ProfileResponse = AuthResponse
 
-/** Paginated response from Laravel */
 export interface PaginatedData<T> {
   data: T[]
   current_page: number
@@ -120,8 +107,6 @@ export interface PaginatedData<T> {
   per_page: number
   total: number
 }
-
-/** All available permissions grouped by category (matches backend) */
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: 'Administration',

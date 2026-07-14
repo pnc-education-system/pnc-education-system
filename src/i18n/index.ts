@@ -116,7 +116,6 @@ function getSavedLocale(): Locale {
     const saved = localStorage.getItem('locale')
     if (saved === 'en' || saved === 'kh') return saved
   } catch {
-    // localStorage unavailable
   }
   return 'en'
 }
@@ -133,6 +132,5 @@ export function setLocale(locale: Locale): void {
   try {
     localStorage.setItem('locale', locale)
   } catch {
-    // localStorage unavailable
   }
 }
