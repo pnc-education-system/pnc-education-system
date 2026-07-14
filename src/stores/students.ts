@@ -9,7 +9,7 @@ export interface Student {
   program: string
   date: string
   initials: string
-  status: 'active' | 'pending' | 'completed'
+  status: 'enrolled' | 'pending' | 'completed' | 'rejected'
 }
 
 export const useStudentsStore = defineStore('students', () => {
@@ -21,7 +21,7 @@ export const useStudentsStore = defineStore('students', () => {
       initials: 'CC',
       program: 'Web Development',
       date: '2026-07-13',
-      status: 'active',
+      status: 'enrolled',
     },
     {
       id: 'STU-2026-01',
@@ -30,7 +30,7 @@ export const useStudentsStore = defineStore('students', () => {
       initials: 'BS',
       program: 'Information Technology',
       date: '2026-07-13',
-      status: 'active',
+      status: 'enrolled',
     },
     {
       id: 'STU-2026-03',
@@ -57,12 +57,21 @@ export const useStudentsStore = defineStore('students', () => {
       initials: 'VP',
       program: 'Graphic Design',
       date: '2026-07-10',
-      status: 'active',
+      status: 'enrolled',
+    },
+    {
+      id: 'STU-2026-06',
+      name: 'Bopha Lim',
+      email: 'bopha.l@gmail.com',
+      initials: 'BL',
+      program: 'Digital Marketing',
+      date: '2026-07-09',
+      status: 'rejected',
     },
   ])
 
   const total = computed(() => students.value.length)
-  const active = computed(() => students.value.filter((s) => s.status === 'active').length)
+  const enrolled = computed(() => students.value.filter((s) => s.status === 'enrolled').length)
 
   function getById(id: string) {
     return students.value.find((s) => s.id === id)
@@ -120,7 +129,7 @@ export const useStudentsStore = defineStore('students', () => {
   return {
     students,
     total,
-    active,
+    enrolled,
     getById,
     create,
     update,

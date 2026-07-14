@@ -14,6 +14,7 @@ import {
   FileDown,
   UserCheck,
   FileText,
+  FilePenLine,
   ChevronRight,
   ChevronLeft,
   Plus,
@@ -24,7 +25,6 @@ import {
   Clock,
   Search,
   RefreshCw,
-  Pencil,
   Trash2,
   X,
   SlidersHorizontal,
@@ -72,18 +72,20 @@ interface StatCard {
 }
 
 const statCards = computed<StatCard[]>(() => {
-  const all = enrollments.value
+  const all = enrollments.value as Array<{ initials: string; date: string; status: 'enrolled' | 'pending' | 'completed' | 'rejected' }>
   const total = all.length
-  const active = all.filter((e) => e.status === 'active').length
+  const enrolled = all.filter((e) => e.status === 'enrolled').length
   const pending = all.filter((e) => e.status === 'pending').length
   const completed = all.filter((e) => e.status === 'completed').length
-  const rate = total > 0 ? Math.round((active / total) * 100) : 0
+  const rejected = all.filter((e) => e.status === 'rejected').length
+  const rate = total > 0 ? Math.round((enrolled / total) * 100) : 0
 
   return [
     { titleKey: 'dashboard.total', value: String(total), subtitleKey: 'dashboard.all_intakes' },
     { titleKey: 'dashboard.pending', value: String(pending), subtitleKey: 'dashboard.awaiting_review', filter: 'pending' },
-    { titleKey: 'dashboard.enrolled', value: String(active), subtitleKey: 'dashboard.active_students', filter: 'active' },
-    { titleKey: 'dashboard.rejected', value: String(completed), subtitleKey: 'dashboard.not_admitted', filter: 'completed' },
+    { titleKey: 'dashboard.enrolled', value: String(enrolled), subtitleKey: 'dashboard.active_students', filter: 'enrolled' },
+    { titleKey: 'dashboard.completed', value: String(completed), subtitleKey: 'dashboard.finished', filter: 'completed' },
+    { titleKey: 'dashboard.rejected', value: String(rejected), subtitleKey: 'dashboard.rejected_students', filter: 'rejected' },
     {
       titleKey: 'dashboard.enroll_rate',
       value: `${rate}%`,
@@ -273,14 +275,15 @@ interface Enrollment {
   id: string
   program: string
   date: string
-  status: 'active' | 'pending' | 'completed'
+  status: 'enrolled' | 'pending' | 'completed' | 'rejected'
 }
 
 const enrollments = computed(() => useStudentsStore().students)
-const enrollmentStatusStyles: Record<string, { bg: string; text: string; dot: string }> = {
-  active: { bg: '#F0FDF4', text: '#16A34A', dot: '#22C55E' },
-  pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316' },
-  completed: { bg: '#EFF6FF', text: '#355C8C', dot: '#60A5FA' },
+const enrollmentStatusStyles: Record<string, { bg: string; text: string; dot: string; border: string }> = {
+  enrolled: { bg: '#F3F4F6', text: '#374151', dot: '#6B7280', border: '#E5E7EB' },
+  pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316', border: '#FED7AA' },
+  completed: { bg: '#EFF6FF', text: '#1E40AF', dot: '#3B82F6', border: '#BFDBFE' },
+  rejected: { bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444', border: '#FECACA' },
 }
 
 const searchQuery = ref('')
@@ -289,11 +292,11 @@ const programFilter = ref('all')
 const currentPage = ref(1)
 const pageSize = 5
 
-const uniquePrograms = computed(() => Array.from(new Set(enrollments.value.map((e) => e.program))))
+const uniquePrograms = computed(() => Array.from(new Set((enrollments.value as Array<{ program: string; initials: string; date: string }>).map((e) => e.program))))
 
 const filteredEnrollments = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
-  return enrollments.value.filter((e) => {
+  return (enrollments.value as Array<{ name: string; id: string; email: string; status: 'enrolled' | 'pending' | 'completed' | 'rejected'; program: string; initials: string; date: string }>).filter((e) => {
     const matchesSearch =
       !q ||
       e.name.toLowerCase().includes(q) ||
@@ -356,7 +359,7 @@ function deleteStudent(enrollment: Enrollment) {
   const confirmed = window.confirm(`Delete ${enrollment.name}? This cannot be undone.`)
   if (!confirmed) return
 
-  const index = enrollments.value.findIndex((e) => e.id === enrollment.id)
+  const index = (enrollments.value as Array<{ id: string }>).findIndex((e) => e.id === enrollment.id)
   if (index === -1) return
 
   enrollments.value.splice(index, 1)
@@ -732,9 +735,10 @@ function deleteStudent(enrollment: Enrollment) {
               class="appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-[#F8FAFC] dark:bg-white/[0.04] text-[#374151] dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#355C8C]/40 focus:border-[#355C8C] cursor-pointer"
             >
               <option value="all">All Statuses</option>
-              <option value="active">Active</option>
+              <option value="enrolled">Enrolled</option>
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>
+              <option value="rejected">Rejected</option>
             </select>
             <SlidersHorizontal
               :size="14"
@@ -790,14 +794,17 @@ function deleteStudent(enrollment: Enrollment) {
                 }}</span>
               </div>
               <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border"
                 :style="{
                   backgroundColor:
                     enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.bg || '#9CA3AF',
+                      ?.bg || '#F3F4F6',
                   color:
                     enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
                       ?.text || '#374151',
+                  borderColor:
+                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
+                      ?.border || '#E5E7EB',
                 }"
               >
                 <span
@@ -806,7 +813,7 @@ function deleteStudent(enrollment: Enrollment) {
                     backgroundColor:
                       enrollmentStatusStyles[
                         enrollment.status as keyof typeof enrollmentStatusStyles
-                      ]?.dot || '#9CA3AF',
+                      ]?.dot || '#6B7280',
                   }"
                 ></span>
                 {{ enrollment.status }}
@@ -821,7 +828,7 @@ function deleteStudent(enrollment: Enrollment) {
                 @click="editStudent(enrollment)"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium bg-[#F8FAFC] dark:bg-white/[0.06] border border-[#E5E7EB] dark:border-gray-700 text-[#374151] dark:text-gray-300 hover:bg-[#EFF6FF] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
               >
-                <Pencil :size="12" /> Edit
+                <FilePenLine :size="12" /> Edit
               </button>
               <button
                 @click="deleteStudent(enrollment)"
@@ -856,14 +863,17 @@ function deleteStudent(enrollment: Enrollment) {
             <div class="text-sm text-[#6B7280] dark:text-gray-400">{{ enrollment.date }}</div>
             <div>
               <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border"
                 :style="{
                   backgroundColor:
                     enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.bg || '#9CA3AF',
+                      ?.bg || '#F3F4F6',
                   color:
                     enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
                       ?.text || '#374151',
+                  borderColor:
+                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
+                      ?.border || '#E5E7EB',
                 }"
               >
                 <span
@@ -872,7 +882,7 @@ function deleteStudent(enrollment: Enrollment) {
                     backgroundColor:
                       enrollmentStatusStyles[
                         enrollment.status as keyof typeof enrollmentStatusStyles
-                      ]?.dot || '#9CA3AF',
+                      ]?.dot || '#6B7280',
                   }"
                 ></span>
                 {{ enrollment.status }}
@@ -883,7 +893,7 @@ function deleteStudent(enrollment: Enrollment) {
                 @click="editStudent(enrollment)"
                 class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] dark:text-gray-400 hover:text-[#355C8C] dark:hover:text-blue-400 hover:bg-[#EFF6FF] dark:hover:bg-[#355C8C]/10 transition-colors cursor-pointer"
               >
-                <Pencil :size="14" />
+                <FilePenLine :size="14" />
               </button>
               <button
                 @click="deleteStudent(enrollment)"

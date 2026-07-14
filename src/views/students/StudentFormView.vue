@@ -40,7 +40,7 @@ const form = ref({
   email: editingId.value ? studentsStore.getById(editingId.value)?.email || '' : '',
   phone: editingId.value ? studentsStore.getById(editingId.value)?.phone || '' : '',
   program: editingId.value ? studentsStore.getById(editingId.value)?.program || '' : '',
-  status: (editingId.value ? studentsStore.getById(editingId.value)?.status || 'active' : 'active') as 'active' | 'pending' | 'completed',
+  status: (editingId.value ? studentsStore.getById(editingId.value)?.status || 'enrolled' : 'enrolled') as 'enrolled' | 'pending' | 'completed',
 })
 
 const isSaving = ref(false)
@@ -53,9 +53,9 @@ async function handleSubmit() {
 
   isSaving.value = true
   try {
-    const normalizedStatus = ['active', 'pending', 'completed'].includes(form.value.status)
-      ? (form.value.status as 'active' | 'pending' | 'completed')
-      : 'active'
+    const normalizedStatus = ['enrolled', 'pending', 'completed'].includes(form.value.status)
+      ? (form.value.status as 'enrolled' | 'pending' | 'completed')
+      : 'enrolled'
 
     if (isEditing.value && editingId.value) {
       studentsStore.update(editingId.value, {
@@ -188,9 +188,10 @@ function goBack() {
             v-model="form.status"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           >
-            <option value="active">Active</option>
+            <option value="enrolled">Enrolled</option>
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>
+            <option value="rejected">Rejected</option>
           </select>
         </div>
       </div>
