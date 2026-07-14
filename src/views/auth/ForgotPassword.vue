@@ -56,16 +56,12 @@ function goToLogin() {
 
     <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200">
       <div class="mb-8 text-center">
-        <div class="flex flex-col items-center gap-3 mb-6">
+        <div class="flex flex-col items-center gap-3 mb-4">
           <img
             src="@/assets/images/PN_logo_clear.png"
             alt="PNC Logo"
-            class="w-14 h-14 object-contain"
+            class="w-20 h-20 object-contain"
           />
-          <div>
-            <h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">PNC Education</h1>
-            <p class="text-xs text-slate-500 dark:text-gray-400 font-medium">System Management</p>
-          </div>
         </div>
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white">{{ forgotTitle }}</h2>
         <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">{{ forgotSubtitle }}</p>

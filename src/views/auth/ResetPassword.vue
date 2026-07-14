@@ -3,13 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/services/api'
 import type { PasswordResetConfirm } from '@/types'
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher.vue'
 
 const router = useRouter()
 const route = useRoute()
 
 const form = ref<PasswordResetConfirm>({
   email: '',
-  token: '',
+  reset_token: '',
   password: '',
   password_confirmation: '',
 })
@@ -22,7 +23,7 @@ const successMessage = ref('')
 
 onMounted(() => {
   form.value.email = (route.query.email as string) || ''
-  form.value.token = (route.query.token as string) || ''
+  form.value.reset_token = (route.query.reset_token as string) || (route.query.token as string) || ''
 })
 
 async function handleSubmit() {
@@ -31,7 +32,7 @@ async function handleSubmit() {
   successMessage.value = ''
 
   try {
-    const response = await authApi.confirmPasswordReset(form.value)
+    const response = await authApi.resetPassword(form.value)
     successMessage.value = response.message
     setTimeout(() => {
       router.push('/login')
@@ -52,32 +53,21 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white flex items-center justify-center p-6">
+  <div class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6 transition-colors duration-200">
     <div class="absolute right-6 top-6">
-      <button
-        type="button"
-        class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-md ring-1 ring-slate-200 transition hover:shadow-lg"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-        </svg>
-        EN
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
+      <LanguageSwitcher />
     </div>
-    <div class="w-full max-w-[440px] rounded-3xl bg-white p-10 shadow-2xl ring-1 ring-slate-100">
+    <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200">
       <div class="mb-8 text-center">
-        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/20">
-          <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="10" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
+        <div class="flex flex-col items-center gap-3 mb-4">
+          <img
+            src="@/assets/images/PN_logo_clear.png"
+            alt="PNC Logo"
+            class="w-20 h-20 object-contain"
+          />
         </div>
-        <h2 class="text-2xl font-bold text-slate-900">Reset password</h2>
-        <p class="mt-2 text-sm text-slate-500">Enter your new password below</p>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Reset password</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">Enter your new password below</p>
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
@@ -92,8 +82,9 @@ function goToLogin() {
             <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
           </svg>
           <span>{{ errorMessage }}</span>
+        </div>
         <input type="hidden" v-model="form.email" />
-        <input type="hidden" v-model="form.token" />
+        <input type="hidden" v-model="form.reset_token" />
 
         <div>
           <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700">New Password</label>
