@@ -33,6 +33,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/enrollment/history',
+    name: 'ImportHistory',
+    component: () => import('@/views/enrollments/ImportHistoryView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollment/views',
+    name: 'ImportViews',
+    component: () => import('@/views/enrollments/ImportViewsView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
     path: '/forbidden',
     name: 'Forbidden',
     component: () => import('@/views/ForbiddenView.vue'),

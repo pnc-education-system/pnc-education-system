@@ -1,13 +1,21 @@
 <script setup lang="ts">
 defineOptions({ name: 'EnrollmentPage' })
 
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { AlertCircle } from 'lucide-vue-next'
 
 import { useFileUpload, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_MB } from '@/composables/useFileUpload'
+import { importsApi } from '@/services/api/imports'
+import { useToast } from '@/composables/useToast'
 import ImportDropzone from '@/components/import/ImportDropzone.vue'
 import FilePreview from '@/components/import/FilePreview.vue'
 import ImportTips from '@/components/import/ImportTips.vue'
 import TemplateDownload from '@/components/import/TemplateDownload.vue'
+
+const router = useRouter()
+const { showErrorToast } = useToast()
+const isUploading = ref(false)
 
 const {
   isDragOver,
@@ -26,8 +34,24 @@ const {
   dropZoneClasses,
 } = useFileUpload()
 
-function onContinueToMapping(): void {
-  // TODO: Navigate to mapping view with the selected file
+async function onContinueToMapping(): Promise<void> {
+  if (!selectedFile.value) return
+  isUploading.value = true
+  try {
+    const preview = await importsApi.preview(selectedFile.value)
+    // Navigate to Import Views with the preview data
+    router.push({
+      path: '/enrollment/views',
+      query: { import_id: String(preview.import_id) },
+      state: { preview },
+    })
+  } catch (err: unknown) {
+    const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+      ?.response?.data?.error?.message ?? 'Failed to process file'
+    showErrorToast(msg, 'Upload Error')
+  } finally {
+    isUploading.value = false
+  }
 }
 </script>
 
@@ -72,6 +96,7 @@ function onContinueToMapping(): void {
         @remove="removeFile"
       />
 
+      <!-- Inline error -->
       <div
         v-if="uploadError && !selectedFile"
         class="mt-4 flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800"
@@ -82,7 +107,7 @@ function onContinueToMapping(): void {
         </div>
         <button
           @click="clearUploadError"
-          class="shrink-0 p-0.5 rounded text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
+          class="shrink-0 p-0.5 rounded text-red-400 hover:text-red-600 transition-colors cursor-pointer"
           aria-label="Dismiss error"
         >
           <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -91,27 +116,32 @@ function onContinueToMapping(): void {
         </button>
       </div>
 
+      <!-- Actions -->
       <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#E5E7EB] dark:border-gray-800">
         <button
           @click="removeFile"
-          class="px-5 py-2.5 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 cursor-pointer"
+          class="px-5 py-2.5 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-200 cursor-pointer"
         >
           Cancel
         </button>
         <button
-          :disabled="!canContinue"
+          :disabled="!canContinue || isUploading"
           @click="onContinueToMapping"
-          class="px-5 py-2.5 text-sm font-medium rounded-lg shadow-sm transition-all duration-200"
-          :class="canContinue
-            ? 'text-white bg-[#355C8C] dark:bg-blue-600 hover:bg-[#2A4A70] cursor-pointer'
-            : 'text-[#9CA3AF] dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'"
+          class="px-5 py-2.5 text-sm font-medium rounded-lg shadow-sm transition-all duration-200 inline-flex items-center gap-2"
+          :class="canContinue && !isUploading
+            ? 'text-white bg-[#355C8C] hover:bg-[#2A4A70] cursor-pointer'
+            : 'text-[#9CA3AF] bg-gray-100 dark:bg-gray-800 cursor-not-allowed'"
         >
-          Continue to Mapping
+          <svg v-if="isUploading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          {{ isUploading ? 'Processing...' : 'Continue to Mapping' }}
         </button>
       </div>
     </div>
 
-    <!-- Info cards row -->
+    <!-- Info cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <ImportTips />
       <TemplateDownload />

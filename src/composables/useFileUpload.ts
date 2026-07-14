@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { useToast } from '@/composables/useToast'
 
-export const ACCEPTED_TYPES = ['csv', 'xlsx'] as const
+export const ACCEPTED_TYPES = ['csv'] as const
 export const ACCEPTED_EXTENSIONS = ACCEPTED_TYPES.map((t) => `.${t}`).join(', ')
 export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024 // 25 MB
 export const MAX_FILE_SIZE_MB = 25

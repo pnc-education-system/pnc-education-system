@@ -152,7 +152,7 @@ const onAdminClick = () => {
             <button
               @click="navigate('/enrollment')"
               class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-              :class="route.path === '/enrollment'
+              :class="route.path === '/enrollment' && !route.path.startsWith('/enrollment/history')
                 ? 'bg-blue-500/10 text-blue-400'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
             >
@@ -160,6 +160,18 @@ const onAdminClick = () => {
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
               </svg>
               <span>Import Upload</span>
+            </button>
+            <button
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              @click="navigate('/enrollment/views')"
+              :class="route.path === '/enrollment/views'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+              </svg>
+              <span>Import Views</span>
             </button>
             <button
               @click="navigate('/enrollment/history')"

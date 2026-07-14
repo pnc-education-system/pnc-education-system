@@ -16,7 +16,6 @@ export interface ImportLog {
   imported_by: {
     id: number
     name: string
-    email: string
   } | null
   created_at: string
   updated_at: string
@@ -24,6 +23,30 @@ export interface ImportLog {
 
 export interface ImportLogDetail extends ImportLog {
   errors: ImportError[]
+}
+
+export interface ImportPreviewRow {
+  row: number
+  student_id_no: string | null
+  full_name: string | null
+  province: string | null
+  gender: string | null
+  dob: string | null
+  phone: string | null
+  email: string | null
+  high_school: string | null
+  validation: string // 'ok' or error message
+  status: string | null
+  errors?: { field: string; message: string }[]
+}
+
+export interface ImportPreview {
+  import_id: number
+  file_name: string
+  total_rows: number
+  valid_count: number
+  error_count: number
+  rows: ImportPreviewRow[]
 }
 
 export interface ImportsMeta {
@@ -34,10 +57,8 @@ export interface ImportsMeta {
 }
 
 export const importsApi = {
-  async list(page = 1, status = ''): Promise<{ data: ImportLog[]; meta: ImportsMeta }> {
-    const params: Record<string, string | number> = { page, per_page: 15 }
-    if (status) params.status = status
-    const { data } = await axiosInstance.get('/imports', { params })
+  async list(page = 1): Promise<{ data: ImportLog[]; meta: ImportsMeta }> {
+    const { data } = await axiosInstance.get('/imports', { params: { page, per_page: 15 } })
     return { data: data.data, meta: data.meta }
   },
 
@@ -46,20 +67,25 @@ export const importsApi = {
     return data.data as ImportLogDetail
   },
 
+  async preview(file: File): Promise<ImportPreview> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await axiosInstance.post('/imports/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data.data as ImportPreview
+  },
+
+  async commit(importId: number): Promise<ImportLog> {
+    const { data } = await axiosInstance.post(`/imports/${importId}/commit`)
+    return data.data as ImportLog
+  },
+
   async downloadErrors(id: number, fileName: string): Promise<void> {
-    const detail = await importsApi.get(id)
-    const errors = detail.errors
-
-    if (!errors || errors.length === 0) return
-
-    const rows = [
-      ['Row', 'Field', 'Error Message'],
-      ...errors.map(e => [String(e.row_number), e.field, e.error_message]),
-    ]
-
-    const csv = rows.map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
+    const response = await axiosInstance.get(`/imports/${id}/download-errors`, {
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(new Blob([response.data]))
     const a = document.createElement('a')
     a.href = url
     a.download = `errors_${fileName.replace(/\.[^.]+$/, '')}.csv`
