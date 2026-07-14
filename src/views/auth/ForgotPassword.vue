@@ -49,12 +49,11 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6 transition-colors duration-200">
+  <div class="min-h-screen bg-white flex items-center justify-center p-6">
     <div class="absolute right-6 top-6">
       <LanguageSwitcher />
     </div>
-
-    <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200">
+    <div class="w-full max-w-[440px] rounded-3xl bg-white p-10 shadow-2xl ring-1 ring-slate-100">
       <div class="mb-8 text-center">
         <div class="flex flex-col items-center gap-3 mb-4">
           <img
@@ -68,20 +67,18 @@ function goToLogin() {
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
-        <div v-if="successMessage" class="flex items-center gap-2.5 rounded-xl bg-green-50 dark:bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400 border border-green-100 dark:border-green-500/20">
+        <div v-if="successMessage" class="flex items-center gap-2.5 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700 border border-green-100">
           <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
           </svg>
           <span>{{ successMessage }}</span>
         </div>
-
-        <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-500/20">
+        <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-100">
           <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
           </svg>
           <span>{{ errorMessage }}</span>
         </div>
-
         <div>
           <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ forgotEmailLabel }}</label>
           <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20">
@@ -101,7 +98,6 @@ function goToLogin() {
             />
           </div>
         </div>
-
         <button
           type="submit"
           :disabled="isSubmitting"
@@ -114,7 +110,6 @@ function goToLogin() {
           </svg>
           {{ isSubmitting ? forgotSending : forgotSendLink }}
         </button>
-
         <div class="text-center">
           <button
             type="button"

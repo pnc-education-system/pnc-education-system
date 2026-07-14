@@ -29,7 +29,6 @@ export interface AdminUser {
   lastLogin?: string
   avatar?: string
 }
-
 export interface Role {
   id: string
   name: string
@@ -50,7 +49,6 @@ export interface ApiResponse<T> {
   data?: T
   errors?: Record<string, string[]>
 }
-
 export interface BackendUser {
   id: number
   role_id: number | null
@@ -62,7 +60,6 @@ export interface BackendUser {
   updated_at: string
   role?: BackendRole | null
 }
-
 export interface BackendRole {
   id: number
   name: string
@@ -99,6 +96,8 @@ export interface PasswordResetResponse {
   message: string
 }
 
+export type ProfileResponse = AuthResponse
+
 export interface PaginatedData<T> {
   data: T[]
   current_page: number
@@ -106,7 +105,6 @@ export interface PaginatedData<T> {
   per_page: number
   total: number
 }
-
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: 'Administration',

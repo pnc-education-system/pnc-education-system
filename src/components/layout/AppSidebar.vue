@@ -55,8 +55,6 @@ const onAdminClick = () => {
       @click="closeSidebar"
     ></div>
   </transition>
-
-
   <aside
     class="fixed left-0 top-0 bottom-0 w-[260px] bg-[#0F172A] z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-out -translate-x-full lg:translate-x-0"
     :class="{ 'translate-x-0': sidebarOpen }"

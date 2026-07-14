@@ -123,7 +123,6 @@ function goBack() {
 
 <template>
   <div class="max-w-2xl mx-auto">
-
     <div class="flex items-center gap-4 mb-6">
       <button
         @click="goBack"
@@ -140,16 +139,12 @@ function goBack() {
         </p>
       </div>
     </div>
-
-
     <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
-
       <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50">
         <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{{ formSectionAccount }}</h2>
       </div>
 
       <div class="p-6 space-y-5">
-
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelName }} <span class="text-red-400">{{ formRequired }}</span>
@@ -161,8 +156,6 @@ function goBack() {
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
-
-
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelEmail }} <span class="text-red-400">{{ formRequired }}</span>
@@ -174,7 +167,6 @@ function goBack() {
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
-
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ isEdit ? formLabelNewPassword : formLabelPassword }}
@@ -191,7 +183,6 @@ function goBack() {
             {{ formPasswordHint }}
           </p>
         </div>
-
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ formLabelRole }} <span class="text-red-400">{{ formRequired }}</span>
@@ -206,7 +197,6 @@ function goBack() {
             </option>
           </select>
         </div>
-
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2.5">            {{ formLabelStatus }}</label>
           <div class="flex items-center gap-6">
@@ -227,7 +217,6 @@ function goBack() {
           </div>
         </div>
       </div>
-
       <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-end gap-3">
         <button
           @click="goBack"

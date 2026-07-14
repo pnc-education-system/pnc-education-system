@@ -11,7 +11,7 @@ const dropdownRef = ref<HTMLElement | null>(null)
 
 const activeLocale = computed<Locale>(() => locale.value as Locale)
 
-const options: { key: Locale; label: string }[] = [
+const options: { key: Locale; label: string; full: string }[] = [
   { key: 'en', label: 'EN', full: 'English' },
   { key: 'kh', label: 'ខ្មែរ', full: 'Khmer' },
 ]

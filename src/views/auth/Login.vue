@@ -146,7 +146,6 @@ function clearFieldError(field: 'email' | 'password') {
             </svg>
             <span>{{ errorMessage }}</span>
           </div>
-
           <div>
             <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ loginEmailLabel }}</label>
             <div
@@ -235,7 +234,6 @@ function clearFieldError(field: 'email' | 'password') {
               <router-link to="/forgot-password" class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors ml-auto">{{ loginForgotPassword }}</router-link>
             </div>
           </div>
-
           <button
             type="submit"
             :disabled="isSubmitting"
@@ -248,9 +246,8 @@ function clearFieldError(field: 'email' | 'password') {
             </svg>
             {{ isSubmitting ? loginSigningIn : loginSignIn }}
           </button>
-
-          <div class="flex items-start gap-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 px-4 py-3.5 border border-blue-100 dark:border-blue-500/20">
-            <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="flex items-start gap-2.5 rounded-xl bg-blue-50 px-4 py-3.5 border border-blue-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="m9 12 2 2 4-4" />
             </svg>

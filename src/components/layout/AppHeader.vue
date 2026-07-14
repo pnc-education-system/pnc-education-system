@@ -8,8 +8,6 @@ import LanguageSwitcher from '@/components/layout/LanguageSwitcher.vue'
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const searchQuery = ref('')
-const searchInputRef = ref<HTMLInputElement | null>(null)
 const showProfileMenu = ref(false)
 const profileMenuRef = ref<HTMLElement | null>(null)
 
@@ -44,21 +42,12 @@ const closeProfileMenu = (e: MouseEvent) => {
   }
 }
 
-const handleKeydown = (e: KeyboardEvent) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault()
-    searchInputRef.value?.focus()
-  }
-}
-
 onMounted(() => {
   document.addEventListener('click', closeProfileMenu)
-  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeProfileMenu)
-  document.removeEventListener('keydown', handleKeydown)
 })
 
 const userInitials = authStore.user?.name
@@ -97,45 +86,7 @@ const userInitials = authStore.user?.name
           <span class="text-sm sm:text-base font-semibold text-gray-900 tracking-tight dark:text-white">{{ pageTitle }}</span>
         </div>
       </div>
-
       <div class="flex items-center gap-1 sm:gap-2">
-        <div
-          class="hidden sm:flex items-center gap-3 bg-white/70 backdrop-blur-xl border border-gray-200/80 rounded-2xl px-4 lg:px-5 py-2.5 w-[240px] lg:w-[400px] transition-all duration-200 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white/90 focus-within:shadow-sm focus-within:shadow-blue-500/10 dark:bg-gray-800/70 dark:border-gray-700/80 dark:hover:border-gray-600 dark:focus-within:border-blue-400 dark:focus-within:bg-gray-800/90"
-        >
-          <svg
-            class="w-4 h-4 text-gray-400 flex-shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            ref="searchInputRef"
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search students, records, or tools"
-            class="w-full bg-transparent border-none outline-none text-sm text-gray-900 placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-500"
-          />
-          <div
-            class="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-200/60 text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex-shrink-0 dark:bg-gray-700/60 dark:text-gray-400"
-          >
-            <span>⌘</span><span>K</span>
-          </div>
-        </div>
-        <button
-          class="flex sm:hidden items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-all duration-200 cursor-pointer"
-          title="Search"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-        </button>
         <button
           class="relative w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
           :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
@@ -157,25 +108,6 @@ const userInitials = authStore.user?.name
           </svg>
         </button>
         <LanguageSwitcher />
-
-        <button
-          class="relative w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
-          title="Notifications"
-        >
-          <svg
-            class="w-[18px] h-[18px]"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-          </svg>
-          <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-gray-800"></span>
-        </button>
         <div class="relative" ref="profileMenuRef">
           <button
             class="flex items-center gap-2.5 pl-3 ml-1 border-l border-gray-200 cursor-pointer transition-all duration-200 hover:opacity-80 dark:border-gray-700"
@@ -205,7 +137,6 @@ const userInitials = authStore.user?.name
               <path d="m6 9 6 6 6-6" />
             </svg>
           </button>
-
           <transition
             enter-active-class="transition-all duration-200 ease-out"
             enter-from-class="opacity-0 scale-95 translate-y-[-4px]"
@@ -245,7 +176,7 @@ const userInitials = authStore.user?.name
                 </button>
                 <button
                   class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                  @click="showProfileMenu = false; router.push('/profile')"
+                  @click="showProfileMenu = false; router.push('/settings')"
                 >
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -268,8 +199,6 @@ const userInitials = authStore.user?.name
                   <span>Privacy</span>
                 </button>
               </div>
-
-  
               <div class="border-t border-gray-100 p-1.5 dark:border-gray-700/80">
                 <button
                   class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer dark:hover:bg-red-500/10"

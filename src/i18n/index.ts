@@ -6,8 +6,6 @@ const messages: Record<Locale, Record<string, string>> = {
   en: {
     'dashboard.title': 'Dashboard',
     'dashboard.welcome': "Welcome back, {name}. Here's your enrollment overview.",
-
-    // Dashboard labels
     'dashboard.total': 'TOTAL',
     'dashboard.pending': 'PENDING',
     'dashboard.enrolled': 'ENROLLED',
@@ -71,15 +69,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'program.doughnut_ba': 'Business Admin',
     'program.doughnut_eng': 'Engineering',
     'program.doughnut_nursing': 'Nursing',
-
-    // Roles / staff
     'admin': 'Admin',
     'staff': 'Staff',
     'pending': 'pending',
     'approved': 'approved',
     'rejected': 'rejected',
 
-    // Login page
     'login.title': 'Welcome back!',
     'login.subtitle': 'Sign in to continue to PNC Education System',
     'login.email_label': 'Email',
@@ -99,7 +94,6 @@ const messages: Record<Locale, Record<string, string>> = {
     'login.error.correct_fields': 'Please correct the fields below.',
     'login.error.generic': 'Login failed. Please try again later.',
 
-    // Forgot password page
     'forgot_password.title': 'Forgot password?',
     'forgot_password.subtitle': 'Enter your email to receive a password reset link',
     'forgot_password.email_label': 'Email',
@@ -108,8 +102,6 @@ const messages: Record<Locale, Record<string, string>> = {
     'forgot_password.sending': 'Sending...',
     'forgot_password.back_to_login': '← Back to Login',
     'forgot_password.error.generic': 'Failed to send reset link. Please try again.',
-
-    // Users management
     'users.title': 'Users',
     'users.subtitle': 'Manage all system users, their roles, and account status.',
     'users.new_user': 'New User',

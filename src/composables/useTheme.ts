@@ -25,7 +25,6 @@ function initTheme() {
 function toggleTheme() {
   applyTheme(!isDark.value)
 }
-
 if (typeof window !== 'undefined') {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     if (!localStorage.getItem('theme')) {
