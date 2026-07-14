@@ -29,6 +29,7 @@ export interface AdminUser {
   lastLogin?: string
   avatar?: string
 }
+
 export interface Role {
   id: string
   name: string
@@ -49,6 +50,7 @@ export interface ApiResponse<T> {
   data?: T
   errors?: Record<string, string[]>
 }
+
 export interface BackendUser {
   id: number
   role_id: number | null
@@ -60,6 +62,7 @@ export interface BackendUser {
   updated_at: string
   role?: BackendRole | null
 }
+
 export interface BackendRole {
   id: number
   name: string
@@ -86,7 +89,7 @@ export interface PasswordResetRequest {
 
 export interface PasswordResetConfirm {
   email: string
-  reset_token: string
+  token: string
   password: string
   password_confirmation: string
 }
@@ -96,8 +99,6 @@ export interface PasswordResetResponse {
   message: string
 }
 
-export type ProfileResponse = AuthResponse
-
 export interface PaginatedData<T> {
   data: T[]
   current_page: number
@@ -105,6 +106,58 @@ export interface PaginatedData<T> {
   per_page: number
   total: number
 }
+
+export type EnrollmentStatus = 'pending' | 'approved' | 'enrolled' | 'rejected'
+
+export interface BackendEnrollment {
+  id: number
+  student_name: string
+  student_id: string
+  program: string
+  batch: string
+  academic_year: string
+  status: EnrollmentStatus
+  submitted_at: string
+  processed_at: string | null
+  processed_by: string | null
+  notes: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Enrollment {
+  id: string
+  studentName: string
+  studentId: string
+  program: string
+  batch: string
+  academicYear: string
+  status: EnrollmentStatus
+  submittedAt: string
+  processedAt?: string
+  processedBy?: string
+  notes?: string
+}
+
+export interface CreateEnrollmentPayload {
+  student_name: string
+  student_id: string
+  program: string
+  batch: string
+  academic_year: string
+  notes?: string
+}
+
+export interface UpdateEnrollmentPayload {
+  student_name?: string
+  student_id?: string
+  program?: string
+  batch?: string
+  academic_year?: string
+  status?: EnrollmentStatus
+  notes?: string
+}
+
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: 'Administration',
@@ -125,11 +178,15 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     group: 'Enrollment',
-    permissions: [{ key: 'enrollment.manage', label: 'Manage Enrollment' }],
+    permissions: [
+      { key: 'enrollment.manage', label: 'Manage Enrollment' },
+    ],
   },
   {
     group: 'ID Cards',
-    permissions: [{ key: 'cards.generate', label: 'Generate ID Cards' }],
+    permissions: [
+      { key: 'cards.generate', label: 'Generate ID Cards' },
+    ],
   },
   {
     group: 'Student Records',
@@ -148,6 +205,8 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     group: 'Reports',
-    permissions: [{ key: 'reports.view', label: 'View Reports' }],
+    permissions: [
+      { key: 'reports.view', label: 'View Reports' },
+    ],
   },
 ]

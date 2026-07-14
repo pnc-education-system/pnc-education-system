@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/enrollment',
+    name: 'Enrollment',
+    component: () => import('@/views/EnrollmentPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/forbidden',
     name: 'Forbidden',
     component: () => import('@/views/ForbiddenView.vue'),
@@ -77,24 +83,16 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
-    path: '/students/new',
-    name: 'StudentCreate',
-    component: () => import('@/views/students/StudentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'students.edit' },
-  },
-  {
     path: '/users',
-    redirect: '/admin/users',
+    name: 'Users',
+    component: () => import('@/views/users/UsersView.vue'),
+    meta: { requiresAuth: true, permission: 'users.manage' },
   },
   {
     path: '/roles',
-    redirect: '/admin/roles',
-  },
-  {
-    path: '/me',
-    name: 'Profile',
-    component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true },
+    name: 'Roles',
+    component: () => import('@/views/roles/RolesView.vue'),
+    meta: { requiresAuth: true, permission: 'roles.manage' },
   },
   {
     path: '/settings',
@@ -104,10 +102,37 @@ const routes: RouteRecordRaw[] = [
   },
 
   {
+    path: '/enrollments',
+    name: 'Enrollments',
+    component: () => import('@/views/enrollments/EnrollmentsView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollments/new',
+    name: 'EnrollmentCreate',
+    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollments/:id/edit',
+    name: 'EnrollmentEdit',
+    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/profile/ProfileView.vue'),
+    meta: { requiresAuth: true },
+  },
+
+  {
     path: '/',
     redirect: '/dashboard',
   },
 ]
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -133,3 +158,4 @@ router.beforeEach((to) => {
 })
 
 export default router
+

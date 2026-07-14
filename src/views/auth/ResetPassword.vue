@@ -32,7 +32,7 @@ async function handleSubmit() {
   successMessage.value = ''
 
   try {
-    const response = await authApi.resetPassword(form.value)
+    const response = await authApi.confirmPasswordReset(form.value)
     successMessage.value = response.message
     setTimeout(() => {
       router.push('/login')
