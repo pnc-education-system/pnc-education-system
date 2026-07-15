@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { importsApi } from '@/services/api/imports'
 import type { ImportLog } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
 
+defineOptions({ name: 'ImportHistoryView' })
+
+const router = useRouter()
 const { showErrorToast, showSuccessToast } = useToast()
 
 const imports = ref<ImportLog[]>([])
 const isLoading = ref(false)
 const downloadingId = ref<number | null>(null)
-
 const currentPage = ref(1)
 const lastPage = ref(1)
 const total = ref(0)
@@ -43,194 +46,145 @@ async function downloadErrors(log: ImportLog) {
   }
 }
 
-function formatDateTime(iso: string): string {
+function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   })
 }
 
-const statusConfig = computed(() => ({
-  Completed: {
-    label: 'Completed',
-    class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
-    dot: 'bg-emerald-500',
-  },
-  Failed: {
-    label: 'Failed',
-    class: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400',
-    dot: 'bg-red-500',
-  },
-  Processing: {
-    label: 'Processing',
-    class: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400',
-    dot: 'bg-yellow-500',
-  },
-  Pending: {
-    label: 'Pending',
-    class: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-    dot: 'bg-gray-400',
-  },
-}))
+const statusConfig: Record<string, { label: string; dot: string; bg: string; text: string }> = {
+  Completed: { label: 'Completed', dot: 'bg-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
+  Failed:    { label: 'Failed',    dot: 'bg-red-500',     bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-700 dark:text-red-400' },
+  Processing:{ label: 'Processing',dot: 'bg-yellow-500',  bg: 'bg-yellow-50 dark:bg-yellow-500/10',   text: 'text-yellow-700 dark:text-yellow-400' },
+  Pending:   { label: 'Pending',   dot: 'bg-gray-400',    bg: 'bg-gray-100 dark:bg-gray-700',         text: 'text-gray-600 dark:text-gray-400' },
+}
 
-function getStatusConfig(status: ImportLog['status']) {
-  return statusConfig.value[status] ?? statusConfig.value.Pending
+function getStatus(status: string) {
+  return statusConfig[status] ?? statusConfig.Pending
 }
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
+
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-start justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Import History</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          View all past file imports and download error reports.
-        </p>
+        <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Import history</h1>
+        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">Past intake files &amp; outcomes</p>
       </div>
-      <div class="text-sm text-gray-500 dark:text-gray-400">
-        {{ total }} total import{{ total !== 1 ? 's' : '' }}
-      </div>
+      <button
+        @click="router.push('/enrollment')"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#0F172A] dark:bg-blue-600 rounded-lg hover:bg-[#1E293B] dark:hover:bg-blue-700 transition-all duration-200 cursor-pointer shadow-sm"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New import
+      </button>
     </div>
 
     <!-- Table card -->
-    <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
+    <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-[#E5E7EB] dark:border-gray-800 overflow-hidden">
+
       <!-- Loading -->
-      <div v-if="isLoading" class="flex items-center justify-center py-20">
-        <div class="flex flex-col items-center gap-3">
-          <svg class="w-8 h-8 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-          </svg>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Loading import history...</p>
-        </div>
+      <div v-if="isLoading" class="flex items-center justify-center py-16 gap-3">
+        <svg class="w-6 h-6 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm text-[#6B7280]">Loading...</span>
       </div>
 
       <!-- Table -->
       <div v-else class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30">
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">File Name</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Date & Time</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Uploaded By</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Records</th>
-              <th class="text-right px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+            <tr class="border-b border-[#E5E7EB] dark:border-gray-800">
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">File</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Batch</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Rows</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Valid</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Errors</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">By</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">When</th>
+              <th class="px-5 py-3"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50 dark:divide-gray-800/30">
-            <!-- Rows -->
+          <tbody class="divide-y divide-[#F3F4F6] dark:divide-gray-800">
             <tr
               v-for="log in imports"
               :key="log.id"
-              class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20"
+              class="hover:bg-[#F9FAFB] dark:hover:bg-white/[0.02] transition-colors"
             >
-              <!-- File name -->
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                  </div>
-                  <span class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[200px]">{{ log.file_name }}</span>
-                </div>
+              <!-- File -->
+              <td class="px-5 py-3.5 font-medium text-[#111827] dark:text-white">{{ log.file_name }}</td>
+
+              <!-- Batch (not stored — show —) -->
+              <td class="px-5 py-3.5 text-[#6B7280] dark:text-gray-400">—</td>
+
+              <!-- Rows -->
+              <td class="px-5 py-3.5 text-[#374151] dark:text-gray-300">{{ log.total_rows }}</td>
+
+              <!-- Valid -->
+              <td class="px-5 py-3.5 text-[#374151] dark:text-gray-300">
+                {{ log.status === 'Failed' ? '—' : log.success_count }}
               </td>
 
-              <!-- Date -->
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ formatDateTime(log.created_at) }}</span>
+              <!-- Errors -->
+              <td class="px-5 py-3.5" :class="log.error_count > 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-[#374151] dark:text-gray-300'">
+                {{ log.error_count > 0 ? log.error_count : '0' }}
               </td>
 
-              <!-- Uploaded by -->
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-700 dark:text-gray-300">
-                  {{ log.imported_by?.name ?? '—' }}
-                </span>
-              </td>
-
-              <!-- Status badge -->
-              <td class="px-6 py-4">
+              <!-- Status -->
+              <td class="px-5 py-3.5">
                 <span
-                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium"
-                  :class="getStatusConfig(log.status).class"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                  :class="[getStatus(log.status).bg, getStatus(log.status).text]"
                 >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getStatusConfig(log.status).dot"></span>
-                  {{ getStatusConfig(log.status).label }}
+                  <span class="w-1.5 h-1.5 rounded-full" :class="getStatus(log.status).dot"></span>
+                  {{ getStatus(log.status).label }}
                 </span>
               </td>
 
-              <!-- Counts -->
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3 text-xs font-medium">
-                  <span class="text-gray-500 dark:text-gray-400">
-                    Total: <span class="text-gray-700 dark:text-gray-300">{{ log.total_rows }}</span>
-                  </span>
-                  <span class="text-emerald-600 dark:text-emerald-400">
-                    ✓ {{ log.success_count }}
-                  </span>
-                  <span v-if="log.error_count > 0" class="text-red-600 dark:text-red-400">
-                    ✗ {{ log.error_count }}
-                  </span>
-                </div>
-              </td>
+              <!-- By -->
+              <td class="px-5 py-3.5 text-[#374151] dark:text-gray-300">{{ log.imported_by?.name ?? '—' }}</td>
 
-              <!-- Actions -->
-              <td class="px-6 py-4">
-                <div class="flex items-center justify-end">
-                  <button
-                    v-if="log.error_count > 0"
-                    @click="downloadErrors(log)"
-                    :disabled="downloadingId === log.id"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 cursor-pointer"
-                    :class="downloadingId === log.id
-                      ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 cursor-not-allowed'
-                      : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20'"
-                    :title="`Download error report (${log.error_count} error${log.error_count !== 1 ? 's' : ''})`"
-                  >
-                    <svg
-                      v-if="downloadingId !== log.id"
-                      class="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" x2="12" y1="15" y2="3"/>
-                    </svg>
-                    <svg v-else class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    {{ downloadingId === log.id ? 'Downloading...' : 'Download Errors' }}
-                  </button>
-                  <span v-else class="text-xs text-gray-400 dark:text-gray-600">—</span>
-                </div>
+              <!-- When -->
+              <td class="px-5 py-3.5 text-[#6B7280] dark:text-gray-400 whitespace-nowrap">{{ formatWhen(log.created_at) }}</td>
+
+              <!-- Download errors -->
+              <td class="px-5 py-3.5">
+                <button
+                  v-if="log.error_count > 0"
+                  @click="downloadErrors(log)"
+                  :disabled="downloadingId === log.id"
+                  class="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline cursor-pointer transition-opacity"
+                  :class="downloadingId === log.id ? 'opacity-50' : ''"
+                >
+                  <svg v-if="downloadingId !== log.id" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  <svg v-else class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  errors ↓
+                </button>
+                <span v-else class="text-[#9CA3AF] text-xs">—</span>
               </td>
             </tr>
 
             <!-- Empty state -->
-            <tr v-if="imports.length === 0">
-              <td colspan="6" class="px-6 py-20 text-center">
-                <div class="flex flex-col items-center gap-3">
-                  <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <svg class="w-7 h-7 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">No imports found</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Upload a file to see import history here.</p>
-                  </div>
-                </div>
+            <tr v-if="!isLoading && imports.length === 0">
+              <td colspan="9" class="px-5 py-16 text-center">
+                <p class="text-sm font-semibold text-[#374151] dark:text-gray-300">No imports found</p>
+                <p class="text-xs text-[#9CA3AF] mt-1">Upload a file to see import history here.</p>
               </td>
             </tr>
           </tbody>
@@ -240,34 +194,35 @@ function getStatusConfig(status: ImportLog['status']) {
       <!-- Pagination -->
       <div
         v-if="!isLoading && lastPage > 1"
-        class="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700/50"
+        class="flex items-center justify-between px-5 py-3.5 border-t border-[#E5E7EB] dark:border-gray-800"
       >
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Page {{ currentPage }} of {{ lastPage }}
-        </p>
-        <div class="flex items-center gap-2">
+        <p class="text-xs text-[#6B7280]">Page {{ currentPage }} of {{ lastPage }}</p>
+        <div class="flex gap-2">
           <button
             :disabled="currentPage === 1"
             @click="fetchHistory(currentPage - 1)"
-            class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-200"
-            :class="currentPage === 1
-              ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'"
-          >
-            Previous
-          </button>
+            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] dark:border-gray-700 transition-all"
+            :class="currentPage === 1 ? 'text-[#D1D5DB] cursor-not-allowed' : 'text-[#374151] dark:text-gray-300 hover:bg-[#F3F4F6] cursor-pointer'"
+          >Previous</button>
           <button
             :disabled="currentPage === lastPage"
             @click="fetchHistory(currentPage + 1)"
-            class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-200"
-            :class="currentPage === lastPage
-              ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'"
-          >
-            Next
-          </button>
+            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] dark:border-gray-700 transition-all"
+            :class="currentPage === lastPage ? 'text-[#D1D5DB] cursor-not-allowed' : 'text-[#374151] dark:text-gray-300 hover:bg-[#F3F4F6] cursor-pointer'"
+          >Next</button>
         </div>
       </div>
     </div>
+
+    <!-- Info note -->
+    <div class="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800">
+      <div class="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span class="text-white text-xs font-bold">!</span>
+      </div>
+      <p class="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+        Each import logs counts, author and timestamp. Re-downloadable error files keep an audit trail of every intake attempt.
+      </p>
+    </div>
+
   </div>
 </template>
