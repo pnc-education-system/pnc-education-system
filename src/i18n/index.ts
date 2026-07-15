@@ -19,6 +19,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'dashboard.not_admitted': 'not admitted',
     'dashboard.enrolled_total': 'enrolled / total',
     'dashboard.updated_ago': 'Updated 2m ago',
+    'dashboard.loading': 'Loading...',
 
     'enrollment_flow.title': 'Enrollment Flow',
     'enrollment_flow.subtitle': 'Monthly submitted vs enrolled students',
@@ -195,16 +196,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'students.empty_description': 'Student list and management features will be available here.',
 
     // Profile page
-    'profile.title': 'My Profile',
-    'profile.subtitle': 'Manage your account information',
-    'profile.member_since': 'Member since',
-    'profile.account_details': 'Account Details',
-    'profile.full_name': 'Full Name',
-    'profile.email_address': 'Email Address',
-    'profile.role': 'Role',
-    'profile.permissions': 'Permissions',
-    'profile.total': 'total',
-    'profile.no_permissions': 'No permissions assigned',
+    'profile.title': 'Profile',
+    'profile.subtitle': 'Update your account details.',
     'profile.label.name': 'Full Name',
     'profile.label.email': 'Email',
     'profile.placeholder.name': 'Enter your full name',
@@ -303,6 +296,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'dashboard.not_admitted': 'មិនត្រូវបានទទួល',
     'dashboard.enrolled_total': 'បានចុះឈ្មោះ / សរុប',
     'dashboard.updated_ago': 'បានធ្វើបច្ចុប្បន្នភាព ២ នាទីមុន',
+    'dashboard.loading': 'កំពុងផ្ទុក...',
 
     'enrollment_flow.title': 'លំហូរការចុះឈ្មោះ',
     'enrollment_flow.subtitle': 'ការដាក់ស្នើប្រចាំខែធៀបនឹងនិស្សិតដែលបានចុះឈ្មោះ',
@@ -479,16 +473,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'students.empty_description': 'បញ្ជីនិស្សិត និងមុខងារគ្រប់គ្រងនឹងមាននៅទីនេះ។',
 
     // Profile page
-    'profile.title': 'ប្រវត្តិរូបរបស់ខ្ញុំ',
-    'profile.subtitle': 'គ្រប់គ្រងព័ត៌មានគណនីរបស់អ្នក',
-    'profile.member_since': 'សមាជិកតាំងពីឆ្នាំ',
-    'profile.account_details': 'ព័ត៌មានគណនី',
-    'profile.full_name': 'ឈ្មោះពេញ',
-    'profile.email_address': 'អាសយដ្ឋានអ៊ីមែល',
-    'profile.role': 'តួនាទី',
-    'profile.permissions': 'សិទ្ធិ',
-    'profile.total': 'សរុប',
-    'profile.no_permissions': 'គ្មានសិទ្ធិត្រូវបានកំណត់',
+    'profile.title': 'ប្រវត្តិរូប',
+    'profile.subtitle': 'ធ្វើបច្ចុប្បន្នភាពព័ត៌មានគណនីរបស់អ្នក។',
     'profile.label.name': 'ឈ្មោះពេញ',
     'profile.label.email': 'អ៊ីមែល',
     'profile.placeholder.name': 'បញ្ចូលឈ្មោះពេញរបស់អ្នក',
@@ -576,6 +562,7 @@ function getSavedLocale(): Locale {
     const saved = localStorage.getItem('locale')
     if (saved === 'en' || saved === 'kh') return saved
   } catch {
+    // ignore
   }
   return 'en'
 }
@@ -592,6 +579,7 @@ export function setLocale(locale: Locale): void {
   try {
     localStorage.setItem('locale', locale)
   } catch {
+    // ignore
   }
 }
 

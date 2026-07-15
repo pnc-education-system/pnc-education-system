@@ -1,12 +1,13 @@
 <script setup lang="ts">
 defineOptions({ name: 'DashboardPage' })
 
-import { ref, shallowRef, computed, onMounted } from 'vue'
+import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { User } from '@/types'
 import type { ChartOptions } from 'chart.js'
+import { dashboardApi, type DashboardData } from '@/services/api/dashboard'
 import {
   FileDown,
   UserCheck,
@@ -28,6 +29,33 @@ const user = ref<User | null>(null)
 const chartReady = ref(false)
 const BarChart = shallowRef<any>(null)
 const DoughnutChart = shallowRef<any>(null)
+const dashboardData = ref<DashboardData | null>(null)
+const isLoading = ref(true)
+const pollingInterval = ref<number | null>(null)
+
+const fetchDashboardData = async () => {
+  try {
+    dashboardData.value = await dashboardApi.getDashboardData()
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const startPolling = () => {
+  fetchDashboardData()
+  pollingInterval.value = window.setInterval(() => {
+    fetchDashboardData()
+  }, 8000)
+}
+
+const stopPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
+  }
+}
 
 onMounted(() => {
   if (authStore.user) {
@@ -36,7 +64,7 @@ onMounted(() => {
     const userData = localStorage.getItem('user')
     if (userData) user.value = JSON.parse(userData)
   }
-  
+
   // Lazy-load Chart.js to keep Dashboard chunk small
   Promise.all([
     import('vue-chartjs'),
@@ -47,6 +75,12 @@ onMounted(() => {
     DoughnutChart.value = Doughnut
     chartReady.value = true
   })
+
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 interface StatCard {
   titleKey: string
@@ -55,13 +89,25 @@ interface StatCard {
   highlighted?: boolean
 }
 
-const statCards: StatCard[] = [
-  { titleKey: 'dashboard.total', value: '1,248', subtitleKey: 'dashboard.all_intakes' },
-  { titleKey: 'dashboard.pending', value: '312', subtitleKey: 'dashboard.awaiting_review' },
-  { titleKey: 'dashboard.enrolled', value: '874', subtitleKey: 'dashboard.active_students' },
-  { titleKey: 'dashboard.rejected', value: '62', subtitleKey: 'dashboard.not_admitted' },
-  { titleKey: 'dashboard.enroll_rate', value: '71%', subtitleKey: 'dashboard.enrolled_total', highlighted: true },
-]
+const statCards = computed<StatCard[]>(() => {
+  if (!dashboardData.value) {
+    return [
+      { titleKey: 'dashboard.total', value: '-', subtitleKey: 'dashboard.all_intakes' },
+      { titleKey: 'dashboard.pending', value: '-', subtitleKey: 'dashboard.awaiting_review' },
+      { titleKey: 'dashboard.enrolled', value: '-', subtitleKey: 'dashboard.active_students' },
+      { titleKey: 'dashboard.rejected', value: '-', subtitleKey: 'dashboard.not_admitted' },
+      { titleKey: 'dashboard.enroll_rate', value: '-', subtitleKey: 'dashboard.enrolled_total', highlighted: true },
+    ]
+  }
+
+  return [
+    { titleKey: 'dashboard.total', value: dashboardData.value.total.toLocaleString(), subtitleKey: 'dashboard.all_intakes' },
+    { titleKey: 'dashboard.pending', value: dashboardData.value.pending.toLocaleString(), subtitleKey: 'dashboard.awaiting_review' },
+    { titleKey: 'dashboard.enrolled', value: dashboardData.value.enrolled.toLocaleString(), subtitleKey: 'dashboard.active_students' },
+    { titleKey: 'dashboard.rejected', value: dashboardData.value.rejected.toLocaleString(), subtitleKey: 'dashboard.not_admitted' },
+    { titleKey: 'dashboard.enroll_rate', value: `${dashboardData.value.rate}%`, subtitleKey: 'dashboard.enrolled_total', highlighted: true },
+  ]
+})
 
 const flowChartData = computed(() => ({
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -130,25 +176,32 @@ const flowChartOptions: ChartOptions<'bar'> = {
   },
 }
 
-const batchChartData = computed(() => ({
-  labels: ['2022', '2023', '2024', '2025', '2026'],
-  datasets: [
-    {
-      label: t('enrollment_by_batch.label'),
-      data: [42, 68, 91, 115, 28],
-      backgroundColor: [
-        'rgba(53, 92, 140, 0.85)',
-        'rgba(53, 92, 140, 0.85)',
-        'rgba(53, 92, 140, 0.85)',
-        'rgba(53, 92, 140, 0.85)',
-        'rgba(53, 92, 140, 0.45)',
-      ],
-      borderRadius: 4,
-      barPercentage: 0.55,
-      categoryPercentage: 0.8,
-    },
-  ],
-}))
+const batchChartData = computed(() => {
+  if (!dashboardData.value || !dashboardData.value.by_batch) {
+    return {
+      labels: [],
+      datasets: [],
+    }
+  }
+
+  const batches = dashboardData.value.by_batch
+  const labels = batches.map(b => b.batch)
+  const data = batches.map(b => b.total)
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: t('enrollment_by_batch.label'),
+        data,
+        backgroundColor: 'rgba(53, 92, 140, 0.85)',
+        borderRadius: 4,
+        barPercentage: 0.55,
+        categoryPercentage: 0.8,
+      },
+    ],
+  }
+})
 
 const batchChartOptions: ChartOptions<'bar'> = {
   responsive: true,
@@ -184,23 +237,26 @@ const batchChartOptions: ChartOptions<'bar'> = {
   },
 }
 
-const doughnutChartData = computed(() => ({
-  labels: [
-    t('program.doughnut_cs'),
-    t('program.doughnut_it'),
-    t('program.doughnut_ba'),
-    t('program.doughnut_eng'),
-    t('program.doughnut_nursing'),
-  ],
-  datasets: [
-    {
-      data: [312, 245, 198, 156, 109],
-      backgroundColor: ['#355C8C', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
-      borderWidth: 0,
-      hoverOffset: 8,
-    },
-  ],
-}))
+const doughnutChartData = computed(() => {
+  if (!dashboardData.value) {
+    return {
+      labels: [],
+      datasets: [],
+    }
+  }
+
+  return {
+    labels: [t('dashboard.pending'), t('dashboard.enrolled'), t('dashboard.rejected')],
+    datasets: [
+      {
+        data: [dashboardData.value.pending, dashboardData.value.enrolled, dashboardData.value.rejected],
+        backgroundColor: ['#F97316', '#22C55E', '#EF4444'],
+        borderWidth: 0,
+        hoverOffset: 8,
+      },
+    ],
+  }
+})
 
 const doughnutChartOptions: ChartOptions<'doughnut'> = {
   responsive: true,
@@ -277,7 +333,7 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
       <div class="flex items-center gap-2">
         <span class="text-xs text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-3 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1.5">
           <Clock :size="12" class="text-[#9CA3AF]" />
-          <span class="font-medium">{{ t('dashboard.updated_ago') }}</span>
+          <span class="font-medium">{{ isLoading ? t('dashboard.loading') : t('dashboard.updated_ago') }}</span>
         </span>
       </div>
     </div>
