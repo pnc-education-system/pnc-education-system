@@ -83,18 +83,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
-    path: '/users',
-    name: 'Users',
-    component: () => import('@/views/users/UsersView.vue'),
-    meta: { requiresAuth: true, permission: 'users.manage' },
-  },
-  {
-    path: '/roles',
-    name: 'Roles',
-    component: () => import('@/views/roles/RolesView.vue'),
-    meta: { requiresAuth: true, permission: 'roles.manage' },
-  },
-  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/settings/SettingsView.vue'),
