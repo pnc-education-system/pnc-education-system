@@ -121,12 +121,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
     meta: { requiresAuth: true, permission: 'enrollment.manage' },
   },
-  {
-    path: '/enrollment/history',
-    name: 'ImportHistory',
-    component: () => import('@/views/enrollments/ImportHistoryView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
+  // {
+  //   path: '/enrollment/history',
+  //   name: 'ImportHistory',
+  //   component: () => import('@/views/enrollments/ImportHistoryView.vue'),
+  //   meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  // },
   {
     path: '/',
     redirect: '/dashboard',
