@@ -103,6 +103,8 @@ async function handleLogin() {
 
     router.push('/dashboard')
   } catch (err: unknown) {
+    // Log the full error details to help diagnose 401 issues
+    console.error('[Login] Request failed:', err)
     errorMessage.value = getFriendlyErrorMessage(err)
   } finally {
     isSubmitting.value = false

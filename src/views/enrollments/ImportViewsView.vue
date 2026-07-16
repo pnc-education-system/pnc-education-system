@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { importsApi } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
+import { useStudentsStore } from '@/stores/students'
 import type { ImportPreview, ImportValidationError } from '@/services/api/imports'
 import type { SelectionBatch } from '@/services/api/selectionBatches'
 
@@ -10,11 +11,32 @@ defineOptions({ name: 'ImportViewsView' })
 
 const router = useRouter()
 const { showSuccessToast, showErrorToast } = useToast()
+const studentsStore = useStudentsStore()
 
 const preview = ref<ImportPreview | null>(null)
 const selectedBatch = ref<SelectionBatch | null>(null)
 const isCommitting = ref(false)
 const isDownloading = ref(false)
+
+// Field name mapping for user-friendly display
+const fieldLabels: Record<string, string> = {
+  student_id_no: 'Student ID',
+  full_name: 'Full Name',
+  gender: 'Gender',
+  dob: 'Date of Birth',
+  phone: 'Phone Number',
+  email: 'Email',
+  province: 'Province',
+  high_school: 'High School',
+  selection_batch_id: 'Selection Batch',
+  enrollment_status: 'Enrollment Status',
+  intake_year: 'Intake Year',
+  system: 'System',
+}
+
+function friendlyField(field: string): string {
+  return fieldLabels[field] || field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 
 onMounted(() => {
   // Get preview data from sessionStorage (set by EnrollmentPage after upload)
@@ -52,21 +74,29 @@ const errorRows = computed(() => preview.value?.validation.invalidRows ?? [])
 async function onCommit() {
   if (!preview.value) return
   if (!selectedBatch.value) {
-    showErrorToast('No selection batch selected', 'Error')
+    showErrorToast('Please select a batch before importing. Go back and choose a selection batch for the students.', 'Batch Required')
     return
   }
 
   isCommitting.value = true
   try {
+    // Add enrollment_status to each row before committing
+    const rowsWithStatus = validRows.value.map(row => ({
+      ...row,
+      enrollment_status: row.enrollment_status || 'Pending'
+    }))
+    
     // Pass the valid rows and selected batch to the backend for import
-    await importsApi.commit(preview.value.import_log_id, validRows.value, selectedBatch.value.id)
+    await importsApi.commit(preview.value.import_log_id, rowsWithStatus, selectedBatch.value.id)
     showSuccessToast(
       `${validCount.value} students imported successfully to ${selectedBatch.value.name}`,
       'Import Complete'
     )
-    router.push('/enrollment/history')
+    // Clear students store to ensure fresh data is loaded on tracking page
+    studentsStore.students = []
+    router.push('/students/tracking')
   } catch {
-    showErrorToast('Failed to commit import', 'Error')
+    showErrorToast('The import could not be completed. Please check your data and try again.', 'Import Failed')
   } finally {
     isCommitting.value = false
   }
@@ -79,7 +109,7 @@ async function onDownloadErrors() {
   try {
     await importsApi.downloadErrors(preview.value.import_log_id, preview.value.file_name)
   } catch {
-    showErrorToast('Failed to download error report', 'Error')
+    showErrorToast('Could not download the error report. Please try again.', 'Download Failed')
   } finally {
     isDownloading.value = false
   }
@@ -99,7 +129,6 @@ function onCancel() {
           <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">
             Import preview
           </h1>
-          <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">Step 2 of 3 — review before commit</p>
         </div>
 
         <!-- Summary cards -->
@@ -210,7 +239,7 @@ function onCancel() {
                   <td class="px-4 py-3">
                     <ul class="space-y-0.5">
                       <li v-for="(msgs, field) in row.errors" :key="field" class="text-xs text-red-600 dark:text-red-400">
-                        <span class="font-medium">{{ field }}:</span>
+                        <span class="font-medium">{{ friendlyField(field) }}:</span>
                         <span v-for="(msg, mi) in msgs" :key="mi">{{ msg }} </span>
                       </li>
                     </ul>
@@ -233,7 +262,7 @@ function onCancel() {
               v-if="errorCount > 0"
               @click="onDownloadErrors"
               :disabled="isDownloading"
-              class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg hover:bg-gray-50 transition-all duration-200 cursor-pointer"
+              class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -245,7 +274,7 @@ function onCancel() {
 
             <button
               @click="onCancel"
-              class="px-4 py-2.5 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg hover:bg-gray-50 transition-all duration-200 cursor-pointer"
+              class="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 cursor-pointer"
             >
               Cancel
             </button>
@@ -256,7 +285,7 @@ function onCancel() {
               class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition-all duration-200"
               :class="
                 !isCommitting && validCount > 0
-                  ? 'text-white bg-[#0F172A] dark:bg-blue-600 hover:bg-[#1E293B] cursor-pointer'
+                  ? 'text-white bg-blue-600 hover:bg-blue-700 cursor-pointer'
                   : 'text-[#9CA3AF] bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
               "
             >
@@ -276,7 +305,6 @@ function onCancel() {
       <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 py-6">
         <div>
           <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Import Views</h1>
-          <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">Preview imported data before confirming enrollment records.</p>
         </div>
 
         <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-[#E5E7EB] dark:border-gray-800 p-16 flex flex-col items-center justify-center gap-4 text-center">
@@ -294,7 +322,7 @@ function onCancel() {
 
           <button
             @click="router.push('/enrollment')"
-            class="mt-2 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#355C8C] rounded-lg hover:bg-[#2A4A70] transition-colors cursor-pointer"
+            class="mt-2 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

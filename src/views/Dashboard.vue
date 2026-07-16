@@ -3,10 +3,10 @@ defineOptions({ name: 'DashboardPage' })
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useStudentsStore } from '@/stores/students'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
-import { useStudentsStore } from '@/stores/students'
 import type { User } from '@/types'
 
 // Lucide Icons
@@ -23,11 +23,8 @@ import {
   BarChart3,
   Activity,
   Clock,
-  Search,
-  RefreshCw,
-  Trash2,
-  X,
-  SlidersHorizontal,
+  GraduationCap,
+  XCircle,
 } from 'lucide-vue-next'
 
 // Chart.js
@@ -48,6 +45,7 @@ ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale,
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const studentsStore = useStudentsStore()
 const router = useRouter()
 const { showSuccessToast } = useToast()
 
@@ -60,64 +58,71 @@ onMounted(() => {
     const userData = localStorage.getItem('user')
     if (userData) user.value = JSON.parse(userData)
   }
+
+  // Fetch student stats for dashboard
+  studentsStore.fetchAll()
+  
+  // Lazy-load Chart.js to keep Dashboard chunk small
+  Promise.all([
+    import('vue-chartjs'),
+    import('chart.js'),
+  ]).then(([{ Bar, Doughnut }, { Chart, registerables }]) => {
+    Chart.register(...registerables)
+    BarChart.value = Bar
+    DoughnutChart.value = Doughnut
+    chartReady.value = true
+  })
 })
 
-// ──── Stat Cards (translation keys) ────
-interface StatCard {
-  titleKey: string
-  value: string
-  subtitleKey: string
-  highlighted?: boolean
-  filter?: string
-}
-
-const statCards = computed<StatCard[]>(() => {
-  const all = enrollments.value as Array<{
-    initials: string
-    date: string
-    status: 'enrolled' | 'pending' | 'completed' | 'rejected'
-  }>
-  const total = all.length
-  const enrolled = all.filter((e) => e.status === 'enrolled').length
-  const pending = all.filter((e) => e.status === 'pending').length
-  const completed = all.filter((e) => e.status === 'completed').length
-  const rejected = all.filter((e) => e.status === 'rejected').length
-  const rate = total > 0 ? Math.round((enrolled / total) * 100) : 0
-
-  return [
-    { titleKey: 'dashboard.total', value: String(total), subtitleKey: 'dashboard.all_intakes' },
-    {
-      titleKey: 'dashboard.pending',
-      value: String(pending),
-      subtitleKey: 'dashboard.awaiting_review',
-      filter: 'pending',
-    },
-    {
-      titleKey: 'dashboard.enrolled',
-      value: String(enrolled),
-      subtitleKey: 'dashboard.active_students',
-      filter: 'enrolled',
-    },
-    {
-      titleKey: 'dashboard.completed',
-      value: String(completed),
-      subtitleKey: 'dashboard.finished',
-      filter: 'completed',
-    },
-    {
-      titleKey: 'dashboard.rejected',
-      value: String(rejected),
-      subtitleKey: 'dashboard.rejected_students',
-      filter: 'rejected',
-    },
-    {
-      titleKey: 'dashboard.enroll_rate',
-      value: `${rate}%`,
-      subtitleKey: 'dashboard.enrolled_total',
-      highlighted: true,
-    },
-  ]
-})
+// ── Student Stats Cards (live from studentsStore) ──
+const statCards = computed(() => [
+  { 
+    titleKey: 'dashboard.total', 
+    value: String(studentsStore.totalStudents), 
+    subtitleKey: 'dashboard.all_students',
+    icon: Users,
+    color: 'text-gray-900 dark:text-white',
+    bg: 'bg-white dark:bg-[#131B2E] border-[#E5E7EB] dark:border-gray-800',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.pending_students', 
+    value: String(studentsStore.pendingCount), 
+    subtitleKey: 'dashboard.awaiting_review',
+    icon: Clock,
+    color: 'text-orange-600',
+    bg: 'bg-orange-50 dark:bg-orange-500/10 border-orange-100 dark:border-orange-800/50',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.approved_students', 
+    value: String(studentsStore.approvedCount), 
+    subtitleKey: 'dashboard.ready_to_enroll',
+    icon: UserCheck,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-800/50',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.enrolled_students', 
+    value: String(studentsStore.enrolledCount), 
+    subtitleKey: 'dashboard.active_students',
+    icon: GraduationCap,
+    color: 'text-blue-600',
+    bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-800/50',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.inactive_students', 
+    value: String(studentsStore.inactiveCount), 
+    subtitleKey: 'dashboard.not_active',
+    icon: XCircle,
+    color: 'text-gray-600',
+    bg: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+    highlighted: false,
+  },
+])
 
 // ──── Enrollment Flow (Chart.js Grouped Bar) ────
 const flowChartData = computed(() => ({
@@ -290,91 +295,6 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
     },
   },
 }
-
-// ──── Enrollment Tracking ────
-interface Enrollment {
-  name: string
-  email: string
-  initials: string
-  id: string
-  program: string
-  date: string
-  status: 'enrolled' | 'pending' | 'completed' | 'rejected'
-}
-
-const enrollments = computed(() => useStudentsStore().students)
-const enrollmentStatusStyles: Record<
-  string,
-  { bg: string; text: string; dot: string; border: string }
-> = {
-  enrolled: { bg: '#F3F4F6', text: '#374151', dot: '#6B7280', border: '#E5E7EB' },
-  pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316', border: '#FED7AA' },
-  completed: { bg: '#EFF6FF', text: '#1E40AF', dot: '#3B82F6', border: '#BFDBFE' },
-  rejected: { bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444', border: '#FECACA' },
-}
-
-const searchQuery = ref('')
-const statusFilter = ref('all')
-const programFilter = ref('all')
-const currentPage = ref(1)
-const pageSize = 5
-
-const uniquePrograms = computed(() =>
-  Array.from(
-    new Set(
-      (enrollments.value as Array<{ program: string; initials: string; date: string }>).map(
-        (e) => e.program,
-      ),
-    ),
-  ),
-)
-
-const filteredEnrollments = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
-  return (
-    enrollments.value as Array<{
-      name: string
-      id: string
-      email: string
-      status: 'enrolled' | 'pending' | 'completed' | 'rejected'
-      program: string
-      initials: string
-      date: string
-    }>
-  ).filter((e) => {
-    const matchesSearch =
-      !q ||
-      e.name.toLowerCase().includes(q) ||
-      e.id.toLowerCase().includes(q) ||
-      e.email.toLowerCase().includes(q)
-    const matchesStatus = statusFilter.value === 'all' || e.status === statusFilter.value
-    const matchesProgram = programFilter.value === 'all' || e.program === programFilter.value
-    return matchesSearch && matchesStatus && matchesProgram
-  })
-})
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredEnrollments.value.length / pageSize)),
-)
-
-watch(currentPage, () => {
-  if (currentPage.value > totalPages.value) currentPage.value = 1
-})
-
-const paginatedEnrollments = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredEnrollments.value.slice(start, start + pageSize)
-})
-
-const showingFrom = computed(() =>
-  filteredEnrollments.value.length === 0 ? 0 : (currentPage.value - 1) * pageSize + 1,
-)
-const showingTo = computed(() =>
-  Math.min(currentPage.value * pageSize, filteredEnrollments.value.length),
-)
-const totalItems = computed(() => filteredEnrollments.value.length)
-
-// ──── Quick Actions (translation keys) ────
 interface QuickAction {
   labelKey: string
   icon: string
@@ -390,30 +310,6 @@ const quickActions: QuickAction[] = [
 
 const navigateTo = (path: string) => {
   router.push(path)
-}
-
-const createNewStudent = () => {
-  router.push('/students/new')
-}
-
-function editStudent(enrollment: Enrollment) {
-  router.push(`/students/new?id=${enrollment.id}`)
-}
-
-function deleteStudent(enrollment: Enrollment) {
-  const confirmed = window.confirm(`Delete ${enrollment.name}? This cannot be undone.`)
-  if (!confirmed) return
-
-  const index = (enrollments.value as Array<{ id: string }>).findIndex(
-    (e) => e.id === enrollment.id,
-  )
-  if (index === -1) return
-
-  enrollments.value.splice(index, 1)
-  if (currentPage.value > Math.max(1, Math.ceil(enrollments.value.length / pageSize))) {
-    currentPage.value = Math.max(1, Math.ceil(enrollments.value.length / pageSize))
-  }
-  showSuccessToast('Student record deleted.', 'Deleted')
 }
 </script>
 <template>
@@ -452,27 +348,19 @@ function deleteStudent(enrollment: Enrollment) {
       <div
         v-for="card in statCards"
         :key="card.titleKey"
-        class="rounded-[14px] p-6 border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-        :class="
-          card.highlighted
-            ? 'bg-[#EFF6FF] border-[#355C8C] dark:bg-[#EFF6FF]/10 dark:border-[#355C8C]/50'
-            : 'bg-white dark:bg-[#131B2E] border-[#E5E7EB] dark:border-gray-800'
-        "
-        :style="{
-          boxShadow: card.highlighted
-            ? '0 1px 3px rgba(53, 92, 140, 0.08), 0 1px 2px rgba(53, 92, 140, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.04)',
-        }"
-        @click="card.filter && (statusFilter = card.filter)"
+        class="rounded-[14px] p-6 border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default"
+        :class="card.bg"
+        :style="{ boxShadow: card.boxShadow }"
       >
-        <p
-          class="text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase mb-2"
-        >
-          {{ t(card.titleKey) }}
-        </p>
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">
+            {{ t(card.titleKey) }}
+          </p>
+          <component :is="card.icon" :size="18" class="text-gray-400" />
+        </div>
         <p
           class="text-2xl font-bold tracking-tight"
-          :class="card.highlighted ? 'text-[#355C8C]' : 'text-[#111827] dark:text-white'"
+          :class="card.color"
         >
           {{ card.value }}
         </p>
@@ -721,263 +609,6 @@ function deleteStudent(enrollment: Enrollment) {
               </p>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Row 5: Enrollment Tracking -->
-    <div
-      class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800"
-      style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04)"
-    >
-      <div
-        class="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] dark:border-gray-800"
-      >
-        <div>
-          <h2 class="text-base font-semibold text-[#111827] dark:text-white">
-            Enrollment Tracking
-          </h2>
-          <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">
-            Track student enrollments and status changes.
-          </p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button
-            @click="createNewStudent"
-            class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-[#355C8C] hover:bg-[#2A4A70] rounded-lg shadow-sm shadow-blue-500/10 transition-colors cursor-pointer"
-          >
-            <Plus :size="14" />
-            Create New
-          </button>
-          <button
-            class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-white/[0.06] border border-[#E5E7EB] dark:border-gray-700 rounded-lg hover:bg-[#F8FAFC] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
-          >
-            <RefreshCw :size="14" />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      <div class="px-6 py-4 flex flex-col md:flex-row md:items-center gap-3">
-        <div class="relative flex-1">
-          <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search students, IDs, or emails..."
-            class="w-full pl-9 pr-9 py-2 text-sm rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-[#F8FAFC] dark:bg-white/[0.04] text-[#111827] dark:text-gray-200 placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#355C8C]/40 focus:border-[#355C8C]"
-          />
-          <button
-            v-if="searchQuery"
-            @click="searchQuery = ''"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] cursor-pointer"
-          >
-            <X :size="14" />
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="relative">
-            <select
-              v-model="statusFilter"
-              class="appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-[#F8FAFC] dark:bg-white/[0.04] text-[#374151] dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#355C8C]/40 focus:border-[#355C8C] cursor-pointer"
-            >
-              <option value="all">All Statuses</option>
-              <option value="enrolled">Enrolled</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <SlidersHorizontal
-              :size="14"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none"
-            />
-          </div>
-          <div class="relative">
-            <select
-              v-model="programFilter"
-              class="appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-[#F8FAFC] dark:bg-white/[0.04] text-[#374151] dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#355C8C]/40 focus:border-[#355C8C] cursor-pointer"
-            >
-              <option value="all">All Programs</option>
-              <option v-for="program in uniquePrograms" :key="program" :value="program">
-                {{ program }}
-              </option>
-            </select>
-            <SlidersHorizontal
-              :size="14"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="hidden md:grid grid-cols-6 gap-4 px-6 py-3 bg-[#F8FAFC] dark:bg-white/[0.02] text-[11px] font-semibold tracking-[0.05em] text-[#6B7280] dark:text-gray-400 uppercase"
-      >
-        <span>Student</span>
-        <span>Student ID</span>
-        <span>Program</span>
-        <span>Enrollment Date</span>
-        <span>Status</span>
-        <span>Actions</span>
-      </div>
-
-      <div class="divide-y divide-[#E5E7EB] dark:divide-gray-800">
-        <div
-          v-for="enrollment in paginatedEnrollments"
-          :key="enrollment.id"
-          class="px-6 py-4 hover:bg-[#F8FAFC] dark:hover:bg-white/[0.02] transition-colors duration-150"
-        >
-          <!-- Mobile -->
-          <div class="md:hidden space-y-2">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
-                >
-                  {{ enrollment.initials }}
-                </div>
-                <span class="text-sm font-medium text-[#111827] dark:text-white">{{
-                  enrollment.name
-                }}</span>
-              </div>
-              <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border"
-                :style="{
-                  backgroundColor:
-                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.bg || '#F3F4F6',
-                  color:
-                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.text || '#374151',
-                  borderColor:
-                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.border || '#E5E7EB',
-                }"
-              >
-                <span
-                  class="w-1.5 h-1.5 rounded-full"
-                  :style="{
-                    backgroundColor:
-                      enrollmentStatusStyles[
-                        enrollment.status as keyof typeof enrollmentStatusStyles
-                      ]?.dot || '#6B7280',
-                  }"
-                ></span>
-                {{ enrollment.status }}
-              </span>
-            </div>
-            <div class="text-xs text-[#9CA3AF] dark:text-gray-500 pl-11">
-              {{ enrollment.email }} · {{ enrollment.id }} · {{ enrollment.program }} ·
-              {{ enrollment.date }}
-            </div>
-            <div class="flex items-center gap-2 pl-11">
-              <button
-                @click="editStudent(enrollment)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium bg-[#F8FAFC] dark:bg-white/[0.06] border border-[#E5E7EB] dark:border-gray-700 text-[#374151] dark:text-gray-300 hover:bg-[#EFF6FF] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
-              >
-                <FilePenLine :size="12" /> Edit
-              </button>
-              <button
-                @click="deleteStudent(enrollment)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium bg-[#F8FAFC] dark:bg-white/[0.06] border border-[#E5E7EB] dark:border-gray-700 text-[#EF4444] hover:bg-red-50 transition-colors cursor-pointer"
-              >
-                <Trash2 :size="12" /> Delete
-              </button>
-            </div>
-          </div>
-
-          <!-- Desktop -->
-          <div class="hidden md:grid grid-cols-6 gap-4 items-center">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-sm flex-shrink-0"
-              >
-                {{ enrollment.initials }}
-              </div>
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-[#111827] dark:text-white truncate">
-                  {{ enrollment.name }}
-                </p>
-                <p class="text-xs text-[#9CA3AF] dark:text-gray-500 truncate">
-                  {{ enrollment.email }}
-                </p>
-              </div>
-            </div>
-            <div class="text-sm text-[#6B7280] dark:text-gray-400 font-mono">
-              {{ enrollment.id }}
-            </div>
-            <div class="text-sm text-[#6B7280] dark:text-gray-400">{{ enrollment.program }}</div>
-            <div class="text-sm text-[#6B7280] dark:text-gray-400">{{ enrollment.date }}</div>
-            <div>
-              <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border"
-                :style="{
-                  backgroundColor:
-                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.bg || '#F3F4F6',
-                  color:
-                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.text || '#374151',
-                  borderColor:
-                    enrollmentStatusStyles[enrollment.status as keyof typeof enrollmentStatusStyles]
-                      ?.border || '#E5E7EB',
-                }"
-              >
-                <span
-                  class="w-1.5 h-1.5 rounded-full"
-                  :style="{
-                    backgroundColor:
-                      enrollmentStatusStyles[
-                        enrollment.status as keyof typeof enrollmentStatusStyles
-                      ]?.dot || '#6B7280',
-                  }"
-                ></span>
-                {{ enrollment.status }}
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                @click="editStudent(enrollment)"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] dark:text-gray-400 hover:text-[#355C8C] dark:hover:text-blue-400 hover:bg-[#EFF6FF] dark:hover:bg-[#355C8C]/10 transition-colors cursor-pointer"
-              >
-                <FilePenLine :size="14" />
-              </button>
-              <button
-                @click="deleteStudent(enrollment)"
-                class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] dark:text-gray-400 hover:text-[#EF4444] hover:bg-red-50 transition-colors cursor-pointer"
-              >
-                <Trash2 :size="14" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="flex items-center justify-between px-6 py-3 border-t border-[#E5E7EB] dark:border-gray-800"
-      >
-        <span class="text-xs text-[#6B7280] dark:text-gray-400">
-          Showing {{ showingFrom }} to {{ showingTo }} of {{ totalItems }} results
-        </span>
-        <div class="flex items-center gap-1">
-          <button
-            @click="currentPage = Math.max(1, currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white hover:bg-[#F8FAFC] dark:hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            <ChevronLeft :size="14" />
-          </button>
-          <span
-            class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold text-white bg-[#355C8C]"
-            >{{ currentPage }}</span
-          >
-          <button
-            @click="currentPage = Math.min(totalPages, currentPage + 1)"
-            :disabled="currentPage === totalPages"
-            class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white hover:bg-[#F8FAFC] dark:hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            <ChevronRight :size="14" />
-          </button>
         </div>
       </div>
     </div>

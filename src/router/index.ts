@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { prefetchBatches } from '@/utils/batchesCache'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -91,7 +92,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/students',
     name: 'Students',
-    component: () => import('@/views/students/StudentsView.vue'),
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/tracking',
+    name: 'StudentTracking',
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
@@ -123,25 +130,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
-  {
-    path: '/enrollments',
-    name: 'Enrollments',
-    component: () => import('@/views/enrollments/EnrollmentsView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-  {
-    path: '/enrollments/new',
-    name: 'EnrollmentCreate',
-    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-  {
-    path: '/enrollments/:id/edit',
-    name: 'EnrollmentEdit',
-    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-
+ 
   {
     path: '/profile',
     name: 'Profile',
@@ -176,6 +165,11 @@ router.beforeEach((to) => {
   const requiredPermission = (to.meta as { permission?: string }).permission
   if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return { name: 'Forbidden' }
+  }
+
+  // Pre-fetch selection batches so the dropdown is ready instantly
+  if (to.name === 'Enrollment' || to.name === 'ImportViews') {
+    prefetchBatches()
   }
 })
 

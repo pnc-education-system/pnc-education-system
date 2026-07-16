@@ -37,6 +37,7 @@ export interface ImportPreviewRow {
   dob: string
   selection_batch_id: string
   intake_year: string
+  enrollment_status?: string
   province?: string
   phone?: string
   email?: string

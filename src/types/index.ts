@@ -158,6 +158,56 @@ export interface UpdateEnrollmentPayload {
   notes?: string
 }
 
+// ── Student Types ──
+export type StudentStatus = 'pending' | 'approved' | 'enrolled' | 'rejected' | 'inactive' | 'graduated' | 'dropped'
+
+export interface BackendStudent {
+  id: number
+  student_id_no: string
+  full_name: string
+  gender: string
+  dob: string | null
+  province?: string
+  phone?: string
+  email?: string
+  high_school?: string
+  selection_batch_id?: number
+  selection_batch?: {
+    id: number
+    name: string
+  }
+  selection_batch_name?: string
+  enrollment_status: string
+  status: string
+  photo_path?: string
+  intake_year?: number
+  created_by?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Student {
+  id: string
+  studentIdNo: string
+  fullName: string
+  gender: string
+  dob: string
+  province?: string
+  phone?: string
+  email?: string
+  highSchool?: string
+  program?: string
+  batch?: string
+  intakeYear?: string
+  selectionBatchId?: number
+  selectionBatchName?: string
+  status: StudentStatus
+  enrolledAt?: string
+  createdAt: string
+  updatedAt: string
+  importLogId?: number
+}
+
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: 'Administration',

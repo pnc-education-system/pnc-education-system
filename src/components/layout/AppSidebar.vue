@@ -10,18 +10,9 @@ const router = useRouter()
 const sidebarOpen = inject('sidebarOpen') as Ref<boolean>
 const closeSidebar = inject('closeSidebar') as () => void
 
+const studentsDropdown = ref(false)
 const enrollmentDropdown = ref(false)
 const adminDropdown = ref(false)
-
-const userInitials = computed(() => {
-  if (!authStore.user?.name) return 'SA'
-  return authStore.user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-})
 
 const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
@@ -30,14 +21,20 @@ const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
 const navigate = (path: string) => {
   router.push(path)
   closeSidebar()
+  studentsDropdown.value = false
   enrollmentDropdown.value = false
   adminDropdown.value = false
 }
 
 const isActive = (path: string) => route.path === path
 
+const isStudentsActive = computed(() => route.path.startsWith('/students'))
 const isEnrollmentActive = computed(() => route.path.startsWith('/enrollment'))
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
+
+const onStudentsClick = () => {
+  studentsDropdown.value = !studentsDropdown.value
+}
 
 const onEnrollmentClick = () => {
   enrollmentDropdown.value = !enrollmentDropdown.value
@@ -108,6 +105,64 @@ const onAdminClick = () => {
         </svg>
         <span>Dashboard</span>
       </button>
+
+      <!-- Students -->
+      <div class="relative">
+        <button
+          @click="onStudentsClick"
+          class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+          :class="isStudentsActive || studentsDropdown
+            ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+        >
+          <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span class="flex-1">Students</span>
+          <svg
+            class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+            :class="{ 'rotate-180': studentsDropdown }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        <transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="studentsDropdown"
+            class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
+          >
+            <button
+              @click="navigate('/students/tracking')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/students/tracking'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              <span>Tracking List</span>
+            </button>
+          </div>
+        </transition>
+      </div>
+
       <div class="relative" v-if="canManageEnrollments">
         <button
           @click="onEnrollmentClick"
@@ -259,35 +314,5 @@ const onAdminClick = () => {
         </transition>
       </div>
     </nav>
-    <div class="flex-shrink-0 px-3 pb-5 pt-3">
-      <div
-        class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-colors duration-200 cursor-pointer group"
-      >
-        <div
-          class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm"
-        >
-          <span class="text-xs font-bold text-white">{{ userInitials }}</span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-semibold text-slate-200 truncate leading-tight">
-            {{ authStore.user?.name || 'System Admin' }}
-          </p>
-          <p class="text-[11px] text-slate-500 font-medium mt-0.5">{{ authStore.user?.role || 'System Admin' }}</p>
-        </div>
-        <svg
-          class="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors duration-200 flex-shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="1" />
-          <circle cx="19" cy="12" r="1" />
-          <circle cx="5" cy="12" r="1" />
-        </svg>
-      </div>
-    </div>
   </aside>
 </template>

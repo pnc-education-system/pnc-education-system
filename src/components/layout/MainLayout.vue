@@ -14,11 +14,14 @@ const authStore = useAuthStore()
 
 onMounted(() => {
   initTheme()
-  if (authStore.token) {
-    authStore.initSession()
-  }
-  if (authStore.isAuthenticated && !authStore.user) {
-    authStore.fetchProfile()
+  // Skip auth validation on public pages — avoids stale-token 401s before login
+  if (!isLoginPage.value) {
+    if (authStore.token) {
+      authStore.initSession()
+    }
+    if (authStore.isAuthenticated && !authStore.user) {
+      authStore.fetchProfile()
+    }
   }
 })
 

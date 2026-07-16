@@ -1,147 +1,106 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { studentsApi } from '@/services/api'
+import type { Student, BackendStudent, StudentStatus } from '@/types'
 
-export interface Student {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  program: string
-  date: string
-  initials: string
-  status: 'enrolled' | 'pending' | 'completed' | 'rejected'
+/** Map a backend student to the frontend Student format */
+function mapBackendStudent(backend: BackendStudent): Student {
+  return {
+    id: String(backend.id),
+    studentIdNo: backend.student_id_no,
+    fullName: backend.full_name,
+    gender: backend.gender,
+    dob: backend.dob ?? '',
+    province: backend.province ?? undefined,
+    phone: backend.phone ?? undefined,
+    email: backend.email ?? undefined,
+    highSchool: backend.high_school ?? undefined,
+    program: undefined,
+    batch: undefined,
+    intakeYear: backend.intake_year ? String(backend.intake_year) : undefined,
+    selectionBatchId: backend.selection_batch_id ?? undefined,
+    selectionBatchName: backend.selection_batch_name ?? undefined,
+    status: ((backend.enrollment_status || backend.status || 'Pending') as string).toLowerCase() as StudentStatus,
+    enrolledAt: undefined,
+    createdAt: backend.created_at,
+    updatedAt: backend.updated_at,
+    importLogId: undefined,
+  }
 }
 
 export const useStudentsStore = defineStore('students', () => {
-  const students = ref<Student[]>([
-    {
-      id: 'STU-2026-02',
-      name: 'Chet Chanthy',
-      email: 'chet.ch@gmail.com',
-      initials: 'CC',
-      program: 'Web Development',
-      date: '2026-07-13',
-      status: 'enrolled',
-    },
-    {
-      id: 'STU-2026-01',
-      name: 'Buntit Satan',
-      email: 'buntit.s@gmail.com',
-      initials: 'BS',
-      program: 'Information Technology',
-      date: '2026-07-13',
-      status: 'enrolled',
-    },
-    {
-      id: 'STU-2026-03',
-      name: 'Lina Dara',
-      email: 'lina.d@gmail.com',
-      initials: 'LD',
-      program: 'Computer Science',
-      date: '2026-07-12',
-      status: 'pending',
-    },
-    {
-      id: 'STU-2026-04',
-      name: 'Srey Roth',
-      email: 'srey.roth@gmail.com',
-      initials: 'SR',
-      program: 'Business Administration',
-      date: '2026-07-11',
-      status: 'completed',
-    },
-    {
-      id: 'STU-2026-05',
-      name: 'Vuthy Pich',
-      email: 'vuthy.p@gmail.com',
-      initials: 'VP',
-      program: 'Graphic Design',
-      date: '2026-07-10',
-      status: 'enrolled',
-    },
-    {
-      id: 'STU-2026-06',
-      name: 'Bopha Lim',
-      email: 'bopha.l@gmail.com',
-      initials: 'BL',
-      program: 'Digital Marketing',
-      date: '2026-07-09',
-      status: 'rejected',
-    },
-    {
-      id: 'STU-2026-07',
-      name: 'Kim Hour',
-      email: 'kim.h@gmail.com',
-      initials: 'KH',
-      program: 'SNAC',
-      date: '2026-07-08',
-      status: 'enrolled',
-    },
-  ])
+  const students = ref<Student[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  const currentPage = ref(1)
+  const lastPage = ref(1)
+  const total = ref(0)
 
-  const total = computed(() => students.value.length)
-  const enrolled = computed(() => students.value.filter((s) => s.status === 'enrolled').length)
+  // ── Computed Stats ──
+  const totalStudents = computed(() => total.value)
+  const pendingCount = computed(() => students.value.filter(s => s.status === 'pending').length)
+  const approvedCount = computed(() => students.value.filter(s => s.status === 'approved').length)
+  const enrolledCount = computed(() => students.value.filter(s => s.status === 'enrolled').length)
+  const inactiveCount = computed(() => students.value.filter(s => s.status === 'inactive').length)
 
-  function getById(id: string) {
-    return students.value.find((s) => s.id === id)
-  }
-
-  function create(payload: Omit<Student, 'id' | 'initials' | 'date'>) {
-    const id = `STU-2026-${String(students.value.length + 1).padStart(2, '0')}`
-    const student: Student = {
-      ...payload,
-      id,
-      initials: payload.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase(),
-      date: new Date().toISOString().slice(0, 10),
+  // ── Actions ──
+  async function fetchAll(params?: { page?: number; status?: string; search?: string }) {
+    loading.value = true
+    error.value = null
+    try {
+      const paginated = await studentsApi.list(params?.page || 1, {
+        ...(params?.status && params.status !== 'all' ? { status: params.status } : {}),
+        ...(params?.search ? { search: params.search } : {}),
+      })
+      students.value = paginated.data.map(mapBackendStudent)
+      currentPage.value = paginated.current_page
+      lastPage.value = paginated.last_page
+      total.value = paginated.total
+    } catch (err: any) {
+      const status = err?.response?.status
+      if (status === 403) {
+        students.value = []
+        error.value = null
+        return
+      }
+      console.error('[students store] fetchAll failed:', err)
+      error.value = 'Failed to load students from server.'
+    } finally {
+      loading.value = false
     }
-    students.value.unshift(student)
-    return student
   }
 
-  function update(id: string, updates: Partial<Omit<Student, 'id' | 'initials' | 'date'>>) {
-    const index = students.value.findIndex((s) => s.id === id)
-    if (index === -1) return null
-
-    const original = students.value[index]
-    const updated: Student = {
-      id: original.id,
-      name: updates.name || original.name,
-      email: updates.email || original.email,
-      phone: updates.phone ?? original.phone,
-      program: updates.program || original.program,
-      date: original.date,
-      initials: original.initials,
-      status: updates.status || original.status,
-    }
-    updated.initials = updated.name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
-    students.value[index] = updated
-    return students.value[index]
+  function getById(id: string): Student | undefined {
+    return students.value.find(s => s.id === id)
   }
 
-  function remove(id: string) {
-    const index = students.value.findIndex((s) => s.id === id)
+  async function updateStatus(id: string, status: StudentStatus): Promise<boolean> {
+    const index = students.value.findIndex(s => s.id === id)
     if (index === -1) return false
-    students.value.splice(index, 1)
-    return true
+
+    try {
+      const backend = await studentsApi.updateStatus(Number(id), status)
+      students.value[index] = mapBackendStudent(backend)
+      return true
+    } catch {
+      return false
+    }
   }
 
   return {
     students,
+    loading,
+    error,
+    currentPage,
+    lastPage,
     total,
-    enrolled,
+    totalStudents,
+    pendingCount,
+    approvedCount,
+    enrolledCount,
+    inactiveCount,
+    fetchAll,
     getById,
-    create,
-    update,
-    remove,
+    updateStatus,
   }
 })

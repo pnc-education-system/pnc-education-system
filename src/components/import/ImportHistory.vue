@@ -240,7 +240,7 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
       <button
         @click="onRefresh"
         :disabled="isLoading"
-        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-700 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-700 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
         title="Refresh"
       >
         <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
@@ -258,13 +258,13 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
             @input="onFilterChange"
             type="text"
             placeholder="Search by file name, ID, or importer..."
-            class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30 focus:border-[#355C8C] dark:focus:border-blue-500 transition-all duration-200"
+            class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
           />
         </div>
         <button
           @click="showFilters = !showFilters"
-          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/60 active:bg-gray-100 dark:active:bg-gray-700 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30"
-          :class="{ 'bg-gray-50 dark:bg-gray-700/60 border-[#355C8C] dark:border-blue-500': showFilters }"
+          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/60 active:bg-gray-100 dark:active:bg-gray-700 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          :class="{ 'bg-gray-50 dark:bg-gray-700/60 border-blue-500': showFilters }"
         >
           <Filter class="w-4 h-4" />
           <span class="hidden sm:inline">Status</span>
@@ -288,9 +288,9 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
             v-for="opt in statusOptions"
             :key="opt.value"
             @click="statusFilter = opt.value; onFilterChange()"
-            class="px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30"
+            class="px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             :class="statusFilter === opt.value
-              ? 'bg-[#355C8C] dark:bg-blue-600 text-white border-[#355C8C] dark:border-blue-600'
+              ? 'bg-blue-600 text-white border-blue-600'
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'"
           >
             {{ opt.label }}
@@ -415,7 +415,7 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
               <div class="flex items-center justify-end gap-1">
                 <button
                   @click="viewDetails(record)"
-                  class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-[#355C8C] dark:hover:text-blue-400 hover:bg-[#355C8C]/5 dark:hover:bg-blue-900/20 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30"
+                  class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   title="View details"
                 >
                   <Eye class="w-4 h-4" />
@@ -438,7 +438,7 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
                 </button>
                 <button
                   @click="reImport(record)"
-                  class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-[#355C8C] dark:hover:text-blue-400 hover:bg-[#355C8C]/5 dark:hover:bg-blue-900/20 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30"
+                  class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   title="Re-import"
                 >
                   <RefreshCw class="w-4 h-4" />
@@ -482,7 +482,7 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
         <button
           @click="goToPage(currentPage - 1)"
           :disabled="currentPage === 1"
-          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30"
+          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           :class="currentPage === 1
             ? 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed'
             : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-700'"
@@ -496,9 +496,9 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
             v-for="page in totalPages"
             :key="page"
             @click="goToPage(page)"
-            class="w-7 h-7 flex items-center justify-center text-xs font-medium rounded-md transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30"
+            class="w-7 h-7 flex items-center justify-center text-xs font-medium rounded-md transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             :class="page === currentPage
-              ? 'bg-[#355C8C] dark:bg-blue-600 text-white'
+              ? 'bg-blue-600 text-white'
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
           >
             {{ page }}
@@ -508,7 +508,7 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
         <button
           @click="goToPage(currentPage + 1)"
           :disabled="currentPage === totalPages"
-          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30"
+          class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           :class="currentPage === totalPages
             ? 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed'
             : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-700'"

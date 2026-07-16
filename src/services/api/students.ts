@@ -1,87 +1,49 @@
 import axiosInstance from '@/services/axios'
-import type { PaginatedData } from '@/types'
-
-export interface Student {
-  id: number
-  student_id_no: string
-  full_name: string
-  gender: 'Male' | 'Female'
-  dob: string | null
-  phone: string | null
-  email: string | null
-  province: string | null
-  high_school: string | null
-  selection_batch_id: number
-  enrollment_status: 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped'
-  intake_year: number | null
-  photo_path: string | null
-  created_by: number
-  created_at: string
-  updated_at: string
-  selection_batch?: {
-    id: number
-    name: string
-  }
-}
-
-export interface CreateStudentPayload {
-  student_id_no: string
-  full_name: string
-  gender: 'Male' | 'Female'
-  dob?: string | null
-  phone?: string | null
-  email?: string | null
-  province?: string | null
-  high_school?: string | null
-  selection_batch_id: number
-  enrollment_status: 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped'
-  intake_year?: number | null
-  photo_path?: string | null
-}
-
-export interface UpdateStudentPayload {
-  student_id_no?: string
-  full_name?: string
-  gender?: 'Male' | 'Female'
-  dob?: string | null
-  phone?: string | null
-  email?: string | null
-  province?: string | null
-  high_school?: string | null
-  selection_batch_id?: number
-  enrollment_status?: 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped'
-  intake_year?: number | null
-  photo_path?: string | null
-}
+import type { BackendStudent, StudentStatus, PaginatedData } from '@/types'
 
 export const studentsApi = {
-  async list(params?: {
-    page?: number
-    status?: string
-    batch?: number
-    province?: string
-    search?: string
-  }): Promise<PaginatedData<Student>> {
-    const { data } = await axiosInstance.get('/students', { params })
-    return data as PaginatedData<Student>
+  async list(page = 1, params?: Record<string, string | number>): Promise<PaginatedData<BackendStudent>> {
+    const { data } = await axiosInstance.get('/students', { params: { page, ...params } })
+    return {
+      data: data.data as BackendStudent[],
+      current_page: data.pagination.current_page,
+      last_page: data.pagination.last_page,
+      per_page: data.pagination.per_page,
+      total: data.pagination.total,
+    }
   },
 
-  async get(id: number): Promise<Student> {
+  async get(id: number): Promise<BackendStudent> {
     const { data } = await axiosInstance.get(`/students/${id}`)
-    return data.data as Student
+    return data.data as BackendStudent
   },
 
-  async create(payload: CreateStudentPayload): Promise<Student> {
-    const { data } = await axiosInstance.post('/students', payload)
-    return data.data as Student
-  },
-
-  async update(id: number, payload: UpdateStudentPayload): Promise<Student> {
+  async update(id: number, payload: Partial<BackendStudent>): Promise<BackendStudent> {
     const { data } = await axiosInstance.put(`/students/${id}`, payload)
-    return data.data as Student
+    return data.data as BackendStudent
+  },
+
+  async updateStatus(id: number, status: StudentStatus): Promise<BackendStudent> {
+    // Convert frontend lowercase status to backend capitalized format
+    const statusMap: Record<StudentStatus, string> = {
+      'pending': 'Pending',
+      'approved': 'Pending', // Frontend 'approved' maps to backend 'Pending'
+      'enrolled': 'Enrolled',
+      'rejected': 'Rejected',
+      'graduated': 'Graduated',
+      'dropped': 'Dropped',
+      'inactive': 'Pending', // Map inactive to pending for now
+    }
+    const backendStatus = statusMap[status] || 'Pending'
+    const { data } = await axiosInstance.patch(`/students/${id}/status`, { status: backendStatus })
+    return data.data.student as BackendStudent
   },
 
   async delete(id: number): Promise<void> {
     await axiosInstance.delete(`/students/${id}`)
+  },
+
+  async bulkStatusUpdate(ids: number[], status: StudentStatus): Promise<void> {
+    await axiosInstance.post('/students/bulk-status', { ids, status })
   },
 }
