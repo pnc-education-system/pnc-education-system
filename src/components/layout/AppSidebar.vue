@@ -150,9 +150,9 @@ const onAdminClick = () => {
             class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
           >
             <button
-              @click="navigate('/enrollment?tab=upload')"
+              @click="navigate('/enrollment')"
               class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-              :class="route.path.startsWith('/enrollment') && route.query.tab === 'upload'
+              :class="route.path === '/enrollment' && !route.path.startsWith('/enrollment/history')
                 ? 'bg-blue-500/10 text-blue-400'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
             >
@@ -162,9 +162,9 @@ const onAdminClick = () => {
               <span>Import Upload</span>
             </button>
             <button
-              @click="navigate('/enrollment?tab=views')"
               class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-              :class="route.path.startsWith('/enrollment') && route.query.tab === 'views'
+              @click="navigate('/enrollment/views')"
+              :class="route.path === '/enrollment/views'
                 ? 'bg-blue-500/10 text-blue-400'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
             >
@@ -174,9 +174,9 @@ const onAdminClick = () => {
               <span>Import Views</span>
             </button>
             <button
-              @click="navigate('/enrollment?tab=history')"
+              @click="navigate('/enrollment/history')"
               class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-              :class="route.path.startsWith('/enrollment') && route.query.tab === 'history'
+              :class="route.path === '/enrollment/history'
                 ? 'bg-blue-500/10 text-blue-400'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
             >

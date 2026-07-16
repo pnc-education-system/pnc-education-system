@@ -33,6 +33,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/enrollment/history',
+    name: 'ImportHistory',
+    component: () => import('@/views/enrollments/ImportHistoryView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollment/views',
+    name: 'ImportViews',
+    component: () => import('@/views/enrollments/ImportViewsView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
     path: '/forbidden',
     name: 'Forbidden',
     component: () => import('@/views/ForbiddenView.vue'),
@@ -83,10 +95,21 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
+<<<<<<< HEAD
     path: '/students/new',
     name: 'StudentCreate',
     component: () => import('@/views/students/StudentFormView.vue'),
     meta: { requiresAuth: true, permission: 'students.create' },
+=======
+    path: '/imports',
+    name: 'Imports',
+    component: () => import('@/views/imports/ImportsView.vue'),
+    meta: { requiresAuth: true, permission: 'students.import' },
+  },
+  {
+    path: '/users',
+    redirect: '/admin/users',
+>>>>>>> 3070163cdddbdbee51ed87b79488c1390a5fdc95
   },
   {
     path: '/students/:id/edit',
