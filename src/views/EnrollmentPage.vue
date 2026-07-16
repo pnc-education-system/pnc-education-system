@@ -1,24 +1,30 @@
 <script setup lang="ts">
 defineOptions({ name: 'EnrollmentPage' })
 
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { History, AlertCircle } from 'lucide-vue-next'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { AlertCircle, History, ChevronDown, Plus } from 'lucide-vue-next'
 
 import { useFileUpload, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_MB } from '@/composables/useFileUpload'
+import { importsApi, selectionBatchesApi } from '@/services/api'
+import { useToast } from '@/composables/useToast'
 import ImportDropzone from '@/components/import/ImportDropzone.vue'
 import FilePreview from '@/components/import/FilePreview.vue'
 import ImportTips from '@/components/import/ImportTips.vue'
 import TemplateDownload from '@/components/import/TemplateDownload.vue'
-import ImportHistory from '@/components/import/ImportHistory.vue'
+import type { SelectionBatch } from '@/services/api/selectionBatches'
 
-const route = useRoute()
-
-const activeTab = computed(() => {
-  const tab = route.query.tab
-  if (tab === 'history') return 'history'
-  return 'upload'
-})
+const router = useRouter()
+const { showErrorToast, showSuccessToast } = useToast()
+const isUploading = ref(false)
+const selectedBatch = ref<SelectionBatch | null>(null)
+const batches = ref<SelectionBatch[]>([])
+const isLoadingBatches = ref(false)
+const isBatchDropdownOpen = ref(false)
+const isCreateBatchModalOpen = ref(false)
+const isCreatingBatch = ref(false)
+const newBatchName = ref('')
+const newBatchYear = ref(new Date().getFullYear())
 
 const {
   isDragOver,
@@ -37,53 +43,186 @@ const {
   dropZoneClasses,
 } = useFileUpload()
 
-function onContinueToMapping(): void {
-  // TODO: Navigate to mapping view with the selected file
+onMounted(async () => {
+  await fetchBatches()
+})
+
+async function fetchBatches() {
+  isLoadingBatches.value = true
+  try {
+    const currentYear = new Date().getFullYear()
+    batches.value = await selectionBatchesApi.list(currentYear)
+    // Auto-select the first batch if available
+    if (batches.value.length > 0) {
+      selectedBatch.value = batches.value[0]
+    }
+  } catch {
+    showErrorToast('Failed to load selection batches', 'Error')
+  } finally {
+    isLoadingBatches.value = false
+  }
+}
+
+async function onCreateBatch() {
+  if (!newBatchName.value.trim()) {
+    showErrorToast('Batch name is required', 'Error')
+    return
+  }
+  if (!newBatchYear.value || newBatchYear.value < 2000 || newBatchYear.value > 2100) {
+    showErrorToast('Please enter a valid year', 'Error')
+    return
+  }
+
+  isCreatingBatch.value = true
+  try {
+    const newBatch = await selectionBatchesApi.create({
+      name: newBatchName.value.trim(),
+      year: newBatchYear.value,
+    })
+    batches.value.push(newBatch)
+    selectedBatch.value = newBatch
+    isCreateBatchModalOpen.value = false
+    newBatchName.value = ''
+    newBatchYear.value = new Date().getFullYear()
+    showSuccessToast('Batch created successfully', 'Success')
+  } catch {
+    showErrorToast('Failed to create batch', 'Error')
+  } finally {
+    isCreatingBatch.value = false
+  }
+}
+
+function openCreateBatchModal() {
+  isBatchDropdownOpen.value = false
+  isCreateBatchModalOpen.value = true
+  newBatchName.value = ''
+  newBatchYear.value = new Date().getFullYear()
+}
+
+async function onContinueToMapping(): Promise<void> {
+  if (!selectedFile.value) {
+    showErrorToast('No file selected', 'Error')
+    return
+  }
+  if (!selectedBatch.value) {
+    showErrorToast('Please select a selection batch', 'Error')
+    return
+  }
+  isUploading.value = true
+  try {
+    console.log('Starting file upload:', selectedFile.value.name)
+    console.log('Selected batch:', selectedBatch.value)
+    const preview = await importsApi.preview(selectedFile.value)
+    console.log('Upload successful, preview data:', preview)
+
+    // Store preview data in sessionStorage for reliable data passing
+    sessionStorage.setItem('import_preview', JSON.stringify(preview))
+    sessionStorage.setItem('import_selected_batch', JSON.stringify(selectedBatch.value))
+
+    // Navigate to Import Views with the preview data
+    router.push({
+      path: '/enrollment/views',
+      query: { import_id: String(preview.import_log_id) },
+    })
+  } catch (err: unknown) {
+    console.error('Upload error:', err)
+    const error = err as { response?: { data?: { message?: string; error?: string; errors?: string } } }
+    const msg =
+      error?.response?.data?.message ??
+      error?.response?.data?.error ??
+      error?.response?.data?.errors ??
+      'Failed to process file. Please check the file format and try again.'
+    showErrorToast(msg, 'Upload Error')
+  } finally {
+    isUploading.value = false
+  }
 }
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
-    <!-- Header -->
-    <div class="flex items-start justify-between">
-      <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Enrollment</h1>
-        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
-          {{ activeTab === 'history' ? 'View and manage all your past file imports.' : 'Upload Excel or CSV files to import student enrollment data.' }}
-        </p>
-      </div>
+  <div class="min-h-screen" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
+    <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 py-6">
+      <!-- Header -->
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Enrollment</h1>
+          <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
+            Upload Excel (.xlsx) files to import student enrollment data.
+          </p>
+        </div>
 
-      <!-- Tab buttons -->
-      <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
+        <!-- History button -->
         <router-link
-          to="/enrollment?tab=upload"
-          class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-200"
-          :class="activeTab === 'upload'
-            ? 'bg-white dark:bg-[#1E293B] text-[#355C8C] dark:text-blue-400 shadow-sm'
-            : 'text-[#6B7280] dark:text-gray-400 hover:text-[#374151] dark:hover:text-gray-200'"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
-          </svg>
-          <span class="hidden sm:inline">Upload</span>
-        </router-link>
-        <router-link
-          to="/enrollment?tab=history"
-          class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-200"
-          :class="activeTab === 'history'
-            ? 'bg-white dark:bg-[#1E293B] text-[#355C8C] dark:text-blue-400 shadow-sm'
-            : 'text-[#6B7280] dark:text-gray-400 hover:text-[#374151] dark:hover:text-gray-200'"
+          to="/enrollment/history"
+          class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-gray-100 dark:bg-gray-800 text-[#6B7280] dark:text-gray-400 hover:text-[#374151] dark:hover:text-gray-200"
         >
           <History class="w-4 h-4" />
-          <span class="hidden sm:inline">History</span>
+          <span class="hidden sm:inline">View History</span>
         </router-link>
       </div>
-    </div>
 
-    <!-- Upload View -->
-    <template v-if="activeTab === 'upload'">
+      <!-- Upload View -->
       <!-- Import Upload Card -->
-      <div class="bg-white dark:bg-[#131B2E] rounded-xl shadow-sm p-4 sm:p-6 lg:p-8">
+        <div class="bg-white dark:bg-[#131B2E] rounded-xl shadow-sm p-4 sm:p-6 lg:p-8">
+        <!-- Batch Selection -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
+            Selection Batch / Intake Year
+          </label>
+          <div class="relative">
+            <button
+              type="button"
+              @click="isBatchDropdownOpen = !isBatchDropdownOpen"
+              class="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border border-[#D1D5DB] dark:border-gray-600 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30"
+              :disabled="isLoadingBatches"
+            >
+              <span v-if="selectedBatch" class="text-sm text-[#111827] dark:text-white">
+                {{ selectedBatch.name }} ({{ selectedBatch.year }})
+              </span>
+              <span v-else class="text-sm text-[#9CA3AF]">
+                {{ isLoadingBatches ? 'Loading batches...' : 'Select a batch' }}
+              </span>
+              <ChevronDown class="w-4 h-4 text-[#6B7280] transition-transform" :class="isBatchDropdownOpen ? 'rotate-180' : ''" />
+            </button>
+
+            <!-- Dropdown -->
+            <div
+              v-if="isBatchDropdownOpen"
+              class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-[#D1D5DB] dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              <div
+                v-if="batches.length === 0 && !isLoadingBatches"
+                class="px-4 py-3 text-sm text-[#9CA3AF]"
+              >
+                No batches available for current year
+              </div>
+              <button
+                v-for="batch in batches"
+                :key="batch.id"
+                type="button"
+                @click="selectedBatch = batch; isBatchDropdownOpen = false"
+                class="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                :class="selectedBatch?.id === batch.id ? 'bg-[#355C8C]/10 dark:bg-blue-600/20 text-[#355C8C] dark:text-blue-400' : 'text-[#374151] dark:text-gray-300'"
+              >
+                <div class="flex items-center justify-between">
+                  <span>{{ batch.name }}</span>
+                  <span class="text-xs text-[#6B7280] dark:text-gray-400">{{ batch.year }}</span>
+                </div>
+              </button>
+              <!-- Create new batch option -->
+              <button
+                type="button"
+                @click="openCreateBatchModal"
+                class="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-t border-[#E5E7EB] dark:border-gray-700 text-[#355C8C] dark:text-blue-400 font-medium"
+              >
+                <div class="flex items-center gap-2">
+                  <Plus class="w-4 h-4" />
+                  <span>Create new batch</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
         <input
           ref="fileInputRef"
           type="file"
@@ -111,7 +250,9 @@ function onContinueToMapping(): void {
         <FilePreview
           v-else
           :file="selectedFile"
+          :is-uploading="isUploading"
           @remove="removeFile"
+          @upload="onContinueToMapping"
         />
 
         <!-- Inline error message -->
@@ -160,9 +301,69 @@ function onContinueToMapping(): void {
         <ImportTips />
         <TemplateDownload />
       </div>
-    </template>
+    </div>
 
-    <!-- History View -->
-    <ImportHistory v-else-if="activeTab === 'history'" />
+    <!-- Create Batch Modal -->
+    <div
+      v-if="isCreateBatchModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      @click.self="isCreateBatchModalOpen = false"
+    >
+      <div class="bg-white dark:bg-[#131B2E] rounded-xl shadow-xl w-full max-w-md mx-4">
+        <div class="p-6">
+          <h2 class="text-xl font-semibold text-[#111827] dark:text-white mb-4">Create New Batch</h2>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
+                Batch Name
+              </label>
+              <input
+                v-model="newBatchName"
+                type="text"
+                placeholder="e.g., 2024 Intake Batch 1"
+                class="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-[#D1D5DB] dark:border-gray-600 rounded-lg text-sm text-[#111827] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30"
+                :disabled="isCreatingBatch"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
+                Intake Year
+              </label>
+              <input
+                v-model.number="newBatchYear"
+                type="number"
+                min="2000"
+                max="2100"
+                class="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-[#D1D5DB] dark:border-gray-600 rounded-lg text-sm text-[#111827] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30"
+                :disabled="isCreatingBatch"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E5E7EB] dark:border-gray-800">
+          <button
+            @click="isCreateBatchModalOpen = false"
+            :disabled="isCreatingBatch"
+            class="px-4 py-2 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            @click="onCreateBatch"
+            :disabled="isCreatingBatch || !newBatchName.trim()"
+            class="px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span v-if="isCreatingBatch" class="flex items-center gap-2">
+              <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              Creating...
+            </span>
+            <span v-else>Create Batch</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

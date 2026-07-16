@@ -1,10 +1,10 @@
 import { ref, computed } from 'vue'
 import { useToast } from '@/composables/useToast'
 
-export const ACCEPTED_TYPES = ['csv', 'xlsx'] as const
+export const ACCEPTED_TYPES = ['xlsx'] as const
 export const ACCEPTED_EXTENSIONS = ACCEPTED_TYPES.map((t) => `.${t}`).join(', ')
-export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024 // 25 MB
-export const MAX_FILE_SIZE_MB = 25
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB (matches backend config)
+export const MAX_FILE_SIZE_MB = 10
 
 export type AcceptedType = (typeof ACCEPTED_TYPES)[number]
 
@@ -26,21 +26,22 @@ export function isAcceptedType(ext: string | null): ext is AcceptedType {
 
 export function downloadSampleCsv(): void {
   const headers = [
-    'Student ID',
-    'Full Name',
-    'Date of Birth',
-    'Gender',
-    'Phone Number',
-    'Email',
-    'Program',
-    'Batch',
-    'Enrollment Date',
+    'student_id_no',
+    'full_name',
+    'gender',
+    'dob',
+    'selection_batch_id',
+    'intake_year',
+    'province',
+    'phone',
+    'email',
+    'high_school',
   ]
 
   const sampleRows: string[][] = [
-    ['STU-001', 'John Doe', '01/15/2005', 'Male', '012-345-678', 'john.doe@example.com', 'BS Computer Science', '2024-A', '09/01/2024'],
-    ['STU-002', 'Jane Smith', '03/22/2006', 'Female', '098-765-432', 'jane.smith@example.com', 'BS Information Technology', '2024-A', '09/01/2024'],
-    ['STU-003', 'Sok Chea', '07/10/2005', 'Male', '011-223-344', 'sok.chea@example.com', 'BS Business Administration', '2024-B', '01/15/2025'],
+    ['ST-0001', 'John Doe', 'Male', '2005-01-15', '1', '2024', 'Phnom Penh', '012-345-678', 'john.doe@example.com', 'High School A'],
+    ['ST-0002', 'Jane Smith', 'Female', '2006-03-22', '1', '2024', 'Kandal', '098-765-432', 'jane.smith@example.com', 'High School B'],
+    ['ST-0003', 'Sok Chea', 'Male', '2005-07-10', '2', '2025', 'Takeo', '011-223-344', 'sok.chea@example.com', 'High School C'],
   ]
 
   const bom = '\uFEFF'
@@ -94,7 +95,7 @@ export function useFileUpload() {
     isDragOver.value = false
 
     const files = e.dataTransfer?.files
-    if (files && files.length > 0) {
+    if (files && files.length > 0 && files[0]) {
       processFile(files[0])
     }
   }
@@ -106,7 +107,7 @@ export function useFileUpload() {
 
   function onFileInputChange(e: Event): void {
     const input = e.target as HTMLInputElement
-    if (input.files && input.files.length > 0) {
+    if (input.files && input.files.length > 0 && input.files[0]) {
       processFile(input.files[0])
     }
     input.value = ''

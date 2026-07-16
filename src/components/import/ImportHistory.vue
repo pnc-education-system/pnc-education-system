@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   Search,
   Filter,
@@ -17,22 +17,51 @@ import {
   RotateCw,
 } from 'lucide-vue-next'
 
+import { importsApi } from '@/services/api/imports'
+import { useToast } from '@/composables/useToast'
+import { useRouter } from 'vue-router'
+import type { ImportLog } from '@/services/api/imports'
+
 defineOptions({ name: 'ImportHistory' })
 
-// ─── Types ───────────────────────────────────────────────
-type ImportStatus = 'completed' | 'failed' | 'processing' | 'partial'
+const router = useRouter()
+const { showSuccessToast, showErrorToast } = useToast()
 
-interface ImportRecord {
+// ─── Status Display ──────────────────────────────────────
+type DisplayStatus = 'completed' | 'failed' | 'processing' | 'partial'
+
+interface DisplayRecord {
   id: string
+  importId: number
   fileName: string
-  fileSize: string
   importedAt: string
   importedBy: string
-  status: ImportStatus
+  status: DisplayStatus
   totalRecords: number
   successRecords: number
   failedRecords: number
-  errorLogUrl?: string
+}
+
+function computeStatus(log: ImportLog): DisplayStatus {
+  if (log.status === 'Failed') return 'failed'
+  if (log.status === 'Processing' || log.status === 'Pending') return 'processing'
+  // Completed with errors → partial
+  if (log.error_count > 0) return 'partial'
+  return 'completed'
+}
+
+function toDisplayRecord(log: ImportLog): DisplayRecord {
+  return {
+    id: `IMP-${String(log.id).padStart(4, '0')}`,
+    importId: log.id,
+    fileName: log.file_name,
+    importedAt: log.created_at,
+    importedBy: log.imported_by?.name ?? '—',
+    status: computeStatus(log),
+    totalRecords: log.total_rows,
+    successRecords: log.success_count,
+    failedRecords: log.error_count,
+  }
 }
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -53,107 +82,39 @@ function formatTime(dateStr: string): string {
   })
 }
 
-// ─── Mock Data ───────────────────────────────────────────
-const generateMockData = (): ImportRecord[] => [
-  {
-    id: 'IMP-2024-001',
-    fileName: 'enrollment_batch_a_2024.xlsx',
-    fileSize: '2.4 MB',
-    importedAt: '2024-09-01 14:30:00',
-    importedBy: 'Admin User',
-    status: 'completed',
-    totalRecords: 150,
-    successRecords: 150,
-    failedRecords: 0,
-  },
-  {
-    id: 'IMP-2024-002',
-    fileName: 'enrollment_batch_b_2024.csv',
-    fileSize: '1.8 MB',
-    importedAt: '2024-09-05 09:15:00',
-    importedBy: 'Admin User',
-    status: 'partial',
-    totalRecords: 200,
-    successRecords: 195,
-    failedRecords: 5,
-    errorLogUrl: '#',
-  },
-  {
-    id: 'IMP-2024-003',
-    fileName: 'summer_intake_2025.xlsx',
-    fileSize: '3.2 MB',
-    importedAt: '2024-12-10 11:00:00',
-    importedBy: 'Sok Chea',
-    status: 'completed',
-    totalRecords: 320,
-    successRecords: 320,
-    failedRecords: 0,
-  },
-  {
-    id: 'IMP-2024-004',
-    fileName: 'student_update_2024.xlsx',
-    fileSize: '0.8 MB',
-    importedAt: '2024-10-22 16:45:00',
-    importedBy: 'Admin User',
-    status: 'failed',
-    totalRecords: 45,
-    successRecords: 0,
-    failedRecords: 45,
-    errorLogUrl: '#',
-  },
-  {
-    id: 'IMP-2025-001',
-    fileName: 'enrollment_spring_2025.csv',
-    fileSize: '4.1 MB',
-    importedAt: '2025-01-15 10:30:00',
-    importedBy: 'Jane Smith',
-    status: 'processing',
-    totalRecords: 500,
-    successRecords: 0,
-    failedRecords: 0,
-  },
-  {
-    id: 'IMP-2025-002',
-    fileName: 'transfer_students_2025.xlsx',
-    fileSize: '1.2 MB',
-    importedAt: '2025-02-03 13:20:00',
-    importedBy: 'Sok Chea',
-    status: 'completed',
-    totalRecords: 78,
-    successRecords: 78,
-    failedRecords: 0,
-  },
-  {
-    id: 'IMP-2025-003',
-    fileName: 'midyear_intake_2025.csv',
-    fileSize: '5.6 MB',
-    importedAt: '2025-03-18 08:00:00',
-    importedBy: 'Admin User',
-    status: 'partial',
-    totalRecords: 410,
-    successRecords: 402,
-    failedRecords: 8,
-    errorLogUrl: '#',
-  },
-  {
-    id: 'IMP-2025-004',
-    fileName: 'summer_enrollment_2025.xlsx',
-    fileSize: '2.9 MB',
-    importedAt: '2025-04-05 15:10:00',
-    importedBy: 'Jane Smith',
-    status: 'completed',
-    totalRecords: 185,
-    successRecords: 185,
-    failedRecords: 0,
-  },
-]
+// ─── State ────────────────────────────────────────────────
+const allImports = ref<ImportLog[]>([])
+const isLoading = ref(false)
+const downloadingId = ref<number | null>(null)
 
-const allRecords = ref<ImportRecord[]>(generateMockData())
+// Pagination (from API)
+const currentPage = ref(1)
+const lastPage = ref(1)
+const total = ref(0)
+
+async function fetchHistory(page = 1): Promise<void> {
+  isLoading.value = true
+  try {
+    const result = await importsApi.list(page)
+    allImports.value = result.data
+    currentPage.value = result.meta.current_page
+    lastPage.value = result.meta.last_page
+    total.value = result.meta.total
+  } catch {
+    showErrorToast('Failed to load import history', 'Error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => fetchHistory())
 
 // ─── Search & Filters ────────────────────────────────────
 const searchQuery = ref('')
-const statusFilter = ref<ImportStatus | 'all'>('all')
+const statusFilter = ref<DisplayStatus | 'all'>('all')
 const showFilters = ref(false)
+
+const allRecords = computed<DisplayRecord[]>(() => allImports.value.map(toDisplayRecord))
 
 const filteredRecords = computed(() => {
   let result = allRecords.value
@@ -176,7 +137,7 @@ const filteredRecords = computed(() => {
 })
 
 // ─── Status Badge Config ─────────────────────────────────
-const statusConfig: Record<ImportStatus, { label: string; icon: any; classes: string }> = {
+const statusConfig: Record<DisplayStatus, { label: string; icon: any; classes: string }> = {
   completed: {
     label: 'Completed',
     icon: CheckCircle,
@@ -199,11 +160,10 @@ const statusConfig: Record<ImportStatus, { label: string; icon: any; classes: st
   },
 }
 
-// ─── Pagination ──────────────────────────────────────────
-const currentPage = ref(1)
+// ─── Pagination (client-side for filtered view) ──────────
 const pageSize = 5
 
-const totalPages = computed(() => Math.ceil(filteredRecords.value.length / pageSize))
+const totalPages = computed(() => Math.ceil(filteredRecords.value.length / pageSize) || 1)
 
 const paginatedRecords = computed(() => {
   const start = (currentPage.value - 1) * pageSize
@@ -221,20 +181,37 @@ function onFilterChange(): void {
 }
 
 // ─── Actions ─────────────────────────────────────────────
-function viewDetails(record: ImportRecord): void {
+function viewDetails(record: DisplayRecord): void {
   // TODO: Navigate to import details
 }
 
-function reImport(record: ImportRecord): void {
-  // TODO: Re-import
+async function downloadErrorLog(record: DisplayRecord): Promise<void> {
+  downloadingId.value = record.importId
+  try {
+    await importsApi.downloadErrors(record.importId, record.fileName)
+    showSuccessToast('Error report downloaded', 'Downloaded')
+  } catch {
+    showErrorToast('Failed to download error report', 'Error')
+  } finally {
+    downloadingId.value = null
+  }
 }
 
-function downloadErrorLog(record: ImportRecord): void {
-  // TODO: Download error log
+function reImport(record: DisplayRecord): void {
+  router.push({
+    path: '/enrollment',
+    query: { tab: 'upload' },
+    state: { reImportFileName: record.fileName },
+  })
+}
+
+function onRefresh(): void {
+  fetchHistory(1)
+  onFilterChange()
 }
 
 // ─── Filter Options ──────────────────────────────────────
-const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
+const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'completed', label: 'Completed' },
   { value: 'partial', label: 'Partially Completed' },
@@ -258,6 +235,15 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
           </p>
         </div>
       </div>
+      <button
+        @click="onRefresh"
+        :disabled="isLoading"
+        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-700 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Refresh"
+      >
+        <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
+        <span class="hidden sm:inline">Refresh</span>
+      </button>
     </div>
 
     <!-- Search & Filters -->
@@ -314,16 +300,25 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
     <!-- Results count -->
     <div class="px-5 sm:px-6 py-2.5 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-200 dark:border-gray-800">
       <p class="text-xs text-gray-500 dark:text-gray-400">
-        <span class="font-medium text-gray-900 dark:text-white">{{ filteredRecords.length }}</span>
-        import{{ filteredRecords.length !== 1 ? 's' : '' }}
+        <span class="font-medium text-gray-900 dark:text-white">{{ total }}</span>
+        import{{ total !== 1 ? 's' : '' }}
         <template v-if="statusFilter !== 'all'">
           &middot; <span class="text-gray-500 dark:text-gray-400">{{ statusOptions.find(o => o.value === statusFilter)?.label }}</span>
         </template>
       </p>
     </div>
 
+    <!-- Loading state -->
+    <div v-if="isLoading" class="flex items-center justify-center py-16 gap-3">
+      <svg class="w-6 h-6 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+      <span class="text-sm text-gray-500 dark:text-gray-400">Loading imports...</span>
+    </div>
+
     <!-- Table -->
-    <div class="overflow-x-auto">
+    <div v-else class="overflow-x-auto">
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-200 dark:border-gray-800">
@@ -339,7 +334,7 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800/80">
           <tr
             v-for="record in paginatedRecords"
-            :key="record.id"
+            :key="record.importId"
             class="hover:bg-gray-50/60 dark:hover:bg-gray-800/20 transition-colors duration-150"
           >
             <!-- File Name -->
@@ -352,7 +347,6 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
                   <p class="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-[260px]">
                     {{ record.fileName }}
                   </p>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ record.fileSize }}</p>
                 </div>
               </div>
             </td>
@@ -416,12 +410,20 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
                   <Eye class="w-4 h-4" />
                 </button>
                 <button
-                  v-if="record.status === 'failed' && record.errorLogUrl"
+                  v-if="record.failedRecords > 0"
                   @click="downloadErrorLog(record)"
-                  class="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                  title="Download error log"
+                  :disabled="downloadingId === record.importId"
+                  class="p-1.5 rounded-lg transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  :class="downloadingId === record.importId
+                    ? 'text-gray-400 dark:text-gray-500 opacity-50'
+                    : 'text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'"
+                  :title="downloadingId === record.importId ? 'Downloading...' : 'Download error report'"
                 >
-                  <Download class="w-4 h-4" />
+                  <Download v-if="downloadingId !== record.importId" class="w-4 h-4" />
+                  <svg v-else class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
                 </button>
                 <button
                   @click="reImport(record)"
@@ -438,7 +440,7 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
 
       <!-- Empty state -->
       <div
-        v-if="filteredRecords.length === 0"
+        v-if="filteredRecords.length === 0 && !isLoading"
         class="flex flex-col items-center justify-center py-16 px-4"
       >
         <div class="w-14 h-14 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
@@ -458,7 +460,7 @@ const statusOptions: { value: ImportStatus | 'all'; label: string }[] = [
 
     <!-- Pagination -->
     <div
-      v-if="totalPages > 1"
+      v-if="!isLoading && totalPages > 1"
       class="flex items-center justify-between px-5 sm:px-6 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20"
     >
       <p class="text-xs text-gray-500 dark:text-gray-400">

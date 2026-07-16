@@ -3,6 +3,8 @@ import { usersApi } from './users'
 import { rolesApi } from './roles'
 import { profileApi } from './profile'
 import { enrollmentsApi } from './enrollments'
+import { importsApi } from './imports'
+import { selectionBatchesApi } from './selectionBatches'
 
-export { authApi, usersApi, rolesApi, profileApi, enrollmentsApi }
+export { authApi, usersApi, rolesApi, profileApi, enrollmentsApi, importsApi, selectionBatchesApi }
 
