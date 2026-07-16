@@ -63,8 +63,8 @@ const statusConfig: Record<string, { label: string; dot: string; bg: string; tex
   Pending:   { label: 'Pending',   dot: 'bg-gray-400',    bg: 'bg-gray-100 dark:bg-gray-700',         text: 'text-gray-600 dark:text-gray-400' },
 }
 
-function getStatus(status: string) {
-  return statusConfig[status] ?? statusConfig.Pending
+function getStatus(status: string): (typeof statusConfig)['Pending'] {
+  return (statusConfig[status] ?? statusConfig.Pending)!
 }
 </script>
 
@@ -75,12 +75,11 @@ function getStatus(status: string) {
     <div class="flex items-start justify-between">
       <div>
         <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Import history</h1>
-        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">Past intake files &amp; outcomes</p>
       </div>
       <div class="flex items-center gap-3">
         <button
           @click="router.push('/enrollment')"
-          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#0F172A] dark:bg-blue-600 rounded-lg hover:bg-[#1E293B] dark:hover:bg-blue-700 transition-all duration-200 cursor-pointer shadow-sm"
+          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 cursor-pointer shadow-sm"
         >
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -219,16 +218,6 @@ function getStatus(status: string) {
           >Next</button>
         </div>
       </div>
-    </div>
-
-    <!-- Info note -->
-    <div class="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800">
-      <div class="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <span class="text-white text-xs font-bold">!</span>
-      </div>
-      <p class="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-        Each import logs counts, author and timestamp. Re-downloadable error files keep an audit trail of every intake attempt.
-      </p>
     </div>
 
   </div>

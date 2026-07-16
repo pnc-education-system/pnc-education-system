@@ -20,10 +20,18 @@ export interface CreateBatchRequest {
   year: number
 }
 
+export interface UpdateBatchRequest {
+  name: string
+  year: number
+}
+
 export const selectionBatchesApi = {
   async list(year?: number): Promise<SelectionBatch[]> {
     const params = year ? { year } : {}
-    const { data } = await axiosInstance.get('/selection-batches', { params })
+    const { data } = await axiosInstance.get('/selection-batches', {
+      params,
+      timeout: 15_000, // 15-second timeout — prevents the dropdown from hanging
+    })
     return data.data as SelectionBatch[]
   },
 
@@ -35,5 +43,14 @@ export const selectionBatchesApi = {
   async create(request: CreateBatchRequest): Promise<SelectionBatch> {
     const { data } = await axiosInstance.post('/selection-batches', request)
     return data.data as SelectionBatch
+  },
+
+  async update(id: number, request: UpdateBatchRequest): Promise<SelectionBatch> {
+    const { data } = await axiosInstance.put(`/selection-batches/${id}`, request)
+    return data.data as SelectionBatch
+  },
+
+  async delete(id: number): Promise<void> {
+    await axiosInstance.delete(`/selection-batches/${id}`)
   },
 }

@@ -42,7 +42,7 @@ function getFormattedSize(): string {
       <button
         @click.stop="emit('upload')"
         :disabled="isUploading"
-        class="px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span v-if="isUploading" class="flex items-center gap-2">
           <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">

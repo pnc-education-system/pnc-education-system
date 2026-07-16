@@ -67,22 +67,13 @@ const emit = defineEmits<{
       <!-- Choose File Button -->
       <button
         @click.stop="emit('chooseFile')"
-        class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-[#355C8C] rounded-lg shadow-sm hover:bg-[#2A4A70] active:scale-[0.97] transition-all duration-200 cursor-pointer"
+        class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg shadow-sm active:scale-[0.97] transition-all duration-200 cursor-pointer"
       >
         <Upload class="w-4 h-4" />
         Choose File
       </button>
 
-      <!-- Accepted types & size limit -->
-      <div class="text-center mt-2">
-        <p class="text-xs text-[#9CA3AF] dark:text-gray-500">
-          Accepted file types:
-          <span class="font-mono text-[#6B7280] dark:text-gray-400">.xlsx</span>
-          <span class="text-[#9CA3AF]">(Excel files only)</span>
-        </p>
-        <p class="text-xs text-[#9CA3AF] dark:text-gray-500 mt-0.5">            Maximum file size: <span class="font-medium text-[#6B7280] dark:text-gray-400">{{ maxFileSizeMb }} MB</span>
-        </p>
-      </div>
+
     </div>
   </div>
 </template>

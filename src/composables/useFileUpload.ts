@@ -147,12 +147,12 @@ export function useFileUpload() {
       return `${base} border-red-300 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10`
     }
     if (isDragOver.value) {
-      return `${base} border-[#355C8C] dark:border-blue-400 bg-[#355C8C]/5 dark:bg-blue-900/20 scale-[1.01]`
+      return `${base} border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 scale-[1.01]`
     }
     if (selectedFile.value) {
       return `${base} border-green-400 dark:border-green-600 bg-green-50/50 dark:bg-green-900/20`
     }
-    return `${base} border-gray-300 dark:border-gray-600 hover:border-[#355C8C] dark:hover:border-blue-400 hover:bg-[#355C8C]/5 dark:hover:bg-blue-900/20`
+    return `${base} border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20`
   })
 
   return {
