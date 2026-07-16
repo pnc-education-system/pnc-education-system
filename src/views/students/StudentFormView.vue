@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
-import { useStudentsStore } from '@/stores/students'
+import { studentsApi, type CreateStudentPayload, type Student } from '@/services/api/students'
+import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
-const studentsStore = useStudentsStore()
 const { showSuccessToast, showErrorToast } = useToast()
 
 const isEditing = computed(() => !!route.query.id)
@@ -42,55 +42,94 @@ const toastValidation = computed(() => t('student_form.toast_validation'))
 const toastValidationTitle = computed(() => t('student_form.toast_validation_title'))
 
 const form = ref({
-  name: editingId.value ? studentsStore.getById(editingId.value)?.name || '' : '',
-  email: editingId.value ? studentsStore.getById(editingId.value)?.email || '' : '',
-  phone: editingId.value ? studentsStore.getById(editingId.value)?.phone || '' : '',
-  program: editingId.value ? studentsStore.getById(editingId.value)?.program || '' : '',
-  status: (editingId.value
-    ? studentsStore.getById(editingId.value)?.status || 'enrolled'
-    : 'enrolled') as 'enrolled' | 'pending' | 'completed',
+  student_id_no: '',
+  full_name: '',
+  gender: 'Male' as 'Male' | 'Female',
+  dob: '',
+  phone: '',
+  email: '',
+  province: '',
+  high_school: '',
+  selection_batch_id: null as number | null,
+  enrollment_status: 'Pending' as 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped',
+  intake_year: new Date().getFullYear(),
 })
 
+const selectionBatches = ref<SelectionBatch[]>([])
 const isSaving = ref(false)
+const isLoading = ref(false)
+
+onMounted(async () => {
+  try {
+    const response = await selectionBatchesApi.list()
+    selectionBatches.value = response
+    if (selectionBatches.value.length > 0 && selectionBatches.value[0]) {
+      form.value.selection_batch_id = selectionBatches.value[0].id
+    }
+  } catch (error) {
+    showErrorToast('Failed to load selection batches', 'Error')
+  }
+
+  if (isEditing.value && editingId.value) {
+    isLoading.value = true
+    try {
+      const student = await studentsApi.get(Number(editingId.value))
+      form.value = {
+        student_id_no: student.student_id_no,
+        full_name: student.full_name,
+        gender: student.gender,
+        dob: student.dob || '',
+        phone: student.phone || '',
+        email: student.email || '',
+        province: student.province || '',
+        high_school: student.high_school || '',
+        selection_batch_id: student.selection_batch_id,
+        enrollment_status: student.enrollment_status,
+        intake_year: student.intake_year || new Date().getFullYear(),
+      }
+    } catch (error) {
+      showErrorToast('Failed to load student data', 'Error')
+      router.push('/students')
+    } finally {
+      isLoading.value = false
+    }
+  }
+})
 
 async function handleSubmit() {
-  if (!form.value.name.trim() || !form.value.email.trim() || !form.value.program.trim()) {
+  if (!form.value.student_id_no.trim() || !form.value.full_name.trim() || form.value.selection_batch_id === null || form.value.selection_batch_id === 0) {
     showErrorToast(toastValidation.value, toastValidationTitle.value)
     return
   }
 
   isSaving.value = true
   try {
-    const normalizedStatus = ['enrolled', 'pending', 'completed'].includes(form.value.status)
-      ? (form.value.status as 'enrolled' | 'pending' | 'completed')
-      : 'enrolled'
-
-    if (isEditing.value && editingId.value) {
-      studentsStore.update(editingId.value, {
-        name: form.value.name.trim(),
-        email: form.value.email.trim(),
-        phone: form.value.phone.trim(),
-        program: form.value.program.trim(),
-        status: normalizedStatus,
-      })
-      showSuccessToast(toastUpdated.value, toastUpdatedTitle.value)
-      router.push('/students')
-      return
+    const payload: CreateStudentPayload = {
+      student_id_no: form.value.student_id_no.trim(),
+      full_name: form.value.full_name.trim(),
+      gender: form.value.gender,
+      dob: form.value.dob || null,
+      phone: form.value.phone.trim() || null,
+      email: form.value.email.trim() || null,
+      province: form.value.province.trim() || null,
+      high_school: form.value.high_school.trim() || null,
+      selection_batch_id: form.value.selection_batch_id,
+      enrollment_status: form.value.enrollment_status,
+      intake_year: form.value.intake_year || null,
     }
 
-    // TODO: replace with real student API/store call on create
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    studentsStore.create({
-      name: form.value.name.trim(),
-      email: form.value.email.trim(),
-      phone: form.value.phone.trim(),
-      program: form.value.program.trim(),
-      status: normalizedStatus,
-    })
-    showSuccessToast(toastCreated.value, toastCreatedTitle.value)
+    if (isEditing.value && editingId.value) {
+      await studentsApi.update(Number(editingId.value), payload)
+      showSuccessToast(toastUpdated.value, toastUpdatedTitle.value)
+    } else {
+      await studentsApi.create(payload)
+      showSuccessToast(toastCreated.value, toastCreatedTitle.value)
+    }
     router.push('/students')
-  } catch {
-    showErrorToast(toastSaveError.value, toastValidationTitle.value)
+  } catch (error: any) {
+    console.error('Error creating student:', error)
+    const errorMessage = error?.response?.data?.message || error?.message || 'An error occurred while saving'
+    showErrorToast(errorMessage, toastValidationTitle.value)
   } finally {
     isSaving.value = false
   }
@@ -142,10 +181,22 @@ function goBack() {
       <div class="p-6 space-y-5">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Student ID <span class="text-red-400">{{ required }}</span>
+          </label>
+          <input
+            v-model="form.student_id_no"
+            type="text"
+            placeholder="e.g. ST001"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {{ labelName }} <span class="text-red-400">{{ required }}</span>
           </label>
           <input
-            v-model="form.name"
+            v-model="form.full_name"
             type="text"
             placeholder="e.g. Jane Doe"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
@@ -154,7 +205,31 @@ function goBack() {
 
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {{ labelEmail }} <span class="text-red-400">{{ required }}</span>
+            Gender <span class="text-red-400">{{ required }}</span>
+          </label>
+          <select
+            v-model="form.gender"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Date of Birth
+          </label>
+          <input
+            v-model="form.dob"
+            type="date"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            {{ labelEmail }}
           </label>
           <input
             v-model="form.email"
@@ -178,12 +253,53 @@ function goBack() {
 
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {{ labelProgram }} <span class="text-red-400">{{ required }}</span>
+            Province
           </label>
           <input
-            v-model="form.program"
+            v-model="form.province"
             type="text"
-            :placeholder="placeholderProgram"
+            placeholder="e.g. Phnom Penh"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            High School
+          </label>
+          <input
+            v-model="form.high_school"
+            type="text"
+            placeholder="e.g. Lincoln High School"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Selection Batch <span class="text-red-400">{{ required }}</span>
+          </label>
+          <select
+            v-model.number="form.selection_batch_id"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option v-if="selectionBatches.length === 0" value="" disabled>
+              No selection batches available
+            </option>
+            <option v-for="batch in selectionBatches" :key="batch.id" :value="batch.id">
+              {{ batch.name }} ({{ batch.year }})
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Intake Year
+          </label>
+          <input
+            v-model.number="form.intake_year"
+            type="number"
+            placeholder="e.g. 2025"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
@@ -193,13 +309,14 @@ function goBack() {
             {{ labelStatus }}
           </label>
           <select
-            v-model="form.status"
+            v-model="form.enrollment_status"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           >
-            <option value="enrolled">Enrolled</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
+            <option value="Pending">Pending</option>
+            <option value="Enrolled">Enrolled</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Graduated">Graduated</option>
+            <option value="Dropped">Dropped</option>
           </select>
         </div>
       </div>
