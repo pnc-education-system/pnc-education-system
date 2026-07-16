@@ -63,10 +63,12 @@ onMounted(async () => {
   try {
     const response = await selectionBatchesApi.list()
     selectionBatches.value = response
+    console.log('Selection batches loaded:', selectionBatches.value)
     if (selectionBatches.value.length > 0 && selectionBatches.value[0]) {
       form.value.selection_batch_id = selectionBatches.value[0].id
     }
   } catch (error) {
+    console.error('Failed to load selection batches:', error)
     showErrorToast('Failed to load selection batches', 'Error')
   }
 
