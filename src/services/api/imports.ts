@@ -13,6 +13,11 @@ export interface ImportLog {
   total_rows: number
   success_count: number
   error_count: number
+  selection_batch: {
+    id: number
+    name: string
+    year: number
+  } | null
   imported_by: {
     id: number
     name: string
@@ -89,9 +94,12 @@ export const importsApi = {
     return data.data as ImportLogDetail
   },
 
-  async preview(file: File): Promise<ImportPreview> {
+  async preview(file: File, selectionBatchId?: number): Promise<ImportPreview> {
     const formData = new FormData()
     formData.append('file', file)
+    if (selectionBatchId) {
+      formData.append('selection_batch_id', String(selectionBatchId))
+    }
     const { data } = await axiosInstance.post('/imports', formData, {
       headers: {
         'Content-Type': undefined,

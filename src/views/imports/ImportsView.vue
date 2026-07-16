@@ -117,6 +117,7 @@ onMounted(() => fetchImports())
           <thead>
             <tr class="border-b border-gray-200/80 dark:border-gray-700/80">
               <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-4">File</th>
+              <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-4">Batch</th>
               <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-4">Status</th>
               <th class="text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-4">Total</th>
               <th class="text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-4 py-4">Success</th>
@@ -142,6 +143,14 @@ onMounted(() => fetchImports())
                   </div>
                   <span class="font-medium text-gray-900 dark:text-white truncate max-w-[180px]">{{ imp.file_name }}</span>
                 </div>
+              </td>
+
+              <!-- Batch -->
+              <td class="px-4 py-4">
+                <span v-if="imp.selection_batch" class="text-sm text-gray-600 dark:text-gray-300">
+                  {{ imp.selection_batch.name }} ({{ imp.selection_batch.year }})
+                </span>
+                <span v-else class="text-sm text-gray-400 dark:text-gray-500">—</span>
               </td>
 
               <!-- Status badge -->
