@@ -285,15 +285,12 @@ async function onContinueToMapping(): Promise<void> {
       <div class="flex items-start justify-between">
         <div>
           <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Enrollment</h1>
-          <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
-            Upload Excel (.xlsx) files to import student enrollment data.
-          </p>
         </div>
 
         <!-- History button -->
         <router-link
           to="/enrollment/history"
-          class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-gray-100 dark:bg-gray-800 text-[#6B7280] dark:text-gray-400 hover:text-[#374151] dark:hover:text-gray-200"
+          class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] shadow-sm"
         >
           <History class="w-4 h-4" />
           <span class="hidden sm:inline">View History</span>
@@ -517,7 +514,7 @@ async function onContinueToMapping(): Promise<void> {
             @click="onContinueToMapping"
             class="px-5 py-2.5 text-sm font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30 focus:ring-offset-1 dark:focus:ring-offset-gray-900"
             :class="canContinue
-              ? 'text-white bg-[#355C8C] dark:bg-blue-600 hover:bg-[#2A4A70] dark:hover:bg-blue-700 active:scale-[0.97] active:bg-[#1F3A5A] dark:active:bg-blue-800 cursor-pointer'
+              ? 'text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.97] cursor-pointer'
               : 'text-[#9CA3AF] dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'"
           >
             Continue to Mapping
@@ -641,7 +638,7 @@ async function onContinueToMapping(): Promise<void> {
           <button
             @click="onCreateBatch"
             :disabled="isCreatingBatch || !newBatchName.trim()"
-            class="px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span v-if="isCreatingBatch" class="flex items-center gap-2">
               <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
