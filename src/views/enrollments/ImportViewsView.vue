@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { importsApi } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
 import type { ImportPreview, ImportValidationError } from '@/services/api/imports'
@@ -8,7 +8,6 @@ import type { SelectionBatch } from '@/services/api/selectionBatches'
 
 defineOptions({ name: 'ImportViewsView' })
 
-const route = useRoute()
 const router = useRouter()
 const { showSuccessToast, showErrorToast } = useToast()
 
@@ -18,7 +17,7 @@ const isCommitting = ref(false)
 const isDownloading = ref(false)
 
 onMounted(() => {
-  // Get preview data from sessionStorage (set by EnrollmentPage on upload)
+  // Get preview data from sessionStorage (set by EnrollmentPage after upload)
   try {
     const storedPreview = sessionStorage.getItem('import_preview')
     const storedBatch = sessionStorage.getItem('import_selected_batch')
@@ -35,23 +34,12 @@ onMounted(() => {
       console.log('Loaded selected batch from sessionStorage:', parsed)
     }
 
-    // Clear sessionStorage after loading to prevent stale data
+    // Data persists in sessionStorage until a new file is uploaded
+  } catch (err) {
+    // Corrupted data - clear it
+    console.error('Failed to load preview data:', err)
     sessionStorage.removeItem('import_preview')
     sessionStorage.removeItem('import_selected_batch')
-  } catch (err) {
-    console.error('Failed to load preview data:', err)
-    console.warn('Preview data not available - redirecting to upload.')
-    showErrorToast('Preview data not available. Please re-upload the file.', 'Error')
-    router.push('/enrollment')
-  }
-
-  // Redirect if no preview data was found
-  if (!preview.value) {
-    console.warn('No preview data in sessionStorage or history.state')
-    if (!route.query.import_id) {
-      // No import_id either - just an empty visit to the page
-      return
-    }
   }
 })
 
