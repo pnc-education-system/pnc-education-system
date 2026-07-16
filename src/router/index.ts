@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { prefetchBatches } from '@/utils/batchesCache'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -174,6 +175,11 @@ router.beforeEach((to) => {
   const requiredPermission = (to.meta as { permission?: string }).permission
   if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return { name: 'Forbidden' }
+  }
+
+  // Pre-fetch selection batches so the dropdown is ready instantly
+  if (to.name === 'Enrollment' || to.name === 'ImportViews') {
+    prefetchBatches()
   }
 })
 
