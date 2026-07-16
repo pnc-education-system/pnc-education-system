@@ -77,8 +77,8 @@ const emit = defineEmits<{
       <div class="text-center mt-2">
         <p class="text-xs text-[#9CA3AF] dark:text-gray-500">
           Accepted file types:
-          <span class="font-mono text-[#6B7280] dark:text-gray-400">.csv</span>,
-          <span class="font-mono text-[#6B7280] dark:text-gray-400">.xlsx</span>
+          <span class="font-mono text-[#6B7280] dark:text-gray-400">.csv</span>
+          <span class="text-[#9CA3AF]">(XLSX: convert to CSV first)</span>
         </p>
         <p class="text-xs text-[#9CA3AF] dark:text-gray-500 mt-0.5">
           Maximum file size: <span class="font-medium text-[#6B7280] dark:text-gray-400">{{ maxFileSizeMB }} MB</span>

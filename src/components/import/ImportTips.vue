@@ -25,6 +25,10 @@ defineOptions({ name: 'ImportTips' })
         <span class="text-[#355C8C] dark:text-blue-400 font-bold mt-0.5 shrink-0">•</span>
         Maximum file size is 25MB.
       </li>
+      <li class="flex items-start gap-2.5 text-[13px] text-[#6B7280] dark:text-gray-400 leading-relaxed">
+        <span class="text-[#355C8C] dark:text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+        Only CSV files are supported. Convert XLSX to CSV before uploading.
+      </li>
     </ul>
   </div>
 </template>
