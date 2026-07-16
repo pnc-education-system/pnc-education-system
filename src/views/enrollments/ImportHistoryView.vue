@@ -1,27 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { importsApi } from '@/services/api/imports'
 import type { ImportLog } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth'
 
 defineOptions({ name: 'ImportHistoryView' })
 
 const router = useRouter()
 const { showErrorToast, showSuccessToast } = useToast()
-const authStore = useAuthStore()
-
-const userInitials = computed(() => {
-  const name = authStore.user?.name?.trim()
-  if (!name) return '?'
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toUpperCase()
-})
 
 const imports = ref<ImportLog[]>([])
 const isLoading = ref(false)
@@ -100,13 +87,6 @@ function getStatus(status: string) {
           </svg>
           New import
         </button>
-        <span
-          class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#F3F4F6] dark:bg-gray-800 text-xs font-semibold text-[#374151] dark:text-gray-300 border border-[#E5E7EB] dark:border-gray-700 select-none"
-          :title="authStore.user?.name ?? 'Account'"
-          :aria-label="authStore.user?.name ?? 'Account'"
-        >
-          {{ userInitials }}
-        </span>
       </div>
     </div>
 
