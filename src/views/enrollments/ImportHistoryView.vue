@@ -28,7 +28,7 @@ async function fetchHistory(page = 1) {
     lastPage.value = result.meta.last_page
     total.value = result.meta.total
   } catch {
-    showErrorToast('Failed to load import history', 'Error')
+    showErrorToast('Unable to load import history. Please check your connection and try again.', 'Load Failed')
   } finally {
     isLoading.value = false
   }
@@ -40,7 +40,7 @@ async function downloadErrors(log: ImportLog) {
     await importsApi.downloadErrors(log.id, log.file_name)
     showSuccessToast('Error report downloaded', 'Downloaded')
   } catch {
-    showErrorToast('Failed to download error report', 'Error')
+    showErrorToast('Could not download the error report. Please try again.', 'Download Failed')
   } finally {
     downloadingId.value = null
   }

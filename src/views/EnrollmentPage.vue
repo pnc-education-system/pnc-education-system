@@ -13,6 +13,7 @@ import { importsApi, selectionBatchesApi } from '@/services/api'
 import { useToast } from '@/composables/useToast'
 import ImportDropzone from '@/components/import/ImportDropzone.vue'
 import FilePreview from '@/components/import/FilePreview.vue'
+import TemplateDownload from '@/components/import/TemplateDownload.vue'
 
 import { getCachedBatches, getFetchPromise, clearCache } from '@/utils/batchesCache'
 import type { SelectionBatch, UpdateBatchRequest } from '@/services/api/selectionBatches'
@@ -542,6 +543,7 @@ async function onContinueToMapping(): Promise<void> {
 
         <!-- Columns Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-5">
+          <!-- Required Columns -->
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">student_id_no</span>
@@ -553,38 +555,66 @@ async function onContinueToMapping(): Promise<void> {
             <span class="text-xs text-red-500 font-semibold">*</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
-            <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">gender</span>
+            <span class="text-xs text-red-500 font-semibold">*</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">dob</span>
+            <span class="text-xs text-red-500 font-semibold">*</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">selection_batch_id</span>
+            <span class="text-xs text-red-500 font-semibold">*</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">intake_year</span>
+            <span class="text-xs text-red-500 font-semibold">*</span>
+          </div>
+          <!-- Optional Columns -->
+          <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
+            <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">phone</span>
+            <span class="text-xs text-gray-400">(Optional)</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
-            <span class="text-sm font-medium text-[#111827] dark:text-white">dob</span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">email</span>
+            <span class="text-xs text-gray-400">(Optional)</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">province</span>
+            <span class="text-xs text-gray-400">(Optional)</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
-            <span class="text-sm font-medium text-[#111827] dark:text-white">phone</span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">high_school</span>
+            <span class="text-xs text-gray-400">(Optional)</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
-            <span class="text-sm font-medium text-[#111827] dark:text-white">guardian</span>
+            <span class="text-sm font-medium text-[#111827] dark:text-white">enrollment_status</span>
+            <span class="text-xs text-gray-400">(Optional)</span>
           </div>
         </div>
 
-        <!-- Info bar — shown only when there's an error -->
-        <div
-          v-if="uploadError || apiUploadError"
-          class="flex items-start gap-2.5 p-3.5 rounded-lg bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800"
-        >
-          <div class="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
-            <span class="text-white text-xs font-bold">i</span>
+        <!-- Legend & Template Download -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
+          <div class="flex items-center gap-6 text-xs text-[#6B7280] dark:text-gray-400">
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+              <span>Required fields</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+              <span>Optional fields</span>
+            </div>
           </div>
-          <p class="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-            Upload parses to a preview via <code class="font-mono font-semibold text-amber-900 dark:text-amber-200">POST /imports</code> — nothing is written yet. A fixed column template is agreed with the Selection Team up front (risk R2). Strict validation happens on the next screen.
-          </p>
+          <TemplateDownload />
         </div>
       </div>
 

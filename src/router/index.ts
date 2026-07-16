@@ -92,7 +92,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/students',
     name: 'Students',
-    component: () => import('@/views/students/StudentsView.vue'),
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/tracking',
+    name: 'StudentTracking',
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
@@ -122,25 +128,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
-  {
-    path: '/enrollments',
-    name: 'Enrollments',
-    component: () => import('@/views/enrollments/EnrollmentsView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-  {
-    path: '/enrollments/new',
-    name: 'EnrollmentCreate',
-    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-  {
-    path: '/enrollments/:id/edit',
-    name: 'EnrollmentEdit',
-    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-
+ 
   {
     path: '/profile',
     name: 'Profile',

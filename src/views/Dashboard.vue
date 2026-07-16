@@ -3,6 +3,7 @@ defineOptions({ name: 'DashboardPage' })
 
 import { ref, shallowRef, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useStudentsStore } from '@/stores/students'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { User } from '@/types'
@@ -18,10 +19,13 @@ import {
   BarChart3,
   Activity,
   Clock,
+  GraduationCap,
+  XCircle,
 } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const studentsStore = useStudentsStore()
 const router = useRouter()
 
 const user = ref<User | null>(null)
@@ -36,6 +40,9 @@ onMounted(() => {
     const userData = localStorage.getItem('user')
     if (userData) user.value = JSON.parse(userData)
   }
+
+  // Fetch student stats for dashboard
+  studentsStore.fetchAll()
   
   // Lazy-load Chart.js to keep Dashboard chunk small
   Promise.all([
@@ -48,20 +55,56 @@ onMounted(() => {
     chartReady.value = true
   })
 })
-interface StatCard {
-  titleKey: string
-  value: string
-  subtitleKey: string
-  highlighted?: boolean
-}
 
-const statCards: StatCard[] = [
-  { titleKey: 'dashboard.total', value: '1,248', subtitleKey: 'dashboard.all_intakes' },
-  { titleKey: 'dashboard.pending', value: '312', subtitleKey: 'dashboard.awaiting_review' },
-  { titleKey: 'dashboard.enrolled', value: '874', subtitleKey: 'dashboard.active_students' },
-  { titleKey: 'dashboard.rejected', value: '62', subtitleKey: 'dashboard.not_admitted' },
-  { titleKey: 'dashboard.enroll_rate', value: '71%', subtitleKey: 'dashboard.enrolled_total', highlighted: true },
-]
+// ── Student Stats Cards (live from studentsStore) ──
+const statCards = computed(() => [
+  { 
+    titleKey: 'dashboard.total', 
+    value: String(studentsStore.totalStudents), 
+    subtitleKey: 'dashboard.all_students',
+    icon: Users,
+    color: 'text-gray-900 dark:text-white',
+    bg: 'bg-white dark:bg-[#131B2E] border-[#E5E7EB] dark:border-gray-800',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.pending_students', 
+    value: String(studentsStore.pendingCount), 
+    subtitleKey: 'dashboard.awaiting_review',
+    icon: Clock,
+    color: 'text-orange-600',
+    bg: 'bg-orange-50 dark:bg-orange-500/10 border-orange-100 dark:border-orange-800/50',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.approved_students', 
+    value: String(studentsStore.approvedCount), 
+    subtitleKey: 'dashboard.ready_to_enroll',
+    icon: UserCheck,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-800/50',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.enrolled_students', 
+    value: String(studentsStore.enrolledCount), 
+    subtitleKey: 'dashboard.active_students',
+    icon: GraduationCap,
+    color: 'text-blue-600',
+    bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-800/50',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  },
+  { 
+    titleKey: 'dashboard.inactive_students', 
+    value: String(studentsStore.inactiveCount), 
+    subtitleKey: 'dashboard.not_active',
+    icon: XCircle,
+    color: 'text-gray-600',
+    bg: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+    highlighted: false,
+  },
+])
 
 const flowChartData = computed(() => ({
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -231,14 +274,6 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
     },
   },
 }
-const recentRequests = [
-  { name: 'Sophia Martinez', id: 'STU-2024-0042', program: 'BS Computer Science', date: 'Dec 12, 2024', status: 'pending' as const },
-  { name: 'James Chen', id: 'STU-2024-0041', program: 'BS Information Technology', date: 'Dec 11, 2024', status: 'approved' as const },
-  { name: 'Emma Williams', id: 'STU-2024-0040', program: 'BS Business Administration', date: 'Dec 10, 2024', status: 'approved' as const },
-  { name: 'Liam Johnson', id: 'STU-2024-0039', program: 'BS Computer Engineering', date: 'Dec 9, 2024', status: 'pending' as const },
-  { name: 'Olivia Brown', id: 'STU-2024-0038', program: 'BS Nursing', date: 'Dec 8, 2024', status: 'rejected' as const },
-  { name: 'Noah Garcia', id: 'STU-2024-0037', program: 'BS Information Systems', date: 'Dec 7, 2024', status: 'pending' as const },
-]
 interface QuickAction {
   labelKey: string
   icon: string
@@ -252,18 +287,8 @@ const quickActions: QuickAction[] = [
   { labelKey: 'quick_actions.view_reports', icon: 'chart', route: '/students' },
 ]
 
-const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
-  pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316' },
-  approved: { bg: '#F0FDF4', text: '#16A34A', dot: '#22C55E' },
-  rejected: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
-}
-
 const navigateTo = (path: string) => {
   router.push(path)
-}
-
-function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
-  return (statusStyles[status] || statusStyles.pending) as { bg: string; text: string; dot: string }
 }
 </script>
 
@@ -286,21 +311,18 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         v-for="card in statCards"
         :key="card.titleKey"
         class="rounded-[14px] p-6 border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default"
-        :class="card.highlighted
-          ? 'bg-[#EFF6FF] border-[#355C8C] dark:bg-[#EFF6FF]/10 dark:border-[#355C8C]/50'
-          : 'bg-white dark:bg-[#131B2E] border-[#E5E7EB] dark:border-gray-800'"
-        :style="{
-          boxShadow: card.highlighted
-            ? '0 1px 3px rgba(53, 92, 140, 0.08), 0 1px 2px rgba(53, 92, 140, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.04)',
-        }"
+        :class="card.bg"
+        :style="{ boxShadow: card.boxShadow }"
       >
-        <p class="text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase mb-2">
-          {{ t(card.titleKey) }}
-        </p>
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">
+            {{ t(card.titleKey) }}
+          </p>
+          <component :is="card.icon" :size="18" class="text-gray-400" />
+        </div>
         <p
           class="text-2xl font-bold tracking-tight"
-          :class="card.highlighted ? 'text-[#355C8C]' : 'text-[#111827] dark:text-white'"
+          :class="card.color"
         >
           {{ card.value }}
         </p>
@@ -481,81 +503,6 @@ function getStatusStyle(status: string): { bg: string; text: string; dot: string
         </div>
       </div>
     </div>
-    <div
-      class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800"
-      style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
-    >
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] dark:border-gray-800">
-        <div>
-          <h2 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('recent_requests.title') }}</h2>
-          <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('recent_requests.subtitle') }}</p>
-        </div>
-        <button
-          @click="navigateTo('/students')"
-          class="flex items-center gap-1 text-sm font-medium text-[#355C8C] hover:text-[#2A4A70] dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer group"
-        >
-          <span>{{ t('recent_requests.view_all') }}</span>
-          <ChevronRight :size="14" class="group-hover:translate-x-0.5 transition-transform" />
-        </button>
-      </div>
 
-      <div class="hidden md:grid grid-cols-5 gap-4 px-6 py-3 bg-[#F8FAFC] dark:bg-white/[0.02] text-[11px] font-semibold tracking-[0.05em] text-[#6B7280] dark:text-gray-400 uppercase">
-        <span>{{ t('recent_requests.student') }}</span>
-        <span>{{ t('recent_requests.id') }}</span>
-        <span>{{ t('recent_requests.program') }}</span>
-        <span>{{ t('recent_requests.date') }}</span>
-        <span>{{ t('recent_requests.status') }}</span>
-      </div>
-
-      <div class="divide-y divide-[#E5E7EB] dark:divide-gray-800">
-        <div
-          v-for="request in recentRequests"
-          :key="request.id"
-          class="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4 px-6 py-4 hover:bg-[#F8FAFC] dark:hover:bg-white/[0.02] transition-colors duration-150 cursor-default"
-        >
-          <div class="md:hidden flex justify-between items-center">
-            <span class="text-sm font-medium text-[#111827] dark:text-white">{{ request.name }}</span>
-            <span
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-              :style="{
-                backgroundColor: getStatusStyle(request.status).bg,
-                color: getStatusStyle(request.status).text,
-              }"
-            >
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(request.status).dot }"></span>
-              {{ t(request.status) }}
-            </span>
-          </div>
-          <div class="md:hidden text-xs text-[#9CA3AF] dark:text-gray-500">
-            {{ request.id }} · {{ request.program }} · {{ request.date }}
-          </div>
-
-          <div class="hidden md:flex items-center">
-            <span class="text-sm font-medium text-[#111827] dark:text-white">{{ request.name }}</span>
-          </div>
-          <div class="hidden md:flex items-center">
-            <span class="text-sm text-[#6B7280] dark:text-gray-400 font-mono">{{ request.id }}</span>
-          </div>
-          <div class="hidden md:flex items-center">
-            <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ request.program }}</span>
-          </div>
-          <div class="hidden md:flex items-center">
-            <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ request.date }}</span>
-          </div>
-          <div class="hidden md:flex items-center">
-            <span
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-              :style="{
-                backgroundColor: getStatusStyle(request.status).bg,
-                color: getStatusStyle(request.status).text,
-              }"
-            >
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(request.status).dot }"></span>
-              {{ t(request.status) }}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>

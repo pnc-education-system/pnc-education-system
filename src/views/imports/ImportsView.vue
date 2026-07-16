@@ -27,7 +27,7 @@ const fetchImports = async (page = 1) => {
     imports.value = result.data
     meta.value = result.meta
   } catch {
-    error.value = 'Failed to load import history.'
+    error.value = 'Unable to load import history. Please check your connection and try again.'
   } finally {
     loading.value = false
   }
@@ -41,7 +41,7 @@ const handleDownload = async (imp: ImportLog) => {
   try {
     await importsApi.downloadErrors(imp.id, imp.file_name)
   } catch {
-    error.value = 'Failed to download error report.'
+    error.value = 'Could not download the error report. Please try again.'
   } finally {
     downloadingId.value = null
   }
