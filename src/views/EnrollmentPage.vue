@@ -50,8 +50,8 @@ onMounted(async () => {
 async function fetchBatches() {
   isLoadingBatches.value = true
   try {
-    const currentYear = new Date().getFullYear()
-    batches.value = await selectionBatchesApi.list(currentYear)
+    // Fetch all batches without year filter so users can select from any intake year
+    batches.value = await selectionBatchesApi.list()
     // Auto-select the first batch if available
     if (batches.value.length > 0) {
       selectedBatch.value = batches.value[0]
@@ -112,26 +112,33 @@ async function onContinueToMapping(): Promise<void> {
   try {
     console.log('Starting file upload:', selectedFile.value.name)
     console.log('Selected batch:', selectedBatch.value)
-    const preview = await importsApi.preview(selectedFile.value)
+    const preview = await importsApi.preview(selectedFile.value, selectedBatch.value.id)
     console.log('Upload successful, preview data:', preview)
 
     // Store preview data in sessionStorage for reliable data passing
     sessionStorage.setItem('import_preview', JSON.stringify(preview))
     sessionStorage.setItem('import_selected_batch', JSON.stringify(selectedBatch.value))
 
-    // Navigate to Import Views with the preview data
+    // Navigate to Import Views
     router.push({
       path: '/enrollment/views',
       query: { import_id: String(preview.import_log_id) },
     })
   } catch (err: unknown) {
     console.error('Upload error:', err)
-    const error = err as { response?: { data?: { message?: string; error?: string; errors?: string } } }
+    const error = err as {
+      response?: {
+        data?: {
+          message?: string
+          error?: string
+          errors?: string
+        }
+      }
+    }
     const msg =
       error?.response?.data?.message ??
       error?.response?.data?.error ??
-      error?.response?.data?.errors ??
-      'Failed to process file. Please check the file format and try again.'
+      'Failed to process file. Check the format and try again.'
     showErrorToast(msg, 'Upload Error')
   } finally {
     isUploading.value = false

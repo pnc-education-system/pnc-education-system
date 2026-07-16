@@ -127,8 +127,13 @@ function getStatus(status: string) {
               <!-- File -->
               <td class="px-5 py-3.5 font-medium text-[#111827] dark:text-white">{{ log.file_name }}</td>
 
-              <!-- Batch (not stored — show —) -->
-              <td class="px-5 py-3.5 text-[#6B7280] dark:text-gray-400">—</td>
+              <!-- Batch -->
+              <td class="px-5 py-3.5 text-[#374151] dark:text-gray-300">
+                <span v-if="log.selection_batch">
+                  {{ log.selection_batch.name }} ({{ log.selection_batch.year }})
+                </span>
+                <span v-else class="text-[#9CA3AF]">—</span>
+              </td>
 
               <!-- Rows -->
               <td class="px-5 py-3.5 text-[#374151] dark:text-gray-300">{{ log.total_rows }}</td>

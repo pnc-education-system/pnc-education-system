@@ -34,6 +34,7 @@ interface DisplayRecord {
   id: string
   importId: number
   fileName: string
+  batchName: string | null
   importedAt: string
   importedBy: string
   status: DisplayStatus
@@ -55,6 +56,7 @@ function toDisplayRecord(log: ImportLog): DisplayRecord {
     id: `IMP-${String(log.id).padStart(4, '0')}`,
     importId: log.id,
     fileName: log.file_name,
+    batchName: log.selection_batch ? `${log.selection_batch.name} (${log.selection_batch.year})` : null,
     importedAt: log.created_at,
     importedBy: log.imported_by?.name ?? '—',
     status: computeStatus(log),
@@ -324,6 +326,7 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
           <tr class="border-b border-gray-200 dark:border-gray-800">
             <th class="text-left px-5 sm:px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">File Name</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Import ID</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Batch</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Date</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Records</th>
@@ -356,6 +359,14 @@ const statusOptions: { value: DisplayStatus | 'all'; label: string }[] = [
               <span class="text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                 {{ record.id }}
               </span>
+            </td>
+
+            <!-- Batch -->
+            <td class="px-4 py-3.5">
+              <span v-if="record.batchName" class="text-sm text-gray-700 dark:text-gray-300">
+                {{ record.batchName }}
+              </span>
+              <span v-else class="text-sm text-gray-400 dark:text-gray-500">—</span>
             </td>
 
             <!-- Status -->
