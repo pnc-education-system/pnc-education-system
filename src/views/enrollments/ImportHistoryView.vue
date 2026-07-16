@@ -69,7 +69,7 @@ function getStatus(status: string) {
 </script>
 
 <template>
-  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
+  <div class="min-h-screen space-y-6 py-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
 
     <!-- Header -->
     <div class="flex items-start justify-between">

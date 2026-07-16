@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { rolesApi } from '@/services/api'
 import type { Role, BackendRole, BackendPermission } from '@/types'
-
 function mapBackendRole(backend: BackendRole): Role {
   return {
     id: String(backend.id),
@@ -42,7 +41,6 @@ export const useRolesStore = defineStore('roles', () => {
       loading.value = false
     }
   }
-
   async function fetchPermissions() {
     try {
       permissions.value = await rolesApi.permissions()

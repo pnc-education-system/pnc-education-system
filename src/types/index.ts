@@ -29,7 +29,6 @@ export interface AdminUser {
   lastLogin?: string
   avatar?: string
 }
-
 export interface Role {
   id: string
   name: string
@@ -50,7 +49,6 @@ export interface ApiResponse<T> {
   data?: T
   errors?: Record<string, string[]>
 }
-
 export interface BackendUser {
   id: number
   role_id: number | null
@@ -62,7 +60,6 @@ export interface BackendUser {
   updated_at: string
   role?: BackendRole | null
 }
-
 export interface BackendRole {
   id: number
   name: string
@@ -89,7 +86,7 @@ export interface PasswordResetRequest {
 
 export interface PasswordResetConfirm {
   email: string
-  token: string
+  reset_token: string
   password: string
   password_confirmation: string
 }
@@ -98,6 +95,8 @@ export interface PasswordResetResponse {
   status: string
   message: string
 }
+
+export type ProfileResponse = AuthResponse
 
 export interface PaginatedData<T> {
   data: T[]

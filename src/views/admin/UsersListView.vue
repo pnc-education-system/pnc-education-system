@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUsersStore } from '@/stores/users'
@@ -8,33 +8,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 
 const { t } = useI18n()
-
-// Pre-computed translations
-const usersTitle = computed(() => t('users.title'))
-const usersSubtitle = computed(() => t('users.subtitle'))
-const usersNewUser = computed(() => t('users.new_user'))
-const usersDeleteBtn = computed(() => t('users.delete'))
-const usersFilterAllStatus = computed(() => t('users.filter_all_status'))
-const usersFilterActive = computed(() => t('users.filter_active'))
-const usersFilterInactive = computed(() => t('users.filter_inactive'))
-const usersFilterAllRoles = computed(() => t('users.filter_all_roles'))
-const usersTotalUsers = computed(() => t('users.total_users'))
-const usersCardActive = computed(() => t('users.active'))
-const usersCardInactive = computed(() => t('users.inactive'))
-const usersTableUser = computed(() => t('users.table_user'))
-const usersTableRole = computed(() => t('users.table_role'))
-const usersTableStatus = computed(() => t('users.table_status'))
-const usersTableCreated = computed(() => t('users.table_created'))
-const usersTableLastLogin = computed(() => t('users.table_last_login'))
-const usersTableActions = computed(() => t('users.table_actions'))
-const usersEditTooltip = computed(() => t('users.edit_tooltip'))
-const usersDeleteTooltip = computed(() => t('users.delete_tooltip'))
-const usersEmptyTitle = computed(() => t('users.empty_title'))
-const usersEmptySubtitle = computed(() => t('users.empty_subtitle'))
-const usersDeleteConfirmTitle = computed(() => t('users.delete_confirm_title'))
-const usersDeleteConfirmMessage = computed(() => t('users.delete_confirm_message'))
-const usersDeleteConfirmCancel = computed(() => t('users.delete_confirm_cancel'))
-const usersDeleteConfirmDelete = computed(() => t('users.delete_confirm_delete'))
 
 const router = useRouter()
 const usersStore = useUsersStore()
@@ -105,6 +78,11 @@ function navigateToEdit(id: string) {
   router.push(`/admin/users/${id}/edit`)
 }
 
+function canDeleteUser(userId: string): boolean {
+  if (authStore.user?.id && Number(userId) === authStore.user.id) return false
+  return true
+}
+
 function confirmDelete(id: string) {
   deleteConfirmId.value = id
 }
@@ -162,15 +140,69 @@ const roleMap = computed(() => {
   roles.value.forEach(r => { map[r.id] = r.name })
   return map
 })
+
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / pageSize.value)))
+
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredUsers.value.slice(start, end)
+})
+
+watch(filteredUsers, () => {
+  currentPage.value = 1
+})
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push(-1)
+
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    for (let i = start; i <= end; i++) pages.push(i)
+
+    if (current < total - 2) pages.push(-2)
+    pages.push(total)
+  }
+  return pages
+})
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ usersTitle }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ t('users.title') }}</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ usersSubtitle }}
+          {{ t('users.subtitle') }}
         </p>
       </div>
       <div v-if="canCreate" class="flex items-center gap-3">
@@ -182,7 +214,7 @@ const roleMap = computed(() => {
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
           </svg>
-          {{ usersDeleteBtn }} ({{ selectedUsers.length }})
+          {{ t('users.delete') }} ({{ selectedUsers.length }})
         </button>
         <button
           @click="navigateToCreate"
@@ -191,11 +223,10 @@ const roleMap = computed(() => {
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" />
           </svg>
-          {{ usersNewUser }}
+          {{ t('users.new_user') }}
         </button>
       </div>
     </div>
-
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
         <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -212,19 +243,18 @@ const roleMap = computed(() => {
         v-model="statusFilter"
         class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer min-w-[140px] dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
       >
-        <option value="all">{{ usersFilterAllStatus }}</option>
-        <option value="active">{{ usersFilterActive }}</option>
-        <option value="inactive">{{ usersFilterInactive }}</option>
+        <option value="all">{{ t('users.filter_all_status') }}</option>
+        <option value="active">{{ t('users.filter_active') }}</option>
+        <option value="inactive">{{ t('users.filter_inactive') }}</option>
       </select>
       <select
         v-model="roleFilter"
         class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer min-w-[140px] dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
       >
-        <option value="all">{{ usersFilterAllRoles }}</option>
+        <option value="all">{{ t('users.filter_all_roles') }}</option>
         <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
       </select>
     </div>
-
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="bg-white dark:bg-gray-800/20 rounded-xl border border-gray-100 dark:border-gray-700/50 p-5">
         <div class="flex items-center gap-3">
@@ -234,7 +264,7 @@ const roleMap = computed(() => {
             </svg>
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTotalUsers }}</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.total_users') }}</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">{{ usersStore.totalUsers }}</p>
           </div>
         </div>
@@ -247,7 +277,7 @@ const roleMap = computed(() => {
             </svg>
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersCardActive }}</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.active') }}</p>
             <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{{ usersStore.activeUsers }}</p>
           </div>
         </div>
@@ -260,13 +290,12 @@ const roleMap = computed(() => {
             </svg>
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersCardInactive }}</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.inactive') }}</p>
             <p class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-0.5">{{ usersStore.inactiveUsers }}</p>
           </div>
         </div>
       </div>
     </div>
-
     <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -281,16 +310,16 @@ const roleMap = computed(() => {
                   class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
                 />
               </th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableUser }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableRole }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableStatus }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableCreated }}</th>
-              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableLastLogin }}</th>
-              <th class="w-24 px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ usersTableActions }}</th>
+              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.table_user') }}</th>
+              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.table_role') }}</th>
+              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.table_status') }}</th>
+              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.table_created') }}</th>
+              <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.table_last_login') }}</th>
+              <th class="w-24 px-6 py-4 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ t('users.table_actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-800/30">
-            <tr v-for="user in filteredUsers" :key="user.id" class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
+            <tr v-for="user in paginatedUsers" :key="user.id" class="transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
               <td class="px-6 py-4">
                 <input
                   type="checkbox"
@@ -341,7 +370,7 @@ const roleMap = computed(() => {
                     v-if="canEdit"
                     @click="navigateToEdit(user.id)"
                     class="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10"
-                    :title="usersEditTooltip"
+                    :title="t('users.edit_tooltip')"
                   >
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -349,10 +378,10 @@ const roleMap = computed(() => {
                     </svg>
                   </button>
                   <button
-                    v-if="canDelete"
+                    v-if="canDelete && canDeleteUser(user.id)"
                     @click="confirmDelete(user.id)"
                     class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10"
-                    :title="usersDeleteTooltip"
+                    :title="t('users.delete_tooltip')"
                   >
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -370,8 +399,8 @@ const roleMap = computed(() => {
                     </svg>
                   </div>
                   <div>
-                    <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ usersEmptyTitle }}</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ usersEmptySubtitle }}</p>
+                    <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ t('users.empty_title') }}</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ t('users.empty_subtitle') }}</p>
                   </div>
                 </div>
               </td>
@@ -379,8 +408,49 @@ const roleMap = computed(() => {
           </tbody>
         </table>
       </div>
+      <div v-if="filteredUsers.length > 0" class="flex items-center justify-between px-6 py-3 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, filteredUsers.length) }} of {{ filteredUsers.length }}
+        </p>
+        <div class="flex items-center gap-1">
+          <button
+            :disabled="currentPage === 1"
+            @click="prevPage"
+            class="p-1.5 rounded-md transition-all duration-200 cursor-pointer"
+            :class="currentPage === 1 ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50'"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+
+          <template v-for="page in visiblePages" :key="page">
+            <span v-if="page < 0" class="px-1 text-gray-400 dark:text-gray-500 text-xs select-none">…</span>
+            <button
+              v-else
+              @click="goToPage(page)"
+              class="min-w-[32px] px-2.5 py-1 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer"
+              :class="page === currentPage
+                ? 'text-white bg-blue-600 dark:bg-blue-500 cursor-default'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'"
+            >
+              {{ page }}
+            </button>
+          </template>
+
+          <button
+            :disabled="currentPage === totalPages"
+            @click="nextPage"
+            class="p-1.5 rounded-md transition-all duration-200 cursor-pointer"
+            :class="currentPage === totalPages ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50'"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-    
     <Teleport to="body">
       <Transition
         enter-active-class="transition-all duration-200 ease-out"
@@ -400,9 +470,9 @@ const roleMap = computed(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ usersDeleteConfirmTitle }}</h3>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ t('users.delete_confirm_title') }}</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                  {{ usersDeleteConfirmMessage }}
+                  {{ t('users.delete_confirm_message') }}
                 </p>
               </div>
             </div>
@@ -411,13 +481,13 @@ const roleMap = computed(() => {
                 @click="cancelDelete"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-200 cursor-pointer dark:bg-gray-700 dark:text-gray-300"
               >
-                {{ usersDeleteConfirmCancel }}
+                {{ t('users.delete_confirm_cancel') }}
               </button>
               <button
                 @click="executeDelete(deleteConfirmId)"
                 class="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-all duration-200 cursor-pointer shadow-sm"
               >
-                {{ usersDeleteConfirmDelete }}
+                {{ t('users.delete_confirm_delete') }}
               </button>
             </div>
           </div>

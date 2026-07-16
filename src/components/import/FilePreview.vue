@@ -6,10 +6,12 @@ defineOptions({ name: 'FilePreview' })
 
 const props = defineProps<{
   file: File
+  isUploading?: boolean
 }>()
 
 const emit = defineEmits<{
   remove: []
+  upload: []
 }>()
 
 function getFormattedSize(): string {
@@ -38,10 +40,18 @@ function getFormattedSize(): string {
         Remove
       </button>
       <button
-        @click.stop
-        class="px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-colors cursor-pointer"
+        @click.stop="emit('upload')"
+        :disabled="isUploading"
+        class="px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Upload File
+        <span v-if="isUploading" class="flex items-center gap-2">
+          <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Uploading...
+        </span>
+        <span v-else>Upload File</span>
       </button>
     </div>
   </div>

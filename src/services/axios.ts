@@ -18,7 +18,6 @@ function isPublicEndpoint(url: string | undefined): boolean {
   if (!url) return false
   return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint))
 }
-
 axiosInstance.interceptors.request.use(
   (config) => {
     if (isPublicEndpoint(config.url)) {

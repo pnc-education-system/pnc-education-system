@@ -102,15 +102,17 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/users',
-    name: 'Users',
-    component: () => import('@/views/users/UsersView.vue'),
-    meta: { requiresAuth: true, permission: 'users.manage' },
+    redirect: '/admin/users',
   },
   {
     path: '/roles',
-    name: 'Roles',
-    component: () => import('@/views/roles/RolesView.vue'),
-    meta: { requiresAuth: true, permission: 'roles.manage' },
+    redirect: '/admin/roles',
+  },
+  {
+    path: '/me',
+    name: 'Profile',
+    component: () => import('@/views/profile/ProfileView.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/settings',

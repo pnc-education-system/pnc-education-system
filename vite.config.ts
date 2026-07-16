@@ -17,4 +17,18 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/chart.js') || id.includes('node_modules/vue-chartjs')) {
+            return 'vendor-charts'
+          }
+          if (id.includes('node_modules/lucide-vue-next')) {
+            return 'vendor-ui'
+          }
+        },
+      },
+    },
+  },
 })

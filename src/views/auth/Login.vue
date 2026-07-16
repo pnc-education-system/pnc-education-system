@@ -121,36 +121,30 @@ function clearFieldError(field: 'email' | 'password') {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6 transition-colors duration-200">
+  <div class="min-h-screen bg-white dark:bg-[#0B1120] flex items-center justify-center p-6">
     <div class="absolute right-6 top-6">
       <LanguageSwitcher />
     </div>
-    <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl dark:shadow-gray-900/50 ring-1 ring-slate-100 dark:ring-gray-800/50 transition-colors duration-200">
+    <div class="w-full max-w-[440px] rounded-3xl bg-white dark:bg-[#131B2E] p-10 shadow-2xl ring-1 ring-slate-100 dark:ring-gray-700/50">
       <div class="mb-8 text-center">
-        <div class="flex flex-col items-center gap-3 mb-6">
+        <div class="flex flex-col items-center gap-3 mb-4">
           <img
             src="@/assets/images/PN_logo_clear.png"
             alt="PNC Logo"
-            class="w-14 h-14 object-contain"
+            class="w-20 h-20 object-contain"
           />
-          <div>
-            <h1 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">PNC Education</h1>
-            <p class="text-xs text-slate-500 dark:text-gray-400 font-medium">System Management</p>
-          </div>
         </div>
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white">{{ loginTitle }}</h2>
         <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">{{ loginSubtitle }}</p>
       </div>
 
       <form class="space-y-5" @submit.prevent="handleLogin">
-
           <div v-if="errorMessage" class="flex items-center gap-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400 border border-red-100 dark:border-red-500/20">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
             </svg>
             <span>{{ errorMessage }}</span>
           </div>
-
           <div>
             <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ loginEmailLabel }}</label>
             <div
@@ -239,11 +233,10 @@ function clearFieldError(field: 'email' | 'password') {
               <router-link to="/forgot-password" class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors ml-auto">{{ loginForgotPassword }}</router-link>
             </div>
           </div>
-
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+            class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 dark:bg-blue-500 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 dark:hover:bg-blue-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -252,7 +245,6 @@ function clearFieldError(field: 'email' | 'password') {
             </svg>
             {{ isSubmitting ? loginSigningIn : loginSignIn }}
           </button>
-
           <div class="flex items-start gap-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 px-4 py-3.5 border border-blue-100 dark:border-blue-500/20">
             <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
