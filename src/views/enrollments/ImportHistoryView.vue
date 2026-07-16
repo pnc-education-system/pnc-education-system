@@ -1,14 +1,27 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { importsApi } from '@/services/api/imports'
 import type { ImportLog } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 
 defineOptions({ name: 'ImportHistoryView' })
 
 const router = useRouter()
 const { showErrorToast, showSuccessToast } = useToast()
+const authStore = useAuthStore()
+
+const userInitials = computed(() => {
+  const name = authStore.user?.name?.trim()
+  if (!name) return '?'
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase()
+})
 
 const imports = ref<ImportLog[]>([])
 const isLoading = ref(false)
@@ -77,15 +90,24 @@ function getStatus(status: string) {
         <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Import history</h1>
         <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">Past intake files &amp; outcomes</p>
       </div>
-      <button
-        @click="router.push('/enrollment')"
-        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#0F172A] dark:bg-blue-600 rounded-lg hover:bg-[#1E293B] dark:hover:bg-blue-700 transition-all duration-200 cursor-pointer shadow-sm"
-      >
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        New import
-      </button>
+      <div class="flex items-center gap-3">
+        <button
+          @click="router.push('/enrollment')"
+          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#0F172A] dark:bg-blue-600 rounded-lg hover:bg-[#1E293B] dark:hover:bg-blue-700 transition-all duration-200 cursor-pointer shadow-sm"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New import
+        </button>
+        <span
+          class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[#F3F4F6] dark:bg-gray-800 text-xs font-semibold text-[#374151] dark:text-gray-300 border border-[#E5E7EB] dark:border-gray-700 select-none"
+          :title="authStore.user?.name ?? 'Account'"
+          :aria-label="authStore.user?.name ?? 'Account'"
+        >
+          {{ userInitials }}
+        </span>
+      </div>
     </div>
 
     <!-- Table card -->
