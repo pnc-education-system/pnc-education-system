@@ -63,8 +63,8 @@ const statusConfig: Record<string, { label: string; dot: string; bg: string; tex
   Pending:   { label: 'Pending',   dot: 'bg-gray-400',    bg: 'bg-gray-100 dark:bg-gray-700',         text: 'text-gray-600 dark:text-gray-400' },
 }
 
-function getStatus(status: string) {
-  return statusConfig[status] ?? statusConfig.Pending
+function getStatus(status: string): (typeof statusConfig)['Pending'] {
+  return (statusConfig[status] ?? statusConfig.Pending)!
 }
 </script>
 
