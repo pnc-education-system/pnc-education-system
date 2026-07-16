@@ -8,7 +8,7 @@ const props = defineProps<{
   uploadError: string | null
   hasFile: boolean
   acceptedExtensions: string
-  maxFileSizeMB: number
+  maxFileSizeMb: number
   dropZoneClasses: string
 }>()
 
@@ -77,11 +77,10 @@ const emit = defineEmits<{
       <div class="text-center mt-2">
         <p class="text-xs text-[#9CA3AF] dark:text-gray-500">
           Accepted file types:
-          <span class="font-mono text-[#6B7280] dark:text-gray-400">.csv</span>
-          <span class="text-[#9CA3AF]">(XLSX: convert to CSV first)</span>
+          <span class="font-mono text-[#6B7280] dark:text-gray-400">.xlsx</span>
+          <span class="text-[#9CA3AF]">(Excel files only)</span>
         </p>
-        <p class="text-xs text-[#9CA3AF] dark:text-gray-500 mt-0.5">
-          Maximum file size: <span class="font-medium text-[#6B7280] dark:text-gray-400">{{ maxFileSizeMB }} MB</span>
+        <p class="text-xs text-[#9CA3AF] dark:text-gray-500 mt-0.5">            Maximum file size: <span class="font-medium text-[#6B7280] dark:text-gray-400">{{ maxFileSizeMb }} MB</span>
         </p>
       </div>
     </div>

@@ -73,7 +73,6 @@ onUnmounted(() => {
       >
         <div class="p-4 sm:p-6 lg:p-8">
           <PageSkeleton v-if="routeLoading" />
-
           <div v-else>
             <router-view v-slot="{ Component }">
               <Transition
@@ -91,12 +90,10 @@ onUnmounted(() => {
           </div>
         </div>
       </main>
-
       <main v-else class="flex-1">
         <router-view />
       </main>
     </div>
-
     <Teleport to="body">
       <div
         id="toast-container"

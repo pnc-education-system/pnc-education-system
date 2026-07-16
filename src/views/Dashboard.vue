@@ -1,13 +1,12 @@
 <script setup lang="ts">
 defineOptions({ name: 'DashboardPage' })
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, shallowRef, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { User } from '@/types'
-
-// Lucide Icons
+import type { ChartOptions } from 'chart.js'
 import {
   FileDown,
   UserCheck,
@@ -21,27 +20,14 @@ import {
   Clock,
 } from 'lucide-vue-next'
 
-// Chart.js
-import { Bar, Doughnut } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  ArcElement,
-  type ChartOptions,
-} from 'chart.js'
-
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
-
 const { t } = useI18n()
 const authStore = useAuthStore()
 const router = useRouter()
 
 const user = ref<User | null>(null)
+const chartReady = ref(false)
+const BarChart = shallowRef<any>(null)
+const DoughnutChart = shallowRef<any>(null)
 
 onMounted(() => {
   if (authStore.user) {
@@ -50,9 +36,18 @@ onMounted(() => {
     const userData = localStorage.getItem('user')
     if (userData) user.value = JSON.parse(userData)
   }
+  
+  // Lazy-load Chart.js to keep Dashboard chunk small
+  Promise.all([
+    import('vue-chartjs'),
+    import('chart.js'),
+  ]).then(([{ Bar, Doughnut }, { Chart, registerables }]) => {
+    Chart.register(...registerables)
+    BarChart.value = Bar
+    DoughnutChart.value = Doughnut
+    chartReady.value = true
+  })
 })
-
-// ──── Stat Cards (translation keys) ────
 interface StatCard {
   titleKey: string
   value: string
@@ -68,7 +63,6 @@ const statCards: StatCard[] = [
   { titleKey: 'dashboard.enroll_rate', value: '71%', subtitleKey: 'dashboard.enrolled_total', highlighted: true },
 ]
 
-// ──── Enrollment Flow (Chart.js Grouped Bar) ────
 const flowChartData = computed(() => ({
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   datasets: [
@@ -103,7 +97,7 @@ const flowChartOptions: ChartOptions<'bar'> = {
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#6B7280',
-        font: { family: 'Inter, sans-serif', size: 11, weight: '500' },
+        font: { family: 'Inter, sans-serif', size: 11, weight: 500 },
         padding: 16,
       },
     },
@@ -125,7 +119,7 @@ const flowChartOptions: ChartOptions<'bar'> = {
       },
     },
     y: {
-      grid: { color: '#F1F5F9', drawBorder: false },
+      grid: { color: '#F1F5F9' },
       ticks: {
         color: '#9CA3AF',
         font: { family: 'Inter, sans-serif', size: 10 },
@@ -136,7 +130,6 @@ const flowChartOptions: ChartOptions<'bar'> = {
   },
 }
 
-// ──── Enrollment by Batch (Chart.js Bar) ────
 const batchChartData = computed(() => ({
   labels: ['2022', '2023', '2024', '2025', '2026'],
   datasets: [
@@ -176,11 +169,11 @@ const batchChartOptions: ChartOptions<'bar'> = {
       grid: { display: false },
       ticks: {
         color: '#9CA3AF',
-        font: { family: 'Inter, sans-serif', size: 12, weight: '500' },
+        font: { family: 'Inter, sans-serif', size: 12, weight: 500 },
       },
     },
     y: {
-      grid: { color: '#F1F5F9', drawBorder: false },
+      grid: { color: '#F1F5F9' },
       ticks: {
         color: '#9CA3AF',
         font: { family: 'Inter, sans-serif', size: 11 },
@@ -191,7 +184,6 @@ const batchChartOptions: ChartOptions<'bar'> = {
   },
 }
 
-// ──── Enrollment Distribution (Doughnut Chart) ────
 const doughnutChartData = computed(() => ({
   labels: [
     t('program.doughnut_cs'),
@@ -223,7 +215,7 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#6B7280',
-        font: { family: 'Inter, sans-serif', size: 10, weight: '500' },
+        font: { family: 'Inter, sans-serif', size: 10, weight: 500 },
         padding: 12,
       },
     },
@@ -239,26 +231,14 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
     },
   },
 }
-
-// ──── Recent Enrollment Requests ────
-interface RecentRequest {
-  name: string
-  id: string
-  programKey: string
-  date: string
-  status: 'pending' | 'approved' | 'rejected'
-}
-
-const recentRequests: RecentRequest[] = [
-  { name: 'Sophia Martinez', id: 'STU-2024-0042', programKey: 'program.cs', date: 'Dec 12, 2024', status: 'pending' as const },
-  { name: 'James Chen', id: 'STU-2024-0041', programKey: 'program.it', date: 'Dec 11, 2024', status: 'approved' as const },
-  { name: 'Emma Williams', id: 'STU-2024-0040', programKey: 'program.ba', date: 'Dec 10, 2024', status: 'approved' as const },
-  { name: 'Liam Johnson', id: 'STU-2024-0039', programKey: 'program.ce', date: 'Dec 9, 2024', status: 'pending' as const },
-  { name: 'Olivia Brown', id: 'STU-2024-0038', programKey: 'program.nursing', date: 'Dec 8, 2024', status: 'rejected' as const },
-  { name: 'Noah Garcia', id: 'STU-2024-0037', programKey: 'program.is', date: 'Dec 7, 2024', status: 'pending' as const },
+const recentRequests = [
+  { name: 'Sophia Martinez', id: 'STU-2024-0042', program: 'BS Computer Science', date: 'Dec 12, 2024', status: 'pending' as const },
+  { name: 'James Chen', id: 'STU-2024-0041', program: 'BS Information Technology', date: 'Dec 11, 2024', status: 'approved' as const },
+  { name: 'Emma Williams', id: 'STU-2024-0040', program: 'BS Business Administration', date: 'Dec 10, 2024', status: 'approved' as const },
+  { name: 'Liam Johnson', id: 'STU-2024-0039', program: 'BS Computer Engineering', date: 'Dec 9, 2024', status: 'pending' as const },
+  { name: 'Olivia Brown', id: 'STU-2024-0038', program: 'BS Nursing', date: 'Dec 8, 2024', status: 'rejected' as const },
+  { name: 'Noah Garcia', id: 'STU-2024-0037', program: 'BS Information Systems', date: 'Dec 7, 2024', status: 'pending' as const },
 ]
-
-// ──── Quick Actions (translation keys) ────
 interface QuickAction {
   labelKey: string
   icon: string
@@ -281,11 +261,14 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
 const navigateTo = (path: string) => {
   router.push(path)
 }
+
+function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
+  return (statusStyles[status] || statusStyles.pending) as { bg: string; text: string; dot: string }
+}
 </script>
 
 <template>
   <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
-    <!-- Header -->
     <div class="flex items-start justify-between">
       <div>
         <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('dashboard.title') }}</h1>
@@ -298,8 +281,6 @@ const navigateTo = (path: string) => {
         </span>
       </div>
     </div>
-
-    <!-- Row 1: Top Statistics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
       <div
         v-for="card in statCards"
@@ -326,10 +307,7 @@ const navigateTo = (path: string) => {
         <p class="text-[13px] text-[#9CA3AF] dark:text-gray-500 mt-1">{{ t(card.subtitleKey) }}</p>
       </div>
     </div>
-
-    <!-- Row 2: Enrollment Flow + Quick Actions -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      <!-- Enrollment Flow Chart -->
       <div
         class="lg:col-span-2 rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -346,12 +324,13 @@ const navigateTo = (path: string) => {
             {{ t('chart.badge_grouped_bar') }}
           </span>
         </div>
-        <div class="h-[200px] w-full">
-          <Bar :data="flowChartData" :options="flowChartOptions" />
+        <div class="h-[200px] w-full" v-if="chartReady">
+          <component :is="BarChart" :data="flowChartData" :options="flowChartOptions" />
+        </div>
+        <div v-else class="h-[200px] w-full flex items-center justify-center">
+          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
-
-      <!-- Quick Actions -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -378,10 +357,7 @@ const navigateTo = (path: string) => {
         </div>
       </div>
     </div>
-
-    <!-- Row 3: Enrollment by Batch (65%) + Doughnut Chart (35%) -->
     <div class="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-5">
-      <!-- Left: Bar Chart -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -398,12 +374,13 @@ const navigateTo = (path: string) => {
             {{ t('chart.badge_bar') }}
           </span>
         </div>
-        <div class="h-[220px] w-full">
-          <Bar :data="batchChartData" :options="batchChartOptions" />
+        <div class="h-[220px] w-full" v-if="chartReady">
+          <component :is="BarChart" :data="batchChartData" :options="batchChartOptions" />
+        </div>
+        <div v-else class="h-[220px] w-full flex items-center justify-center">
+          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
-
-      <!-- Right: Doughnut Chart -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
         style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -417,13 +394,14 @@ const navigateTo = (path: string) => {
             {{ t('chart.badge_doughnut') }}
           </span>
         </div>
-        <div class="h-[240px] w-full">
-          <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
+        <div class="h-[240px] w-full" v-if="chartReady">
+          <component :is="DoughnutChart" :data="doughnutChartData" :options="doughnutChartOptions" />
+        </div>
+        <div v-else class="h-[240px] w-full flex items-center justify-center">
+          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
     </div>
-
-    <!-- Row 4: Recent Activity Timeline -->
     <div
       class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
       style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -437,7 +415,7 @@ const navigateTo = (path: string) => {
           class="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-2.5 py-1 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1.5"
         >
           <Clock :size="12" />
-          {{ t('recent_activity.last_24h') }}
+          <span class="font-medium">{{ t('recent_activity.last_24h') }}</span>
         </span>
       </div>
 
@@ -445,7 +423,6 @@ const navigateTo = (path: string) => {
         <div class="absolute left-[19px] top-3 bottom-3 w-[2px] bg-[#E5E7EB] dark:bg-gray-700 rounded-full"></div>
 
         <div class="space-y-0">
-          <!-- Activity 1 -->
           <div class="relative flex gap-5 pb-7">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#EFF6FF] dark:bg-[#355C8C]/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -463,8 +440,6 @@ const navigateTo = (path: string) => {
               <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('recent_activity.students_added', { count: 487 }) }}</p>
             </div>
           </div>
-
-          <!-- Activity 2 -->
           <div class="relative flex gap-5 pb-7">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#F0FDF4] dark:bg-emerald-500/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -488,8 +463,6 @@ const navigateTo = (path: string) => {
               </div>
             </div>
           </div>
-
-          <!-- Activity 3 -->
           <div class="relative flex gap-5">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FFF7ED] dark:bg-amber-500/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -508,8 +481,6 @@ const navigateTo = (path: string) => {
         </div>
       </div>
     </div>
-
-    <!-- Row 5: Recent Enrollment Requests -->
     <div
       class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800"
       style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
@@ -547,16 +518,16 @@ const navigateTo = (path: string) => {
             <span
               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
               :style="{
-                backgroundColor: statusStyles[request.status].bg,
-                color: statusStyles[request.status].text,
+                backgroundColor: getStatusStyle(request.status).bg,
+                color: getStatusStyle(request.status).text,
               }"
             >
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusStyles[request.status].dot }"></span>
+              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(request.status).dot }"></span>
               {{ t(request.status) }}
             </span>
           </div>
           <div class="md:hidden text-xs text-[#9CA3AF] dark:text-gray-500">
-            {{ request.id }} · {{ t(request.programKey) }} · {{ request.date }}
+            {{ request.id }} · {{ request.program }} · {{ request.date }}
           </div>
 
           <div class="hidden md:flex items-center">
@@ -566,7 +537,7 @@ const navigateTo = (path: string) => {
             <span class="text-sm text-[#6B7280] dark:text-gray-400 font-mono">{{ request.id }}</span>
           </div>
           <div class="hidden md:flex items-center">
-            <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ t(request.programKey) }}</span>
+            <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ request.program }}</span>
           </div>
           <div class="hidden md:flex items-center">
             <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ request.date }}</span>
@@ -575,11 +546,11 @@ const navigateTo = (path: string) => {
             <span
               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
               :style="{
-                backgroundColor: statusStyles[request.status].bg,
-                color: statusStyles[request.status].text,
+                backgroundColor: getStatusStyle(request.status).bg,
+                color: getStatusStyle(request.status).text,
               }"
             >
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: statusStyles[request.status].dot }"></span>
+              <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(request.status).dot }"></span>
               {{ t(request.status) }}
             </span>
           </div>

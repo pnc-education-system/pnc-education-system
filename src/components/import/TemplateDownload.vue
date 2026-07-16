@@ -23,7 +23,7 @@ defineOptions({ name: 'TemplateDownload' })
       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg shadow-sm hover:bg-[#2A4A70] dark:hover:bg-blue-700 active:scale-[0.97] active:bg-[#1F3A5A] dark:active:bg-blue-800 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30 focus:ring-offset-1 dark:focus:ring-offset-gray-900"
     >
       <Download class="w-4 h-4" />
-      Download Template (.csv)
+      Download Template
     </button>
   </div>
 </template>

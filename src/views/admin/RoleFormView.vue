@@ -148,7 +148,6 @@ function goBack() {
               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
-
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{{ t('admin.role_form.label.description') }}</label>
             <textarea
@@ -160,7 +159,6 @@ function goBack() {
           </div>
         </div>
       </div>
-
       <div class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
           <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{{ t('admin.role_form.section.permissions') }}</h2>
@@ -202,7 +200,6 @@ function goBack() {
                 {{ group.permissions.filter(p => form.permissions.includes(p.key)).length }}/{{ group.permissions.length }}
               </span>
             </button>
-
             <div class="px-3 py-2">
               <label
                 v-for="perm in group.permissions"
@@ -221,7 +218,6 @@ function goBack() {
           </div>
         </div>
       </div>
-
       <div class="flex items-center justify-end gap-3">
         <button
           @click="goBack"

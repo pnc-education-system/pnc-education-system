@@ -1,5 +1,5 @@
 import axiosInstance from '@/services/axios'
-import type { AuthResponse, LoginCredentials, ProfileResponse } from '@/types'
+import type { AuthResponse, LoginCredentials, ProfileResponse, PasswordResetRequest, PasswordResetConfirm, PasswordResetResponse } from '@/types'
 
 export const authApi = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -18,6 +18,16 @@ export const authApi = {
 
   async refresh(refreshToken: string) {
     const { data } = await axiosInstance.post('/auth/refresh', { refresh_token: refreshToken })
+    return data
+  },
+
+  async requestPasswordReset(payload: PasswordResetRequest): Promise<PasswordResetResponse> {
+    const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/forgot-password', payload)
+    return data
+  },
+
+  async confirmPasswordReset(payload: PasswordResetConfirm): Promise<PasswordResetResponse> {
+    const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/reset-password', payload)
     return data
   },
 }
