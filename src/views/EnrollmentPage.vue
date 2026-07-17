@@ -3,6 +3,7 @@ defineOptions({ name: 'EnrollmentPage' })
 
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   AlertCircle, History, ChevronDown, Plus, GraduationCap, Layers, Calendar, X,
   Edit, Trash2, AlertTriangle,
@@ -18,6 +19,7 @@ import TemplateDownload from '@/components/import/TemplateDownload.vue'
 import { getCachedBatches, getFetchPromise, clearCache } from '@/utils/batchesCache'
 import type { SelectionBatch, UpdateBatchRequest } from '@/services/api/selectionBatches'
 
+const { t } = useI18n()
 const router = useRouter()
 const { showErrorToast, showSuccessToast } = useToast()
 const isUploading = ref(false)
@@ -84,7 +86,7 @@ async function fetchBatches() {
       selectedBatch.value = batches.value[0] ?? null
     }
   } catch {
-    showErrorToast('Failed to load selection batches', 'Error')
+    showErrorToast(t('enrollment.load_failed'), 'Error')
   } finally {
     isLoadingBatches.value = false
   }
@@ -92,11 +94,11 @@ async function fetchBatches() {
 
 async function onCreateBatch() {
   if (!newBatchName.value.trim()) {
-    showErrorToast('Batch name is required', 'Error')
+    showErrorToast(t('enrollment.batch_name_required'), 'Error')
     return
   }
   if (!newBatchYear.value || newBatchYear.value < 2000 || newBatchYear.value > 2100) {
-    showErrorToast('Please enter a valid year', 'Error')
+    showErrorToast(t('enrollment.valid_year'), 'Error')
     return
   }
 
@@ -112,9 +114,9 @@ async function onCreateBatch() {
     isCreateBatchModalOpen.value = false
     newBatchName.value = ''
     newBatchYear.value = new Date().getFullYear()
-    showSuccessToast('Batch created successfully', 'Success')
+    showSuccessToast(t('enrollment.batch_created'), 'Success')
   } catch {
-    showErrorToast('Failed to create batch', 'Error')
+    showErrorToast(t('enrollment.batch_create_failed'), 'Error')
   } finally {
     isCreatingBatch.value = false
   }
@@ -161,11 +163,11 @@ function getApiErrorMessage(err: unknown, fallback: string): string {
 
 async function onEditBatch() {
   if (!editingBatch.value || !editBatchName.value.trim()) {
-    showErrorToast('Batch name is required', 'Error')
+    showErrorToast(t('enrollment.batch_name_required'), 'Error')
     return
   }
   if (!editBatchYear.value || editBatchYear.value < 2000 || editBatchYear.value > 2100) {
-    showErrorToast('Please enter a valid year', 'Error')
+    showErrorToast(t('enrollment.valid_year'), 'Error')
     return
   }
 
@@ -190,10 +192,10 @@ async function onEditBatch() {
     clearCache() // Ensure fresh data on next navigation
     isEditBatchModalOpen.value = false
     editingBatch.value = null
-    showSuccessToast('Batch updated successfully', 'Success')
+    showSuccessToast(t('enrollment.batch_updated'), 'Success')
   } catch (err: unknown) {
     console.error('Update batch error:', err)
-    showErrorToast(getApiErrorMessage(err, 'Failed to update batch'), 'Update Error')
+    showErrorToast(getApiErrorMessage(err, t('enrollment.batch_update_failed')), 'Update Error')
   } finally {
     isEditingBatch.value = false
   }
@@ -222,10 +224,10 @@ async function onDeleteBatch() {
     clearCache() // Ensure fresh data on next navigation
     isDeleteConfirmOpen.value = false
     deletingBatch.value = null
-    showSuccessToast('Batch deleted successfully', 'Success')
+    showSuccessToast(t('enrollment.batch_deleted'), 'Success')
   } catch (err: unknown) {
     console.error('Delete batch error:', err)
-    showErrorToast(getApiErrorMessage(err, 'Failed to delete batch'), 'Delete Error')
+    showErrorToast(getApiErrorMessage(err, t('enrollment.batch_delete_failed')), 'Delete Error')
   } finally {
     isDeletingBatch.value = false
   }
@@ -233,11 +235,11 @@ async function onDeleteBatch() {
 
 async function onContinueToMapping(): Promise<void> {
   if (!selectedFile.value) {
-    showErrorToast('No file selected', 'Error')
+    showErrorToast(t('enrollment.no_file'), 'Error')
     return
   }
   if (!selectedBatch.value) {
-    showErrorToast('Please select a selection batch', 'Error')
+    showErrorToast(t('enrollment.no_batch_selected'), 'Error')
     return
   }
   isUploading.value = true
@@ -270,7 +272,7 @@ async function onContinueToMapping(): Promise<void> {
     const msg =
       error?.response?.data?.message ??
       error?.response?.data?.error ??
-      'Failed to process file. Check the format and try again.'
+      t('enrollment.upload_error_default')
     apiUploadError.value = msg
     showErrorToast(msg, 'Upload Error')
   } finally {
@@ -285,7 +287,7 @@ async function onContinueToMapping(): Promise<void> {
       <!-- Header -->
       <div class="flex items-start justify-between">
         <div>
-          <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Enrollment</h1>
+          <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('enrollment.title') }}</h1>
         </div>
 
         <!-- History button -->
@@ -294,7 +296,7 @@ async function onContinueToMapping(): Promise<void> {
           class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] shadow-sm"
         >
           <History class="w-4 h-4" />
-          <span class="hidden sm:inline">View History</span>
+          <span class="hidden sm:inline">{{ t('enrollment.view_history') }}</span>
         </router-link>
       </div>
 
@@ -304,7 +306,7 @@ async function onContinueToMapping(): Promise<void> {
         <!-- Batch Selection -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
-            Selection Batch / Intake Year
+            {{ t('enrollment.select_batch') }}
           </label>
           <div class="relative">
             <button
@@ -320,13 +322,11 @@ async function onContinueToMapping(): Promise<void> {
                 <div>
                   <span v-if="selectedBatch" class="text-sm font-medium text-[#111827] dark:text-white">
                     {{ selectedBatch.name }}
-                  </span>
-                  <span v-if="selectedBatch" class="text-xs text-[#6B7280] dark:text-gray-400 ml-2">
+                  </span>                    <span v-if="selectedBatch" class="text-xs text-[#6B7280] dark:text-gray-400 ml-2">
                     {{ selectedBatch.year }}
-                    <span v-if="selectedBatch.students_count !== undefined" class="ml-2">· {{ selectedBatch.students_count }} students</span>
-                  </span>
-                  <span v-else class="text-sm text-[#9CA3AF]">
-                    {{ isLoadingBatches ? 'Loading batches...' : 'Select a batch' }}
+                    <span v-if="selectedBatch.students_count !== undefined" class="ml-2">· {{ t('enrollment.students_count', { count: selectedBatch.students_count }) }}</span>
+                  </span>                    <span v-else class="text-sm text-[#9CA3AF]">
+                    {{ isLoadingBatches ? t('enrollment.loading_batches') : t('enrollment.select_batch_placeholder') }}
                   </span>
                 </div>
               </div>
@@ -343,8 +343,8 @@ async function onContinueToMapping(): Promise<void> {
                 <!-- Card Header -->
                 <div class="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] dark:border-gray-800 shrink-0">
                   <div>
-                    <h2 class="text-lg font-semibold text-[#111827] dark:text-white">Select Batch</h2>
-                    <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">Choose a selection batch to associate with this import</p>
+                    <h2 class="text-lg font-semibold text-[#111827] dark:text-white">{{ t('enrollment.modal_title') }}</h2>
+                    <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('enrollment.modal_subtitle') }}</p>
                   </div>
                   <button
                     @click="isBatchDropdownOpen = false"
@@ -367,8 +367,8 @@ async function onContinueToMapping(): Promise<void> {
                     <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                       <Layers class="w-6 h-6 text-[#9CA3AF]" />
                     </div>
-                    <p class="text-sm font-medium text-[#374151] dark:text-gray-300">No batches available</p>
-                    <p class="text-xs text-[#9CA3AF] mt-1">Create a new batch to get started.</p>
+                    <p class="text-sm font-medium text-[#374151] dark:text-gray-300">{{ t('enrollment.no_batches') }}</p>
+                    <p class="text-xs text-[#9CA3AF] mt-1">{{ t('enrollment.create_hint') }}</p>
                   </div>
 
                   <div
@@ -400,10 +400,10 @@ async function onContinueToMapping(): Promise<void> {
                         </span>
                         <span v-if="batch.students_count !== undefined" class="inline-flex items-center gap-1 text-xs text-[#6B7280] dark:text-gray-400">
                           <GraduationCap class="w-3 h-3" />
-                          {{ batch.students_count }} students
+                          {{ t('enrollment.students_count', { count: batch.students_count }) }}
                         </span>
                         <span v-if="batch.creator?.name" class="text-xs text-[#9CA3AF] dark:text-gray-500">
-                          by {{ batch.creator.name }}
+                          {{ t('enrollment.by', { name: batch.creator.name }) }}
                         </span>
                       </div>
                     </div>
@@ -443,7 +443,7 @@ async function onContinueToMapping(): Promise<void> {
                     class="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#355C8C] dark:bg-blue-600 rounded-lg hover:bg-[#2A4A70] dark:hover:bg-blue-700 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
                   >
                     <Plus class="w-4 h-4" />
-                    Create New Batch
+                    {{ t('enrollment.create_new') }}
                   </button>
                 </div>
               </div>
@@ -508,7 +508,7 @@ async function onContinueToMapping(): Promise<void> {
             @click="handleCancel"
             class="px-5 py-2.5 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30 focus:ring-offset-1 dark:focus:ring-offset-gray-900 transition-all duration-200 cursor-pointer"
           >
-            Cancel
+            {{ t('enrollment.cancel') }}
           </button>
           <button
             :disabled="!canContinue"
@@ -518,7 +518,7 @@ async function onContinueToMapping(): Promise<void> {
               ? 'text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.97] cursor-pointer'
               : 'text-[#9CA3AF] dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'"
           >
-            Continue to Mapping
+            {{ t('enrollment.continue') }}
           </button>
         </div>
       </div>
@@ -536,8 +536,8 @@ async function onContinueToMapping(): Promise<void> {
             </svg>
           </div>
           <div>
-            <h3 class="text-base font-semibold text-[#111827] dark:text-white">Expected Columns</h3>
-            <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">Enforced on parse — ensure your file includes these columns</p>
+            <h3 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('enrollment.expected_columns') }}</h3>
+            <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('enrollment.columns_subtitle') }}</p>
           </div>
         </div>
 
@@ -578,27 +578,27 @@ async function onContinueToMapping(): Promise<void> {
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">phone</span>
-            <span class="text-xs text-gray-400">(Optional)</span>
+            <span class="text-xs text-gray-400">{{ t('enrollment.optional_badge') }}</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">email</span>
-            <span class="text-xs text-gray-400">(Optional)</span>
+            <span class="text-xs text-gray-400">{{ t('enrollment.optional_badge') }}</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">province</span>
-            <span class="text-xs text-gray-400">(Optional)</span>
+            <span class="text-xs text-gray-400">{{ t('enrollment.optional_badge') }}</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">high_school</span>
-            <span class="text-xs text-gray-400">(Optional)</span>
+            <span class="text-xs text-gray-400">{{ t('enrollment.optional_badge') }}</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">enrollment_status</span>
-            <span class="text-xs text-gray-400">(Optional)</span>
+            <span class="text-xs text-gray-400">{{ t('enrollment.optional_badge') }}</span>
           </div>
         </div>
 
@@ -607,11 +607,11 @@ async function onContinueToMapping(): Promise<void> {
           <div class="flex items-center gap-6 text-xs text-[#6B7280] dark:text-gray-400">
             <div class="flex items-center gap-2">
               <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-              <span>Required fields</span>
+              <span>{{ t('enrollment.required_fields') }}</span>
             </div>
             <div class="flex items-center gap-2">
               <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
-              <span>Optional fields</span>
+              <span>{{ t('enrollment.optional_fields') }}</span>
             </div>
           </div>
           <TemplateDownload />
@@ -628,23 +628,23 @@ async function onContinueToMapping(): Promise<void> {
     >
       <div class="bg-white dark:bg-[#131B2E] rounded-xl shadow-xl w-full max-w-md mx-4">
         <div class="p-6">
-          <h2 class="text-xl font-semibold text-[#111827] dark:text-white mb-4">Create New Batch</h2>
+          <h2 class="text-xl font-semibold text-[#111827] dark:text-white mb-4">{{ t('enrollment.create_modal_title') }}</h2>
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
-                Batch Name
+                {{ t('enrollment.batch_name') }}
               </label>
               <input
                 v-model="newBatchName"
                 type="text"
-                placeholder="e.g., 2024 Intake Batch 1"
+                :placeholder="t('enrollment.batch_name_placeholder')"
                 class="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-[#D1D5DB] dark:border-gray-600 rounded-lg text-sm text-[#111827] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30"
                 :disabled="isCreatingBatch"
               />
             </div>
             <div>
               <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
-                Intake Year
+                {{ t('enrollment.intake_year') }}
               </label>
               <input
                 v-model.number="newBatchYear"
@@ -663,7 +663,7 @@ async function onContinueToMapping(): Promise<void> {
             :disabled="isCreatingBatch"
             class="px-4 py-2 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
           >
-            Cancel
+            {{ t('enrollment.cancel') }}
           </button>
           <button
             @click="onCreateBatch"
@@ -675,9 +675,9 @@ async function onContinueToMapping(): Promise<void> {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Creating...
+              {{ t('enrollment.creating') }}
             </span>
-            <span v-else>Create Batch</span>
+            <span v-else>{{ t('enrollment.create_batch') }}</span>
           </button>
         </div>
       </div>
@@ -691,24 +691,24 @@ async function onContinueToMapping(): Promise<void> {
     >
       <div class="bg-white dark:bg-[#131B2E] rounded-xl shadow-xl w-full max-w-md mx-4">
         <div class="p-6">
-          <h2 class="text-xl font-semibold text-[#111827] dark:text-white mb-4">Edit Batch</h2>
-          <p class="text-xs text-[#6B7280] dark:text-gray-400 mb-6 -mt-2">Update the name or intake year for this selection batch.</p>
+          <h2 class="text-xl font-semibold text-[#111827] dark:text-white mb-4">{{ t('enrollment.edit_modal_title') }}</h2>
+          <p class="text-xs text-[#6B7280] dark:text-gray-400 mb-6 -mt-2">{{ t('enrollment.edit_modal_subtitle') }}</p>
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
-                Batch Name
+                {{ t('enrollment.batch_name') }}
               </label>
               <input
                 v-model="editBatchName"
                 type="text"
-                placeholder="e.g., 2024 Intake Batch 1"
+                :placeholder="t('enrollment.batch_name_placeholder')"
                 class="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-[#D1D5DB] dark:border-gray-600 rounded-lg text-sm text-[#111827] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#355C8C]/30 dark:focus:ring-blue-400/30"
                 :disabled="isEditingBatch"
               />
             </div>
             <div>
               <label class="block text-sm font-medium text-[#374151] dark:text-gray-300 mb-2">
-                Intake Year
+                {{ t('enrollment.intake_year') }}
               </label>
               <input
                 v-model.number="editBatchYear"
@@ -727,7 +727,7 @@ async function onContinueToMapping(): Promise<void> {
             :disabled="isEditingBatch"
             class="px-4 py-2 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
           >
-            Cancel
+            {{ t('enrollment.cancel') }}
           </button>
           <button
             @click="onEditBatch"
@@ -739,9 +739,9 @@ async function onContinueToMapping(): Promise<void> {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Saving...
+              {{ t('enrollment.saving') }}
             </span>
-            <span v-else>Save Changes</span>
+            <span v-else>{{ t('enrollment.save_changes') }}</span>
           </button>
         </div>
       </div>
@@ -758,11 +758,9 @@ async function onContinueToMapping(): Promise<void> {
           <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
             <AlertTriangle class="w-6 h-6 text-red-500" />
           </div>
-          <h2 class="text-lg font-semibold text-[#111827] dark:text-white">Delete Batch</h2>
+          <h2 class="text-lg font-semibold text-[#111827] dark:text-white">{{ t('enrollment.delete_confirm_title') }}</h2>
           <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-2 leading-relaxed">
-            Are you sure you want to delete
-            <span class="font-semibold text-[#111827] dark:text-white">"{{ deletingBatch?.name }}"</span>?
-            This action cannot be undone.
+            {{ t('enrollment.delete_confirm_message', { name: deletingBatch?.name || '' }) }}
           </p>
         </div>
         <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E5E7EB] dark:border-gray-800">
@@ -771,7 +769,7 @@ async function onContinueToMapping(): Promise<void> {
             :disabled="isDeletingBatch"
             class="px-4 py-2 text-sm font-medium text-[#374151] dark:text-gray-300 bg-white dark:bg-transparent border border-[#D1D5DB] dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
           >
-            Cancel
+            {{ t('enrollment.cancel') }}
           </button>
           <button
             @click="onDeleteBatch"
@@ -783,11 +781,11 @@ async function onContinueToMapping(): Promise<void> {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Deleting...
+              {{ t('enrollment.deleting') }}
             </span>
             <span v-else class="flex items-center gap-2">
               <Trash2 class="w-4 h-4" />
-              Delete
+              {{ t('enrollment.delete') }}
             </span>
           </button>
         </div>

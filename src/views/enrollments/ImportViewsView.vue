@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { importsApi } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
 import { useStudentsStore } from '@/stores/students'
@@ -9,6 +10,7 @@ import type { SelectionBatch } from '@/services/api/selectionBatches'
 
 defineOptions({ name: 'ImportViewsView' })
 
+const { t } = useI18n()
 const router = useRouter()
 const { showSuccessToast, showErrorToast } = useToast()
 const studentsStore = useStudentsStore()
@@ -71,10 +73,46 @@ const errorCount = computed(() => preview.value?.validation.summary.invalid ?? 0
 const validRows = computed(() => preview.value?.validation.validRows ?? [])
 const errorRows = computed(() => preview.value?.validation.invalidRows ?? [])
 
+// ── Pagination ──
+const VALID_PAGE_SIZE = 10
+const ERROR_PAGE_SIZE = 5
+
+const validPage = ref(1)
+const errorPage = ref(1)
+
+const paginatedValidRows = computed(() => {
+  const start = (validPage.value - 1) * VALID_PAGE_SIZE
+  return validRows.value.slice(start, start + VALID_PAGE_SIZE)
+})
+
+const paginatedErrorRows = computed(() => {
+  const start = (errorPage.value - 1) * ERROR_PAGE_SIZE
+  return errorRows.value.slice(start, start + ERROR_PAGE_SIZE)
+})
+
+const validTotalPages = computed(() => Math.max(1, Math.ceil(validRows.value.length / VALID_PAGE_SIZE)))
+const errorTotalPages = computed(() => Math.max(1, Math.ceil(errorRows.value.length / ERROR_PAGE_SIZE)))
+
+function goToValidPage(page: number) {
+  if (page >= 1 && page <= validTotalPages.value) {
+    validPage.value = page
+  }
+}
+
+function goToErrorPage(page: number) {
+  if (page >= 1 && page <= errorTotalPages.value) {
+    errorPage.value = page
+  }
+}
+
+// Reset pages when data changes
+watch(validRows, () => { validPage.value = 1 })
+watch(errorRows, () => { errorPage.value = 1 })
+
 async function onCommit() {
   if (!preview.value) return
   if (!selectedBatch.value) {
-    showErrorToast('Please select a batch before importing. Go back and choose a selection batch for the students.', 'Batch Required')
+    showErrorToast(t('import_views.batch_required'), 'Batch Required')
     return
   }
 
@@ -89,14 +127,14 @@ async function onCommit() {
     // Pass the valid rows and selected batch to the backend for import
     await importsApi.commit(preview.value.import_log_id, rowsWithStatus, selectedBatch.value.id)
     showSuccessToast(
-      `${validCount.value} students imported successfully to ${selectedBatch.value.name}`,
-      'Import Complete'
+      t('import_views.import_complete', { count: validCount.value, batch: selectedBatch.value.name }),
+      t('import_views.import_complete_title')
     )
     // Clear students store to ensure fresh data is loaded on tracking page
     studentsStore.students = []
     router.push('/students/tracking')
   } catch {
-    showErrorToast('The import could not be completed. Please check your data and try again.', 'Import Failed')
+    showErrorToast(t('import_views.import_failed'), t('import_views.import_failed_title'))
   } finally {
     isCommitting.value = false
   }
@@ -109,7 +147,7 @@ async function onDownloadErrors() {
   try {
     await importsApi.downloadErrors(preview.value.import_log_id, preview.value.file_name)
   } catch {
-    showErrorToast('Could not download the error report. Please try again.', 'Download Failed')
+    showErrorToast(t('import_views.download_failed'), 'Download Failed')
   } finally {
     isDownloading.value = false
   }
@@ -127,7 +165,7 @@ function onCancel() {
         <!-- Header -->
         <div>
           <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">
-            Import preview
+            {{ t('import_views.title') }}
           </h1>
         </div>
 
@@ -136,7 +174,7 @@ function onCancel() {
           <!-- Valid rows -->
           <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-[#E5E7EB] dark:border-gray-800 p-5">
             <p class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 uppercase tracking-wider mb-2">
-              Valid Rows
+              {{ t('import_views.valid_rows') }}
             </p>
             <p class="text-4xl font-bold text-[#111827] dark:text-white">{{ validCount }}</p>
           </div>
@@ -154,7 +192,7 @@ function onCancel() {
               class="text-xs font-semibold uppercase tracking-wider mb-2"
               :class="errorCount > 0 ? 'text-red-500' : 'text-[#6B7280] dark:text-gray-400'"
             >
-              Errors
+              {{ t('import_views.errors') }}
             </p>
             <p
               class="text-4xl font-bold"
@@ -162,14 +200,14 @@ function onCancel() {
             >
               {{ errorCount }}
             </p>
-            <p v-if="errorCount > 0" class="text-xs text-[#6B7280] dark:text-gray-400 mt-1">excluded from import</p>
+            <p v-if="errorCount > 0" class="text-xs text-[#6B7280] dark:text-gray-400 mt-1">{{ t('import_views.excluded_from_import') }}</p>
           </div>
 
           <!-- File info -->
           <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-[#E5E7EB] dark:border-gray-800 p-5">
-            <p class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 uppercase tracking-wider mb-2">File</p>
+            <p class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 uppercase tracking-wider mb-2">{{ t('import_views.file') }}</p>
             <p class="text-sm font-bold text-[#111827] dark:text-white truncate">{{ preview.file_name }}</p>
-            <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-1">{{ preview.total_rows }} rows</p>
+            <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-1">{{ t('import_views.rows', { count: preview.total_rows }) }}</p>
           </div>
         </div>
 
@@ -180,7 +218,7 @@ function onCancel() {
         >
           <div class="px-5 py-3 border-b border-[#E5E7EB] dark:border-gray-800 bg-[#F9FAFB] dark:bg-gray-800/40">
             <h3 class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-              Valid Rows ({{ validRows.length }})
+              {{ t('import_views.valid_rows_title', { count: validRows.length }) }}
             </h3>
           </div>
 
@@ -199,7 +237,7 @@ function onCancel() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#F3F4F6] dark:divide-gray-800">
-                <tr v-for="(row, i) in validRows" :key="i" class="hover:bg-[#F9FAFB] dark:hover:bg-white/[0.02]">
+                <tr v-for="(row, i) in paginatedValidRows" :key="i" class="hover:bg-[#F9FAFB] dark:hover:bg-white/[0.02]">
                   <td class="px-4 py-3 font-medium text-[#111827] dark:text-white">{{ row.student_id_no }}</td>
                   <td class="px-4 py-3 text-[#374151] dark:text-gray-300">{{ row.full_name }}</td>
                   <td class="px-4 py-3 text-[#6B7280]">{{ row.gender }}</td>
@@ -210,6 +248,43 @@ function onCancel() {
               </tbody>
             </table>
           </div>
+
+          <!-- Valid rows pagination -->
+          <div
+            v-if="validTotalPages > 1"
+            class="flex items-center justify-between px-5 py-3 border-t border-[#E5E7EB] dark:border-gray-800 bg-[#F9FAFB] dark:bg-gray-800/40"
+          >
+            <p class="text-xs text-[#6B7280] dark:text-gray-400">
+              {{ t('import_views.rows', { count: validRows.length }) }}
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                :disabled="validPage <= 1"
+                @click="goToValidPage(validPage - 1)"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] transition-all duration-200 dark:border-gray-700"
+                :class="validPage <= 1 ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-white cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+                Previous
+              </button>
+              <span class="text-xs text-[#6B7280] dark:text-gray-400 px-1">
+                {{ validPage }} / {{ validTotalPages }}
+              </span>
+              <button
+                :disabled="validPage >= validTotalPages"
+                @click="goToValidPage(validPage + 1)"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] transition-all duration-200 dark:border-gray-700"
+                :class="validPage >= validTotalPages ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-white cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
+              >
+                Next
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Error rows table -->
@@ -218,7 +293,7 @@ function onCancel() {
           class="bg-white dark:bg-[#131B2E] rounded-xl border border-red-200 dark:border-red-800 overflow-hidden"
         >
           <div class="px-5 py-3 border-b border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10">
-            <h3 class="text-sm font-semibold text-red-700 dark:text-red-400">Invalid Rows ({{ errorRows.length }})</h3>
+            <h3 class="text-sm font-semibold text-red-700 dark:text-red-400">{{ t('import_views.error_rows_title', { count: errorRows.length }) }}</h3>
           </div>
 
           <div class="overflow-x-auto">
@@ -232,7 +307,7 @@ function onCancel() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-red-100 dark:divide-red-900/30">
-                <tr v-for="row in errorRows" :key="row.row" class="bg-red-50/60 dark:bg-red-900/10">
+                <tr v-for="row in paginatedErrorRows" :key="row.row" class="bg-red-50/60 dark:bg-red-900/10">
                   <td class="px-4 py-3 text-[#6B7280]">{{ row.row }}</td>
                   <td class="px-4 py-3 font-medium text-red-700 dark:text-red-400">{{ row.data.student_id_no ?? '—' }}</td>
                   <td class="px-4 py-3 text-red-700 dark:text-red-400">{{ row.data.full_name ?? '—' }}</td>
@@ -248,13 +323,49 @@ function onCancel() {
               </tbody>
             </table>
           </div>
+
+          <!-- Error rows pagination -->
+          <div
+            v-if="errorTotalPages > 1"
+            class="flex items-center justify-between px-5 py-3 border-t border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10"
+          >
+            <p class="text-xs text-[#6B7280] dark:text-gray-400">
+              {{ t('import_views.rows', { count: errorRows.length }) }}
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                :disabled="errorPage <= 1"
+                @click="goToErrorPage(errorPage - 1)"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 transition-all duration-200 dark:border-red-800"
+                :class="errorPage <= 1 ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-white cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+                Previous
+              </button>
+              <span class="text-xs text-[#6B7280] dark:text-gray-400 px-1">
+                {{ errorPage }} / {{ errorTotalPages }}
+              </span>
+              <button
+                :disabled="errorPage >= errorTotalPages"
+                @click="goToErrorPage(errorPage + 1)"
+                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 transition-all duration-200 dark:border-red-800"
+                :class="errorPage >= errorTotalPages ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-white cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
+              >
+                Next
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Footer actions -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6">
           <p class="text-xs text-[#6B7280] dark:text-gray-400 max-w-sm">
-            Only the <strong>{{ validCount }} valid rows</strong> will be imported with default status
-            <strong>Pending</strong>.
+            {{ t('import_views.import_message', { valid: validCount, status: 'Pending' }) }}
           </p>
 
           <div class="flex items-center gap-3">
@@ -269,14 +380,14 @@ function onCancel() {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" x2="12" y1="15" y2="3" />
               </svg>
-              {{ isDownloading ? 'Downloading...' : '↓ Download error report' }}
+              {{ isDownloading ? t('import_views.downloading') : t('import_views.download_report') }}
             </button>
 
             <button
               @click="onCancel"
               class="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 cursor-pointer"
             >
-              Cancel
+              {{ t('import_views.import_cancel') }}
             </button>
 
             <button
@@ -293,7 +404,7 @@ function onCancel() {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>
-              {{ isCommitting ? 'Importing...' : `Import ${validCount} students` }}
+              {{ isCommitting ? t('import_views.importing') : t('import_views.import_students', { count: validCount }) }}
             </button>
           </div>
         </div>
@@ -304,7 +415,7 @@ function onCancel() {
     <template v-else>
       <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6 py-6">
         <div>
-          <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Import Views</h1>
+          <h1 class="text-xl sm:text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('import_views.title') }}</h1>
         </div>
 
         <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-[#E5E7EB] dark:border-gray-800 p-16 flex flex-col items-center justify-center gap-4 text-center">
@@ -316,8 +427,8 @@ function onCancel() {
           </div>
 
           <div>
-            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">No file uploaded yet</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Upload a file from Import Upload first, then click "Continue to Mapping" to see the preview here.</p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('import_views.empty_title') }}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ t('import_views.empty_subtitle') }}</p>
           </div>
 
           <button
@@ -329,7 +440,7 @@ function onCancel() {
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" x2="12" y1="3" y2="15" />
             </svg>
-            Go to Import Upload
+            {{ t('import_views.go_to_upload') }}
           </button>
         </div>
       </div>
