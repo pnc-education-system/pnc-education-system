@@ -30,7 +30,6 @@ export function downloadSampleCsv(): void {
     'full_name',
     'gender',
     'dob',
-    'selection_batch_id',
     'intake_year',
     'province',
     'phone',
@@ -39,9 +38,9 @@ export function downloadSampleCsv(): void {
   ]
 
   const sampleRows: string[][] = [
-    ['ST-0001', 'John Doe', 'Male', '2005-01-15', '1', '2024', 'Phnom Penh', '012-345-678', 'john.doe@example.com', 'High School A'],
-    ['ST-0002', 'Jane Smith', 'Female', '2006-03-22', '1', '2024', 'Kandal', '098-765-432', 'jane.smith@example.com', 'High School B'],
-    ['ST-0003', 'Sok Chea', 'Male', '2005-07-10', '2', '2025', 'Takeo', '011-223-344', 'sok.chea@example.com', 'High School C'],
+    ['ST0001', 'John Doe', 'Male', '2005-01-15', '2024', 'Phnom Penh', '012-345-678', 'john.doe@example.com', 'High School A'],
+    ['ST0002', 'Jane Smith', 'Female', '2006-03-22', '2024', 'Kandal', '098-765-432', 'jane.smith@example.com', 'High School B'],
+    ['ST0003', 'Sok Chea', 'Male', '2005-07-10', '2025', 'Takeo', '011-223-344', 'sok.chea@example.com', 'High School C'],
   ]
 
   const bom = '\uFEFF'
