@@ -102,6 +102,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
+    path: '/students/new',
+    name: 'StudentCreate',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.create' },
+  },
+  {
     path: '/imports',
     name: 'Imports',
     component: () => import('@/views/imports/ImportsView.vue'),
@@ -112,14 +118,10 @@ const routes: RouteRecordRaw[] = [
     redirect: '/admin/users',
   },
   {
-    path: '/roles',
-    redirect: '/admin/roles',
-  },
-  {
-    path: '/me',
-    name: 'Profile',
-    component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true },
+    path: '/students/:id/edit',
+    name: 'StudentEdit',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.edit' },
   },
   {
     path: '/settings',

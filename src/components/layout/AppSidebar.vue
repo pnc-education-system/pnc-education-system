@@ -14,16 +14,6 @@ const studentsDropdown = ref(false)
 const enrollmentDropdown = ref(false)
 const adminDropdown = ref(false)
 
-const userInitials = computed(() => {
-  if (!authStore.user?.name) return 'SA'
-  return authStore.user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-})
-
 const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
@@ -70,6 +60,8 @@ const onAdminClick = () => {
       @click="closeSidebar"
     ></div>
   </transition>
+
+
   <aside
     class="fixed left-0 top-0 bottom-0 w-[260px] bg-[#0F172A] z-50 flex flex-col overflow-hidden transition-transform duration-300 ease-out -translate-x-full lg:translate-x-0"
     :class="{ 'translate-x-0': sidebarOpen }"

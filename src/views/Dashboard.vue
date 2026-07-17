@@ -2,18 +2,22 @@
 <script setup lang="ts">
 defineOptions({ name: 'DashboardPage' })
 
-import { ref, shallowRef, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentsStore } from '@/stores/students'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useToast } from '@/composables/useToast'
 import type { User } from '@/types'
-import type { ChartOptions } from 'chart.js'
+
+// Lucide Icons
 import {
   FileDown,
   UserCheck,
   FileText,
+  FilePenLine,
   ChevronRight,
+  ChevronLeft,
   Plus,
   Eye,
   Users,
@@ -24,15 +28,29 @@ import {
   XCircle,
 } from 'lucide-vue-next'
 
+// Chart.js
+import { Bar, Doughnut } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  ArcElement,
+  type ChartOptions,
+} from 'chart.js'
+
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
+
 const { t } = useI18n()
 const authStore = useAuthStore()
 const studentsStore = useStudentsStore()
 const router = useRouter()
+const { showSuccessToast } = useToast()
 
 const user = ref<User | null>(null)
-const chartReady = ref(false)
-const BarChart = shallowRef<any>(null)
-const DoughnutChart = shallowRef<any>(null)
 
 onMounted(() => {
   if (authStore.user) {
@@ -107,6 +125,7 @@ const statCards = computed(() => [
   },
 ])
 
+// ──── Enrollment Flow (Chart.js Grouped Bar) ────
 const flowChartData = computed(() => ({
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   datasets: [
@@ -141,7 +160,7 @@ const flowChartOptions: ChartOptions<'bar'> = {
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#6B7280',
-        font: { family: 'Inter, sans-serif', size: 11, weight: 500 },
+        font: { family: 'Inter, sans-serif', size: 11, weight: '500' },
         padding: 16,
       },
     },
@@ -163,7 +182,7 @@ const flowChartOptions: ChartOptions<'bar'> = {
       },
     },
     y: {
-      grid: { color: '#F1F5F9' },
+      grid: { color: '#F1F5F9', drawBorder: false },
       ticks: {
         color: '#9CA3AF',
         font: { family: 'Inter, sans-serif', size: 10 },
@@ -174,6 +193,7 @@ const flowChartOptions: ChartOptions<'bar'> = {
   },
 }
 
+// ──── Enrollment by Batch (Chart.js Bar) ────
 const batchChartData = computed(() => ({
   labels: ['2022', '2023', '2024', '2025', '2026'],
   datasets: [
@@ -213,11 +233,11 @@ const batchChartOptions: ChartOptions<'bar'> = {
       grid: { display: false },
       ticks: {
         color: '#9CA3AF',
-        font: { family: 'Inter, sans-serif', size: 12, weight: 500 },
+        font: { family: 'Inter, sans-serif', size: 12, weight: '500' },
       },
     },
     y: {
-      grid: { color: '#F1F5F9' },
+      grid: { color: '#F1F5F9', drawBorder: false },
       ticks: {
         color: '#9CA3AF',
         font: { family: 'Inter, sans-serif', size: 11 },
@@ -228,6 +248,7 @@ const batchChartOptions: ChartOptions<'bar'> = {
   },
 }
 
+// ──── Enrollment Distribution (Doughnut Chart) ────
 const doughnutChartData = computed(() => ({
   labels: [
     t('program.doughnut_cs'),
@@ -259,7 +280,7 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#6B7280',
-        font: { family: 'Inter, sans-serif', size: 10, weight: 500 },
+        font: { family: 'Inter, sans-serif', size: 10, weight: '500' },
         padding: 12,
       },
     },
@@ -292,21 +313,38 @@ const navigateTo = (path: string) => {
   router.push(path)
 }
 </script>
-
 <template>
-  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
+  <div
+    class="space-y-6"
+    style="
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
+    "
+  >
+    <!-- Header -->
     <div class="flex items-start justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('dashboard.title') }}</h1>
-        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">{{ t('dashboard.welcome', { name: user?.name || 'Admin' }) }}</p>
+        <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">
+          {{ t('dashboard.title') }}
+        </h1>
+        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
+          {{ t('dashboard.welcome', { name: user?.name || 'Admin' }) }}
+        </p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xs text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-3 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1.5">
+        <span
+          class="text-xs text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-3 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1.5"
+        >
           <Clock :size="12" class="text-[#9CA3AF]" />
           <span class="font-medium">{{ t('dashboard.updated_ago') }}</span>
         </span>
       </div>
     </div>
+
+    <!-- Row 1: Top Statistics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
       <div
         v-for="card in statCards"
@@ -330,15 +368,22 @@ const navigateTo = (path: string) => {
         <p class="text-[13px] text-[#9CA3AF] dark:text-gray-500 mt-1">{{ t(card.subtitleKey) }}</p>
       </div>
     </div>
+
+    <!-- Row 2: Enrollment Flow + Quick Actions -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- Enrollment Flow Chart -->
       <div
         class="lg:col-span-2 rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
-        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
+        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04)"
       >
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h2 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('enrollment_flow.title') }}</h2>
-            <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('enrollment_flow.subtitle') }}</p>
+            <h2 class="text-base font-semibold text-[#111827] dark:text-white">
+              {{ t('enrollment_flow.title') }}
+            </h2>
+            <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">
+              {{ t('enrollment_flow.subtitle') }}
+            </p>
           </div>
           <span
             class="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-2.5 py-1 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1"
@@ -347,18 +392,19 @@ const navigateTo = (path: string) => {
             {{ t('chart.badge_grouped_bar') }}
           </span>
         </div>
-        <div class="h-[200px] w-full" v-if="chartReady">
-          <component :is="BarChart" :data="flowChartData" :options="flowChartOptions" />
-        </div>
-        <div v-else class="h-[200px] w-full flex items-center justify-center">
-          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div class="h-[200px] w-full">
+          <Bar :data="flowChartData" :options="flowChartOptions" />
         </div>
       </div>
+
+      <!-- Quick Actions -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
-        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
+        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04)"
       >
-        <h2 class="text-base font-semibold text-[#111827] dark:text-white mb-4">{{ t('quick_actions.title') }}</h2>
+        <h2 class="text-base font-semibold text-[#111827] dark:text-white mb-4">
+          {{ t('quick_actions.title') }}
+        </h2>
         <div class="space-y-2">
           <button
             v-for="action in quickActions"
@@ -369,26 +415,52 @@ const navigateTo = (path: string) => {
             <div
               class="w-8 h-8 rounded-lg flex items-center justify-center bg-[#F8FAFC] dark:bg-white/[0.06] group-hover:bg-white dark:group-hover:bg-white/[0.08] transition-colors border border-[#E5E7EB] dark:border-gray-700"
             >
-              <Plus v-if="action.icon === 'plus'" :size="16" class="text-[#6B7280] dark:text-gray-400" />
-              <Eye v-else-if="action.icon === 'eye'" :size="16" class="text-[#6B7280] dark:text-gray-400" />
-              <Users v-else-if="action.icon === 'users'" :size="16" class="text-[#6B7280] dark:text-gray-400" />
-              <BarChart3 v-else-if="action.icon === 'chart'" :size="16" class="text-[#6B7280] dark:text-gray-400" />
+              <Plus
+                v-if="action.icon === 'plus'"
+                :size="16"
+                class="text-[#6B7280] dark:text-gray-400"
+              />
+              <Eye
+                v-else-if="action.icon === 'eye'"
+                :size="16"
+                class="text-[#6B7280] dark:text-gray-400"
+              />
+              <Users
+                v-else-if="action.icon === 'users'"
+                :size="16"
+                class="text-[#6B7280] dark:text-gray-400"
+              />
+              <BarChart3
+                v-else-if="action.icon === 'chart'"
+                :size="16"
+                class="text-[#6B7280] dark:text-gray-400"
+              />
             </div>
             <span class="flex-1 text-left">{{ t(action.labelKey) }}</span>
-            <ChevronRight :size="16" class="text-[#D1D5DB] dark:text-gray-600 group-hover:text-[#9CA3AF] dark:group-hover:text-gray-400 transition-colors" />
+            <ChevronRight
+              :size="16"
+              class="text-[#D1D5DB] dark:text-gray-600 group-hover:text-[#9CA3AF] dark:group-hover:text-gray-400 transition-colors"
+            />
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Row 3: Enrollment by Batch (65%) + Doughnut Chart (35%) -->
     <div class="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-5">
+      <!-- Left: Bar Chart -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
-        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
+        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04)"
       >
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h2 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('enrollment_by_batch.title') }}</h2>
-            <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('enrollment_by_batch.subtitle') }}</p>
+            <h2 class="text-base font-semibold text-[#111827] dark:text-white">
+              {{ t('enrollment_by_batch.title') }}
+            </h2>
+            <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">
+              {{ t('enrollment_by_batch.subtitle') }}
+            </p>
           </div>
           <span
             class="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-2.5 py-1 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1"
@@ -397,19 +469,20 @@ const navigateTo = (path: string) => {
             {{ t('chart.badge_bar') }}
           </span>
         </div>
-        <div class="h-[220px] w-full" v-if="chartReady">
-          <component :is="BarChart" :data="batchChartData" :options="batchChartOptions" />
-        </div>
-        <div v-else class="h-[220px] w-full flex items-center justify-center">
-          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div class="h-[220px] w-full">
+          <Bar :data="batchChartData" :options="batchChartOptions" />
         </div>
       </div>
+
+      <!-- Right: Doughnut Chart -->
       <div
         class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
-        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
+        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04)"
       >
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('doughnut.title') }}</h2>
+          <h2 class="text-base font-semibold text-[#111827] dark:text-white">
+            {{ t('doughnut.title') }}
+          </h2>
           <span
             class="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-2.5 py-1 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1"
           >
@@ -417,35 +490,41 @@ const navigateTo = (path: string) => {
             {{ t('chart.badge_doughnut') }}
           </span>
         </div>
-        <div class="h-[240px] w-full" v-if="chartReady">
-          <component :is="DoughnutChart" :data="doughnutChartData" :options="doughnutChartOptions" />
-        </div>
-        <div v-else class="h-[240px] w-full flex items-center justify-center">
-          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div class="h-[240px] w-full">
+          <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
         </div>
       </div>
     </div>
+
+    <!-- Row 4: Recent Activity Timeline -->
     <div
       class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 p-6"
-      style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
+      style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04)"
     >
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('recent_activity.title') }}</h2>
-          <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('recent_activity.subtitle') }}</p>
+          <h2 class="text-base font-semibold text-[#111827] dark:text-white">
+            {{ t('recent_activity.title') }}
+          </h2>
+          <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">
+            {{ t('recent_activity.subtitle') }}
+          </p>
         </div>
         <span
           class="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-2.5 py-1 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1.5"
         >
           <Clock :size="12" />
-          <span class="font-medium">{{ t('recent_activity.last_24h') }}</span>
+          {{ t('recent_activity.last_24h') }}
         </span>
       </div>
 
       <div class="relative">
-        <div class="absolute left-[19px] top-3 bottom-3 w-[2px] bg-[#E5E7EB] dark:bg-gray-700 rounded-full"></div>
+        <div
+          class="absolute left-[19px] top-3 bottom-3 w-[2px] bg-[#E5E7EB] dark:bg-gray-700 rounded-full"
+        ></div>
 
         <div class="space-y-0">
+          <!-- Activity 1 -->
           <div class="relative flex gap-5 pb-7">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#EFF6FF] dark:bg-[#355C8C]/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -454,15 +533,27 @@ const navigateTo = (path: string) => {
             </div>
             <div class="flex-1 min-w-0 pt-1">
               <div class="flex items-center gap-2.5 flex-wrap">
-                <span class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 tabular-nums">10:24</span>
-                <span class="text-[11px] font-medium text-[#355C8C] bg-[#EFF6FF] dark:bg-[#355C8C]/15 dark:text-blue-300 px-2 py-0.5 rounded-md">{{ t('admin') }}</span>
+                <span class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 tabular-nums"
+                  >10:24</span
+                >
+                <span
+                  class="text-[11px] font-medium text-[#355C8C] bg-[#EFF6FF] dark:bg-[#355C8C]/15 dark:text-blue-300 px-2 py-0.5 rounded-md"
+                  >{{ t('admin') }}</span
+                >
               </div>
               <p class="text-sm font-medium text-[#111827] dark:text-white mt-1.5 leading-snug">
-                {{ t('recent_activity.imported') }} <span class="font-mono text-[#6B7280] dark:text-gray-400 text-xs">"Intake-2025-B.xlsx"</span>
+                {{ t('recent_activity.imported') }}
+                <span class="font-mono text-[#6B7280] dark:text-gray-400 text-xs"
+                  >"Intake-2025-B.xlsx"</span
+                >
               </p>
-              <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('recent_activity.students_added', { count: 487 }) }}</p>
+              <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">
+                {{ t('recent_activity.students_added', { count: 487 }) }}
+              </p>
             </div>
           </div>
+
+          <!-- Activity 2 -->
           <div class="relative flex gap-5 pb-7">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#F0FDF4] dark:bg-emerald-500/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -471,10 +562,17 @@ const navigateTo = (path: string) => {
             </div>
             <div class="flex-1 min-w-0 pt-1">
               <div class="flex items-center gap-2.5 flex-wrap">
-                <span class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 tabular-nums">09:51</span>
-                <span class="text-[11px] font-medium text-[#6B7280] dark:text-gray-400 bg-[#F8FAFC] dark:bg-white/[0.06] px-2 py-0.5 rounded-md border border-[#E5E7EB] dark:border-gray-700">{{ t('staff') }}</span>
+                <span class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 tabular-nums"
+                  >09:51</span
+                >
+                <span
+                  class="text-[11px] font-medium text-[#6B7280] dark:text-gray-400 bg-[#F8FAFC] dark:bg-white/[0.06] px-2 py-0.5 rounded-md border border-[#E5E7EB] dark:border-gray-700"
+                  >{{ t('staff') }}</span
+                >
               </div>
-              <p class="text-sm font-medium text-[#111827] dark:text-white mt-1.5 leading-snug">{{ t('recent_activity.status_changed') }}</p>
+              <p class="text-sm font-medium text-[#111827] dark:text-white mt-1.5 leading-snug">
+                {{ t('recent_activity.status_changed') }}
+              </p>
               <div class="flex items-center gap-2 mt-0.5">
                 <span class="text-xs text-[#6B7280] dark:text-gray-400 font-medium">SOK Dara</span>
                 <span
@@ -486,6 +584,8 @@ const navigateTo = (path: string) => {
               </div>
             </div>
           </div>
+
+          <!-- Activity 3 -->
           <div class="relative flex gap-5">
             <div
               class="relative z-10 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[#FFF7ED] dark:bg-amber-500/20 border-2 border-white dark:border-[#131B2E] shadow-sm"
@@ -494,16 +594,24 @@ const navigateTo = (path: string) => {
             </div>
             <div class="flex-1 min-w-0 pt-1">
               <div class="flex items-center gap-2.5 flex-wrap">
-                <span class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 tabular-nums">09:03</span>
-                <span class="text-[11px] font-medium text-[#6B7280] dark:text-gray-400 bg-[#F8FAFC] dark:bg-white/[0.06] px-2 py-0.5 rounded-md border border-[#E5E7EB] dark:border-gray-700">{{ t('staff') }}</span>
+                <span class="text-xs font-semibold text-[#6B7280] dark:text-gray-400 tabular-nums"
+                  >09:03</span
+                >
+                <span
+                  class="text-[11px] font-medium text-[#6B7280] dark:text-gray-400 bg-[#F8FAFC] dark:bg-white/[0.06] px-2 py-0.5 rounded-md border border-[#E5E7EB] dark:border-gray-700"
+                  >{{ t('staff') }}</span
+                >
               </div>
-              <p class="text-sm font-medium text-[#111827] dark:text-white mt-1.5 leading-snug">{{ t('recent_activity.pdf_generated') }}</p>
-              <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('recent_activity.cards', { count: 48 }) }}</p>
+              <p class="text-sm font-medium text-[#111827] dark:text-white mt-1.5 leading-snug">
+                {{ t('recent_activity.pdf_generated') }}
+              </p>
+              <p class="text-xs text-[#6B7280] dark:text-gray-400 mt-0.5">
+                {{ t('recent_activity.cards', { count: 48 }) }}
+              </p>
             </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
