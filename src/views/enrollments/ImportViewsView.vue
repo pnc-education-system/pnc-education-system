@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { importsApi } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
@@ -132,6 +132,7 @@ async function onCommit() {
     )
     // Clear students store to ensure fresh data is loaded on tracking page
     studentsStore.students = []
+    clearImportSession()
     router.push('/students/tracking')
   } catch {
     showErrorToast(t('import_views.import_failed'), t('import_views.import_failed_title'))
@@ -153,9 +154,20 @@ async function onDownloadErrors() {
   }
 }
 
+function clearImportSession() {
+  sessionStorage.removeItem('import_preview')
+  sessionStorage.removeItem('import_selected_batch')
+}
+
 function onCancel() {
+  clearImportSession()
   router.push('/enrollment')
 }
+
+// Clear session data when navigating away from this page
+onBeforeRouteLeave(() => {
+  clearImportSession()
+})
 </script>
 
 <template>

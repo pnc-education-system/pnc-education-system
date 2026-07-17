@@ -319,16 +319,27 @@ async function onContinueToMapping(): Promise<void> {
                 <div class="w-8 h-8 rounded-lg bg-[#355C8C]/10 dark:bg-blue-500/10 flex items-center justify-center">
                   <Layers class="w-4 h-4 text-[#355C8C] dark:text-blue-400" />
                 </div>
-                <div>
-                  <span v-if="selectedBatch" class="text-sm font-medium text-[#111827] dark:text-white">
+                <div class="flex-1 min-w-0">
+                <!-- Skeleton loading -->
+                <template v-if="isLoadingBatches">
+                  <div class="h-4 w-32 bg-gray-200 dark:bg-gray-600 rounded-md animate-pulse mb-1.5"></div>
+                  <div class="h-3 w-20 bg-gray-100 dark:bg-gray-700 rounded-md animate-pulse"></div>
+                </template>
+                <!-- Selected batch info -->
+                <template v-else-if="selectedBatch">
+                  <span class="text-sm font-medium text-[#111827] dark:text-white">
                     {{ selectedBatch.name }}
-                  </span>                    <span v-if="selectedBatch" class="text-xs text-[#6B7280] dark:text-gray-400 ml-2">
+                  </span>
+                  <span class="text-xs text-[#6B7280] dark:text-gray-400 ml-2">
                     {{ selectedBatch.year }}
                     <span v-if="selectedBatch.students_count !== undefined" class="ml-2">· {{ t('enrollment.students_count', { count: selectedBatch.students_count }) }}</span>
-                  </span>                    <span v-else class="text-sm text-[#9CA3AF]">
-                    {{ isLoadingBatches ? t('enrollment.loading_batches') : t('enrollment.select_batch_placeholder') }}
                   </span>
-                </div>
+                </template>
+                <!-- Placeholder when no batch selected -->
+                <span v-else class="text-sm text-[#9CA3AF]">
+                  {{ t('enrollment.select_batch_placeholder') }}
+                </span>
+              </div>
               </div>
               <ChevronDown class="w-4 h-4 text-[#6B7280] transition-transform duration-200 shrink-0" :class="isBatchDropdownOpen ? 'rotate-180' : ''" />
             </button>
@@ -356,11 +367,18 @@ async function onContinueToMapping(): Promise<void> {
 
                 <!-- Batch List -->
                 <div class="flex-1 overflow-y-auto p-4 space-y-2">
-                  <div v-if="isLoadingBatches" class="flex items-center justify-center py-10">
-                    <svg class="w-6 h-6 text-[#355C8C] dark:text-blue-400 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
+                  <!-- Skeleton loading cards -->
+                  <div v-if="isLoadingBatches" class="space-y-2">
+                    <div v-for="i in 4" :key="i" class="flex items-center gap-3 p-4 rounded-xl border border-[#E5E7EB] dark:border-gray-700 animate-pulse">
+                      <div class="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-600 shrink-0"></div>
+                      <div class="flex-1 space-y-2">
+                        <div class="h-4 w-36 bg-gray-200 dark:bg-gray-600 rounded-md"></div>
+                        <div class="flex items-center gap-3">
+                          <div class="h-3 w-16 bg-gray-100 dark:bg-gray-700 rounded-md"></div>
+                          <div class="h-3 w-20 bg-gray-100 dark:bg-gray-700 rounded-md"></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div v-else-if="batches.length === 0" class="flex flex-col items-center justify-center py-10 text-center">
@@ -544,11 +562,7 @@ async function onContinueToMapping(): Promise<void> {
         <!-- Columns Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-5">
           <!-- Required Columns -->
-          <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-            <span class="text-sm font-medium text-[#111827] dark:text-white">student_id_no</span>
-            <span class="text-xs text-red-500 font-semibold">*</span>
-          </div>
+
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">full_name</span>
@@ -564,11 +578,7 @@ async function onContinueToMapping(): Promise<void> {
             <span class="text-sm font-medium text-[#111827] dark:text-white">dob</span>
             <span class="text-xs text-red-500 font-semibold">*</span>
           </div>
-          <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-            <span class="text-sm font-medium text-[#111827] dark:text-white">selection_batch_id</span>
-            <span class="text-xs text-red-500 font-semibold">*</span>
-          </div>
+
           <div class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 bg-gray-50/50 dark:bg-white/[0.02]">
             <span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
             <span class="text-sm font-medium text-[#111827] dark:text-white">intake_year</span>

@@ -26,7 +26,6 @@ export function isAcceptedType(ext: string | null): ext is AcceptedType {
 
 export function downloadSampleCsv(): void {
   const headers = [
-    'student_id_no',
     'full_name',
     'gender',
     'dob',
@@ -38,9 +37,9 @@ export function downloadSampleCsv(): void {
   ]
 
   const sampleRows: string[][] = [
-    ['ST0001', 'John Doe', 'Male', '2005-01-15', '2024', 'Phnom Penh', '012-345-678', 'john.doe@example.com', 'High School A'],
-    ['ST0002', 'Jane Smith', 'Female', '2006-03-22', '2024', 'Kandal', '098-765-432', 'jane.smith@example.com', 'High School B'],
-    ['ST0003', 'Sok Chea', 'Male', '2005-07-10', '2025', 'Takeo', '011-223-344', 'sok.chea@example.com', 'High School C'],
+    ['John Doe', 'Male', '2005-01-15', '2024', 'Phnom Penh', '012-345-678', 'john.doe@example.com', 'High School A'],
+    ['Jane Smith', 'Female', '2006-03-22', '2024', 'Kandal', '098-765-432', 'jane.smith@example.com', 'High School B'],
+    ['Sok Chea', 'Male', '2005-07-10', '2025', 'Takeo', '011-223-344', 'sok.chea@example.com', 'High School C'],
   ]
 
   const bom = '\uFEFF'

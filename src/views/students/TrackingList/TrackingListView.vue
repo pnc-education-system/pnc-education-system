@@ -10,6 +10,7 @@ import { useI18n } from 'vue-i18n'
 import type { StudentStatus, Student } from '@/types'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { studentsApi } from '@/services/api'
+import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 
 import {
   Search,
@@ -64,10 +65,6 @@ const bulkStatusTarget = ref<StudentStatus>('enrolled')
 const bulkStatusNote = ref('')
 const isBulkUpdating = ref(false)
 
-// ── Bulk Confirm ──
-const showBulkConfirmModal = ref(false)
-const isBulkConfirming = ref(false)
-
 const canManage = computed(() => authStore.hasPermission('students.edit'))
 const canImport = computed(() => authStore.hasPermission('students.import'))
 
@@ -101,11 +98,28 @@ const hasSelectedStudents = computed(() => selectedStudentIds.value.size > 0)
 async function loadBatches() {
   loadingBatches.value = true
   try {
-    const data = await selectionBatchesApi.list()
-    batches.value = data
-    // Auto-select the latest batch (first one since ordered by year desc)
-    if (data.length > 0 && !selectedBatchId.value && !hasExplicitBatchQuery) {
-      selectedBatchId.value = data[0]?.id ?? null
+    // Try cache first for instant load
+    const cached = getCachedBatches()
+    if (cached) {
+      batches.value = cached
+      loadingBatches.value = false
+    }
+
+    // If cache wasn't available, kick off a fetch and await it
+    if (!cached) {
+      prefetchBatches()
+      const inFlight = getFetchPromise()
+      const data = inFlight ? await inFlight : await selectionBatchesApi.list()
+      batches.value = data
+    } else {
+      // Cache available — just refresh in background to stay current
+      prefetchBatches()
+    }
+
+    // Default to 'All Batches' — user selects a batch from the dropdown
+    // Only auto-select if explicitly set via URL query
+    if (batches.value.length > 0 && !selectedBatchId.value && hasExplicitBatchQuery) {
+      selectedBatchId.value = batches.value[0]?.id ?? null
     }
   } catch (error) {
     console.error('Failed to load batches:', error)
@@ -204,14 +218,6 @@ async function executeBulkStatusUpdate() {
   isBulkUpdating.value = true
   try {
     const ids = Array.from(selectedStudentIds.value).map(id => Number(id))
-    console.log('Bulk update request:', {
-      ids,
-      status: bulkStatusTarget.value,
-      note: bulkStatusNote.value
-    })
-    console.log('Selected student IDs (raw):', Array.from(selectedStudentIds.value))
-    console.log('Converted IDs:', ids)
-    
     const result = await studentsApi.bulkStatusUpdate(ids, bulkStatusTarget.value, bulkStatusNote.value)
     
     showSuccessToast(`Successfully updated status for ${result.updated_count} student(s).`, 'Bulk Update Complete')
@@ -221,53 +227,10 @@ async function executeBulkStatusUpdate() {
     closeBulkStatusModal()
     loadStudents()
   } catch (error: any) {
-    console.error('Bulk update error:', error)
-    console.error('Error response:', error?.response?.data)
-    console.error('Error status:', error?.response?.status)
-    console.error('Error message:', error?.response?.data?.message)
     const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update student status.'
     showErrorToast(errorMessage, 'Error')
   } finally {
     isBulkUpdating.value = false
-  }
-}
-
-// ── Bulk Confirm Functions ──
-function openBulkConfirmModal() {
-  if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
-    return
-  }
-  showBulkConfirmModal.value = true
-}
-
-function closeBulkConfirmModal() {
-  showBulkConfirmModal.value = false
-}
-
-async function executeBulkConfirm() {
-  if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
-    return
-  }
-
-  isBulkConfirming.value = true
-  try {
-    const ids = Array.from(selectedStudentIds.value).map(id => Number(id))
-    const result = await studentsApi.bulkConfirm(ids)
-    
-    showSuccessToast(`${result.confirmed_count} students were confirmed successfully.`, 'Bulk Confirm Complete')
-    
-    // Clear selection and reload
-    selectedStudentIds.value.clear()
-    closeBulkConfirmModal()
-    loadStudents()
-  } catch (error: any) {
-    console.error('Bulk confirm error:', error)
-    const errorMessage = error?.response?.data?.message || 'Failed to confirm students.'
-    showErrorToast(errorMessage, 'Error')
-  } finally {
-    isBulkConfirming.value = false
   }
 }
 
@@ -394,14 +357,6 @@ function goToPage(page: number) {
         <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">{{ t('students.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-3">
-        <button
-          v-if="canManage && hasSelectedStudents"
-          @click="openBulkConfirmModal"
-          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
-        >
-          <Check :size="16" />
-          Confirm Status ({{ selectedStudentIds.size }})
-        </button>
         <button
           v-if="canManage && hasSelectedStudents"
           @click="openBulkStatusModal"
@@ -544,14 +499,6 @@ function goToPage(page: number) {
                   <Eye :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
-                  v-if="canManage"
-                  @click="openEdit(student)"
-                  class="group relative p-1.5 rounded-lg text-amber-500 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:hover:text-amber-400"
-                  title="Edit Student"
-                >
-                  <Pencil :size="16" class="transition-transform group-hover:scale-110" />
-                </button>
-                <button
                   v-if="student.status === 'pending' && canManage"
                   @click="confirmStatusChange(student.id, 'enrolled')"
                   class="group relative p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
@@ -628,14 +575,6 @@ function goToPage(page: number) {
                   title="View Details"
                 >
                   <Eye :size="16" class="transition-transform group-hover:scale-110" />
-                </button>
-                <button
-                  v-if="canManage"
-                  @click="openEdit(student)"
-                  class="group relative p-2 rounded-lg text-amber-500 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:hover:text-amber-400"
-                  title="Edit Student"
-                >
-                  <Pencil :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
@@ -918,39 +857,6 @@ function goToPage(page: number) {
             >
               <RefreshCw v-if="isBulkUpdating" :size="14" class="animate-spin" />
               {{ isBulkUpdating ? 'Updating...' : 'Update' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Bulk Confirm Modal -->
-    <Teleport to="body">
-      <div v-if="showBulkConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="closeBulkConfirmModal"></div>
-        <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
-          <h3 class="text-lg font-bold text-[#111827] dark:text-white">Confirm Student Status</h3>
-          <p class="text-sm text-[#6B7280] mt-2 dark:text-gray-400">
-            Are you sure you want to confirm the status of <strong>{{ selectedStudentIds.size }}</strong> selected student(s)?
-          </p>
-          <p class="text-sm text-[#6B7280] mt-1 dark:text-gray-400">
-            This action will update all selected students.
-          </p>
-          <div class="flex items-center justify-end gap-3 mt-6">
-            <button
-              @click="closeBulkConfirmModal"
-              :disabled="isBulkConfirming"
-              class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              @click="executeBulkConfirm"
-              :disabled="isBulkConfirming"
-              class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <RefreshCw v-if="isBulkConfirming" :size="14" class="animate-spin" />
-              {{ isBulkConfirming ? 'Confirming...' : 'Confirm' }}
             </button>
           </div>
         </div>
