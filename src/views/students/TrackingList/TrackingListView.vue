@@ -49,6 +49,7 @@ const loadingBatches = ref(false)
 // ── Filters ──
 const searchQuery = ref(getQueryString(route.query.search))
 const statusFilter = ref<string>(getQueryString(route.query.status) || 'all')
+const provinceFilter = ref<string>(getQueryString(route.query.province) || 'all')
 const statusChangeId = ref<string | null>(null)
 const statusChangeTarget = ref<StudentStatus>('enrolled')
 const statusChangeNote = ref('')
@@ -135,11 +136,12 @@ function loadStudents(page = 1) {
     status: statusFilter.value,
     search: searchQuery.value || undefined,
     batch: selectedBatchId.value ?? undefined,
+    province: provinceFilter.value || undefined,
   })
 }
 
 // ── Watch for changes ──
-watch([selectedBatchId, statusFilter], () => {
+watch([selectedBatchId, statusFilter, provinceFilter], () => {
   loadStudents()
   // Clear selection when filters change
   selectedStudentIds.value.clear()
@@ -200,6 +202,11 @@ function openBulkStatusModal() {
     showErrorToast('Please select at least one student.', 'Selection Required')
     return
   }
+  const selectedStudents = store.students.filter(s => selectedStudentIds.value.has(String(s.id)))
+  const firstStudent = selectedStudents[0]
+  if (firstStudent) {
+    bulkStatusTarget.value = firstStudent.status
+  }
   showBulkStatusModal.value = true
 }
 
@@ -256,6 +263,34 @@ const statusLabels: Record<string, string> = {
   graduated: 'Graduated',
   dropped: 'Dropped',
 }
+
+const provinces = [
+  'Banteay Meanchey',
+  'Battambang',
+  'Kampong Cham',
+  'Kampong Chhnang',
+  'Kampong Speu',
+  'Kampong Thom',
+  'Kampot',
+  'Kandal',
+  'Koh Kong',
+  'Kratie',
+  'Mondulkiri',
+  'Phnom Penh',
+  'Preah Vihear',
+  'Prey Veng',
+  'Pursat',
+  'Ratanakiri',
+  'Siem Reap',
+  'Preah Sihanouk',
+  'Stung Treng',
+  'Svay Rieng',
+  'Takeo',
+  'Otdar Meanchey',
+  'Kep',
+  'Pailin',
+  'Tboung Khmum'
+]
 
 // ── Status Change ──
 function confirmStatusChange(id: string, newStatus: StudentStatus) {
@@ -323,6 +358,7 @@ function getListQuery(): Record<string, string> {
   return {
     batch: selectedBatchId.value === null ? 'all' : String(selectedBatchId.value),
     status: statusFilter.value,
+    province: provinceFilter.value,
     ...(searchQuery.value.trim() ? { search: searchQuery.value.trim() } : {}),
     page: String(store.currentPage || 1),
   }
@@ -418,6 +454,13 @@ function goToPage(page: number) {
           <option value="all">All Status</option>
           <option v-for="(label, key) in statusLabels" :key="key" :value="key">{{ label }}</option>
         </select>
+        <select
+          v-model="provinceFilter"
+          class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer min-w-[150px]"
+        >
+          <option value="all">{{ t('students.filter_province') }}</option>
+          <option v-for="province in provinces" :key="province" :value="province">{{ province }}</option>
+        </select>
       </div>
     </div>
 
@@ -433,7 +476,7 @@ function goToPage(page: number) {
 
       <template v-if="!store.loading">
         <!-- Desktop Table Header -->
-        <div class="hidden md:grid grid-cols-13 gap-4 px-6 py-3.5 bg-[#F8FAFC] dark:bg-white/[0.02] border-b border-[#E5E7EB] dark:border-gray-800">
+        <div class="hidden md:grid grid-cols-[repeat(15,minmax(0,1fr))] gap-4 px-6 py-3.5 bg-[#F8FAFC] dark:bg-white/[0.02] border-b border-[#E5E7EB] dark:border-gray-800">
           <div class="col-span-1 flex items-center">
             <input
               ref="selectAllCheckbox"
@@ -446,6 +489,7 @@ function goToPage(page: number) {
           <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Student ID</span>
           <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Student Name</span>
           <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Gender</span>
+          <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('students.table_province') }}</span>
           <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Batch</span>
           <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Status</span>
           <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase text-right">Action</span>
@@ -494,9 +538,17 @@ function goToPage(page: number) {
                 <button
                   @click="openDetail(student)"
                   class="group relative p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
-                  title="View Details"
+                  :title="t('students.action_view')"
                 >
                   <Eye :size="16" class="transition-transform group-hover:scale-110" />
+                </button>
+                <button
+                  v-if="canManage"
+                  @click="openEdit(student)"
+                  class="group relative p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
+                  :title="t('students.action_edit')"
+                >
+                  <Pencil :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
@@ -518,7 +570,7 @@ function goToPage(page: number) {
             </div>
 
             <!-- Desktop Layout -->
-            <div class="hidden md:grid grid-cols-13 gap-4 items-center">
+            <div class="hidden md:grid grid-cols-[repeat(15,minmax(0,1fr))] gap-4 items-center">
               <!-- Checkbox -->
               <div class="col-span-1">
                 <input
@@ -550,6 +602,11 @@ function goToPage(page: number) {
                 <span class="text-sm text-[#6B7280] dark:text-gray-400">{{ student.gender }}</span>
               </div>
 
+              <!-- Province -->
+              <div class="col-span-2">
+                <span class="text-sm text-[#374151] dark:text-gray-300">{{ student.province || '—' }}</span>
+              </div>
+
               <!-- Batch -->
               <div class="col-span-2">
                 <span class="text-sm text-[#374151] dark:text-gray-300">{{ student.selectionBatchName || student.intakeYear || '—' }}</span>
@@ -572,9 +629,17 @@ function goToPage(page: number) {
                 <button
                   @click="openDetail(student)"
                   class="group relative p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
-                  title="View Details"
+                  :title="t('students.action_view')"
                 >
                   <Eye :size="16" class="transition-transform group-hover:scale-110" />
+                </button>
+                <button
+                  v-if="canManage"
+                  @click="openEdit(student)"
+                  class="group relative p-2 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
+                  :title="t('students.action_edit')"
+                >
+                  <Pencil :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
