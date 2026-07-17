@@ -74,12 +74,12 @@ export const useStudentsStore = defineStore('students', () => {
     return students.value.find(s => s.id === id)
   }
 
-  async function updateStatus(id: string, status: StudentStatus): Promise<boolean> {
+  async function updateStatus(id: string, status: StudentStatus, note?: string): Promise<boolean> {
     const index = students.value.findIndex(s => s.id === id)
     if (index === -1) return false
 
     try {
-      const backend = await studentsApi.updateStatus(Number(id), status)
+      const backend = await studentsApi.updateStatus(Number(id), status, note)
       students.value[index] = mapBackendStudent(backend)
       return true
     } catch {

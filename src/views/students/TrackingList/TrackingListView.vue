@@ -14,7 +14,6 @@ import {
   UserCheck,
   XCircle,
   FileText,
-  Trash2,
   UserPlus,
   Eye,
   Mail,
@@ -42,6 +41,7 @@ const searchQuery = ref('')
 const statusFilter = ref<string>('all')
 const statusChangeId = ref<string | null>(null)
 const statusChangeTarget = ref<StudentStatus>('enrolled')
+const statusChangeNote = ref('')
 const showDetailModal = ref(false)
 const detailStudentObj = ref<Student | null>(null)
 
@@ -94,11 +94,12 @@ function confirmStatusChange(id: string, newStatus: StudentStatus) {
 function cancelStatusChange() {
   statusChangeId.value = null
   statusChangeTarget.value = 'enrolled'
+  statusChangeNote.value = ''
 }
 
 async function executeStatusChange() {
   if (!statusChangeId.value) return
-  const success = await store.updateStatus(statusChangeId.value, statusChangeTarget.value)
+  const success = await store.updateStatus(statusChangeId.value, statusChangeTarget.value, statusChangeNote.value)
   if (success) {
     showSuccessToast(`Student status updated to ${statusChangeTarget.value} successfully.`, 'Status Updated')
   } else {
@@ -106,25 +107,7 @@ async function executeStatusChange() {
   }
   statusChangeId.value = null
   statusChangeTarget.value = 'enrolled'
-}
-
-// ── Delete ──
-function confirmDelete(id: string) {
-  deleteConfirmId.value = id
-}
-
-function cancelDelete() {
-  deleteConfirmId.value = null
-}
-
-async function executeDelete(id: string) {
-  const success = await store.remove(id)
-  if (success) {
-    showSuccessToast('Student deleted successfully.', 'Deleted')
-  } else {
-    showErrorToast('Failed to delete student.', 'Error')
-  }
-  deleteConfirmId.value = null
+  statusChangeNote.value = ''
 }
 
 // ── Detail View ──
@@ -293,14 +276,6 @@ function goToPage(page: number) {
                 >
                   <XCircle :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
-                <button
-                  v-if="canManage"
-                  @click="confirmDelete(student.id)"
-                  class="group relative p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                  title="Delete"
-                >
-                  <Trash2 :size="16" class="transition-transform group-hover:scale-110" />
-                </button>
               </div>
             </div>
 
@@ -369,14 +344,6 @@ function goToPage(page: number) {
                 >
                   <XCircle :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
-                <button
-                  v-if="canManage"
-                  @click="confirmDelete(student.id)"
-                  class="group relative p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                  title="Delete"
-                >
-                  <Trash2 :size="16" class="transition-transform group-hover:scale-110" />
-                </button>
               </div>
             </div>
           </div>
@@ -439,33 +406,6 @@ function goToPage(page: number) {
       </template>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <div v-if="deleteConfirmId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="cancelDelete"></div>
-        <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
-          <h3 class="text-lg font-bold text-[#111827] dark:text-white">Confirm Delete</h3>
-          <p class="text-sm text-[#6B7280] mt-2 dark:text-gray-400">
-            Are you sure you want to delete this student? This action cannot be undone.
-          </p>
-          <div class="flex items-center justify-end gap-3 mt-6">
-            <button
-              @click="cancelDelete"
-              class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
-            >
-              Cancel
-            </button>
-            <button
-              @click="executeDelete(deleteConfirmId)"
-              class="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors cursor-pointer"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
     <!-- Status Change Confirmation Modal -->
     <Teleport to="body">
       <div v-if="statusChangeId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -476,6 +416,15 @@ function goToPage(page: number) {
             Are you sure you want to change this student's status to
             <strong class="text-[#374151] dark:text-gray-200 capitalize">{{ statusChangeTarget }}</strong>?
           </p>
+          <div class="mt-4">
+            <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Note (optional)</label>
+            <textarea
+              v-model="statusChangeNote"
+              rows="3"
+              placeholder="Add a note about this status change..."
+              class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 resize-none"
+            ></textarea>
+          </div>
           <div class="flex items-center justify-end gap-3 mt-6">
             <button
               @click="cancelStatusChange"

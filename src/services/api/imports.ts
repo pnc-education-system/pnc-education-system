@@ -85,8 +85,8 @@ export interface ImportsMeta {
 }
 
 export const importsApi = {
-  async list(page = 1): Promise<{ data: ImportLog[]; meta: ImportsMeta }> {
-    const { data } = await axiosInstance.get('/imports', { params: { page, per_page: 15 } })
+  async list(page = 1, status?: string): Promise<{ data: ImportLog[]; meta: ImportsMeta }> {
+    const { data } = await axiosInstance.get('/imports', { params: { page, per_page: 15, status } })
     return { data: data.data, meta: data.meta }
   },
 

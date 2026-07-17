@@ -23,7 +23,7 @@ export const studentsApi = {
     return data.data as BackendStudent
   },
 
-  async updateStatus(id: number, status: StudentStatus): Promise<BackendStudent> {
+  async updateStatus(id: number, status: StudentStatus, note?: string): Promise<BackendStudent> {
     // Convert frontend lowercase status to backend capitalized format
     const statusMap: Record<StudentStatus, string> = {
       'pending': 'Pending',
@@ -35,7 +35,7 @@ export const studentsApi = {
       'inactive': 'Pending', // Map inactive to pending for now
     }
     const backendStatus = statusMap[status] || 'Pending'
-    const { data } = await axiosInstance.patch(`/students/${id}/status`, { status: backendStatus })
+    const { data } = await axiosInstance.patch(`/students/${id}/status`, { status: backendStatus, note })
     return data.data.student as BackendStudent
   },
 
