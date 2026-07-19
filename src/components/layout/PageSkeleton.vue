@@ -1,5 +1,4 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div class="space-y-6 animate-pulse">
@@ -14,7 +13,11 @@
       </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div v-for="i in 4" :key="i" class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
+      <div
+        v-for="i in 4"
+        :key="i"
+        class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50"
+      >
         <div class="flex items-start gap-4">
           <div class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-700"></div>
           <div class="flex-1 space-y-2">
@@ -26,16 +29,25 @@
       </div>
     </div>
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div class="xl:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
+      <div
+        class="xl:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50"
+      >
         <div class="flex items-center justify-between mb-6">
           <div class="h-5 w-36 bg-gray-200 rounded-lg dark:bg-gray-600"></div>
           <div class="h-6 w-28 bg-gray-100 rounded-lg dark:bg-gray-700"></div>
         </div>
         <div class="h-64 flex items-end gap-3 px-4">
-          <div v-for="i in 6" :key="i" class="flex-1 bg-gray-100 rounded-t-lg dark:bg-gray-700" :style="{ height: `${40 + Math.random() * 50}%` }"></div>
+          <div
+            v-for="i in 6"
+            :key="i"
+            class="flex-1 bg-gray-100 rounded-t-lg dark:bg-gray-700"
+            :style="{ height: `${40 + Math.random() * 50}%` }"
+          ></div>
         </div>
       </div>
-      <div class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
+      <div
+        class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50"
+      >
         <div class="h-5 w-44 bg-gray-200 rounded-lg mb-6 dark:bg-gray-600"></div>
         <div class="flex items-center justify-center h-48">
           <div class="w-40 h-40 rounded-full bg-gray-100 dark:bg-gray-700"></div>
@@ -46,7 +58,9 @@
       </div>
     </div>
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div class="xl:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
+      <div
+        class="xl:col-span-2 bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50"
+      >
         <div class="flex items-center justify-between mb-6">
           <div class="space-y-2">
             <div class="h-5 w-32 bg-gray-200 rounded-lg dark:bg-gray-600"></div>
@@ -68,10 +82,18 @@
         </div>
       </div>
       <div class="space-y-6">
-        <div v-for="i in 2" :key="i" class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50">
+        <div
+          v-for="i in 2"
+          :key="i"
+          class="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/80 dark:bg-gray-800/20 dark:border-gray-700/50"
+        >
           <div class="h-5 w-28 bg-gray-200 rounded-lg mb-5 dark:bg-gray-600"></div>
           <div class="space-y-4">
-            <div v-for="j in 4" :key="j" class="h-12 bg-gray-100 rounded-2xl dark:bg-gray-700"></div>
+            <div
+              v-for="j in 4"
+              :key="j"
+              class="h-12 bg-gray-100 rounded-2xl dark:bg-gray-700"
+            ></div>
           </div>
         </div>
       </div>

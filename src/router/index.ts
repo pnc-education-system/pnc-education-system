@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { prefetchBatches } from '@/utils/batchesCache'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -91,8 +92,20 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/students',
     name: 'Students',
-    component: () => import('@/views/students/StudentsView.vue'),
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
     meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/tracking',
+    name: 'StudentTracking',
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/new',
+    name: 'StudentCreate',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.create' },
   },
   {
     path: '/imports',
@@ -105,14 +118,10 @@ const routes: RouteRecordRaw[] = [
     redirect: '/admin/users',
   },
   {
-    path: '/roles',
-    redirect: '/admin/roles',
-  },
-  {
-    path: '/me',
-    name: 'Profile',
-    component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true },
+    path: '/students/:id/edit',
+    name: 'StudentEdit',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.edit' },
   },
   {
     path: '/settings',
@@ -121,30 +130,14 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
+
   {
-    path: '/enrollments',
-    name: 'Enrollments',
-    component: () => import('@/views/enrollments/EnrollmentsView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/profile/ProfileView.vue'),
+    meta: { requiresAuth: true },
   },
-  {
-    path: '/enrollments/new',
-    name: 'EnrollmentCreate',
-    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-  {
-    path: '/enrollments/:id/edit',
-    name: 'EnrollmentEdit',
-    component: () => import('@/views/enrollments/EnrollmentFormView.vue'),
-    meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  },
-  // {
-  //   path: '/enrollment/history',
-  //   name: 'ImportHistory',
-  //   component: () => import('@/views/enrollments/ImportHistoryView.vue'),
-  //   meta: { requiresAuth: true, permission: 'enrollment.manage' },
-  // },
+
   {
     path: '/',
     redirect: '/dashboard',
@@ -172,6 +165,11 @@ router.beforeEach((to) => {
   const requiredPermission = (to.meta as { permission?: string }).permission
   if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return { name: 'Forbidden' }
+  }
+
+  // Pre-fetch selection batches so the dropdown is ready instantly
+  if (to.name === 'Enrollment' || to.name === 'ImportViews') {
+    prefetchBatches()
   }
 })
 

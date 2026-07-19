@@ -3,20 +3,17 @@ import { useAuthStore } from '@/stores/auth'
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1',
+  timeout: 30_000, // 30-second global safety net for all requests
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-const PUBLIC_ENDPOINTS = [
-  '/auth/login',
-  '/auth/password/reset',
-  '/auth/password/reset/confirm',
-]
+const PUBLIC_ENDPOINTS = ['/auth/login', '/auth/password/reset', '/auth/password/reset/confirm']
 
 function isPublicEndpoint(url: string | undefined): boolean {
   if (!url) return false
-  return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint))
+  return PUBLIC_ENDPOINTS.some((endpoint) => url.includes(endpoint))
 }
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -33,7 +30,7 @@ axiosInstance.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 let isRefreshing = false
@@ -58,7 +55,10 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Don't try to refresh the token for public endpoints (e.g. login, forgot password)
+    const isPublic = isPublicEndpoint(originalRequest.url)
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isPublic) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
@@ -87,7 +87,7 @@ axiosInstance.interceptors.response.use(
     }
 
     return Promise.reject(error)
-  }
+  },
 )
 
 export default axiosInstance
