@@ -66,6 +66,24 @@ const bulkStatusTarget = ref<StudentStatus>('enrolled')
 const bulkStatusNote = ref('')
 const isBulkUpdating = ref(false)
 
+// ── Add Student Modal ──
+const showAddStudentModal = ref(false)
+const isAddingStudent = ref(false)
+const newStudent = ref({
+  studentIdNo: '',
+  fullName: '',
+  gender: 'Male' as 'Male' | 'Female',
+  dob: '',
+  phone: '',
+  email: '',
+  province: '',
+  highSchool: '',
+  selectionBatchId: null as number | null,
+  enrollmentStatus: 'Pending' as 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped',
+  intakeYear: new Date().getFullYear(),
+  enrolledAt: '',
+})
+
 const canManage = computed(() => authStore.hasPermission('students.edit'))
 const canImport = computed(() => authStore.hasPermission('students.import'))
 
@@ -333,6 +351,67 @@ function navigateToImport() {
   router.push('/enrollment')
 }
 
+function openAddStudentModal() {
+  showAddStudentModal.value = true
+}
+
+function closeAddStudentModal() {
+  showAddStudentModal.value = false
+  newStudent.value = {
+    studentIdNo: '',
+    fullName: '',
+    gender: 'Male' as 'Male' | 'Female',
+    dob: '',
+    phone: '',
+    email: '',
+    province: '',
+    highSchool: '',
+    selectionBatchId: null as number | null,
+    enrollmentStatus: 'Pending' as 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped',
+    intakeYear: new Date().getFullYear(),
+    enrolledAt: '',
+  }
+}
+
+async function submitNewStudent() {
+  if (!newStudent.value.studentIdNo || !newStudent.value.fullName) {
+    showErrorToast('Student ID and Full Name are required.', 'Validation Error')
+    return
+  }
+
+  isAddingStudent.value = true
+  try {
+    const payload: any = {
+      student_id_no: newStudent.value.studentIdNo,
+      full_name: newStudent.value.fullName,
+      gender: newStudent.value.gender,
+      dob: newStudent.value.dob,
+      phone: newStudent.value.phone,
+      email: newStudent.value.email,
+      province: newStudent.value.province,
+      high_school: newStudent.value.highSchool,
+      enrollment_status: newStudent.value.enrollmentStatus,
+      intake_year: newStudent.value.intakeYear,
+      enrolled_at: newStudent.value.enrolledAt,
+    }
+    
+    if (newStudent.value.selectionBatchId) {
+      payload.selection_batch_id = newStudent.value.selectionBatchId
+    }
+    
+    await studentsApi.create(payload)
+
+    showSuccessToast('Student added successfully.', 'Success')
+    closeAddStudentModal()
+    loadStudents()
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add student.'
+    showErrorToast(errorMessage, 'Error')
+  } finally {
+    isAddingStudent.value = false
+  }
+}
+
 function openEdit(student: Student) {
   router.push({
     name: 'StudentEdit',
@@ -364,6 +443,45 @@ function getListQuery(): Record<string, string> {
   }
 }
 
+// ── Pagination Helpers ──
+const pageNumbers = computed(() => {
+  const pages: (number | string)[] = []
+  const current = store.currentPage
+  const last = store.lastPage
+  const delta = 2 // Number of pages to show on each side
+
+  if (last <= 7) {
+    // Show all pages if total is small
+    for (let i = 1; i <= last; i++) {
+      pages.push(i)
+    }
+  } else {
+    // Always show first page
+    pages.push(1)
+
+    if (current > delta + 3) {
+      pages.push('...')
+    }
+
+    // Show pages around current
+    const start = Math.max(2, current - delta)
+    const end = Math.min(last - 1, current + delta)
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+
+    if (current < last - delta - 2) {
+      pages.push('...')
+    }
+
+    // Always show last page
+    pages.push(last)
+  }
+
+  return pages
+})
+
 // ── Helpers ──
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
@@ -390,7 +508,12 @@ function goToPage(page: number) {
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('students.title') }}</h1>
-        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">{{ t('students.subtitle') }}</p>
+        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1 flex items-center gap-2">
+          {{ t('students.subtitle') }}
+          <span v-if="store.total > 0" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+            {{ store.total }} Students
+          </span>
+        </p>
       </div>
       <div class="flex items-center gap-3">
         <button
@@ -413,7 +536,7 @@ function goToPage(page: number) {
         </button>
         <button
           v-if="canManage"
-          @click="router.push('/imports')"
+          @click="openAddStudentModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gray-800 rounded-xl hover:bg-gray-900 transition-all duration-200 cursor-pointer"
         >
           <UserPlus :size="16" />
@@ -696,6 +819,17 @@ function goToPage(page: number) {
             Page {{ store.currentPage }} of {{ store.lastPage }} ({{ store.total }} total)
           </p>
           <div class="flex items-center gap-2">
+            <!-- First Page -->
+            <button
+              :disabled="store.currentPage <= 1"
+              @click="goToPage(1)"
+              class="inline-flex items-center justify-center w-8 h-8 text-xs font-medium rounded-lg border border-[#E5E7EB] transition-all duration-200 dark:border-gray-700"
+              :class="store.currentPage <= 1 ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-[#F8FAFC] cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
+              title="First Page"
+            >
+              «
+            </button>
+            <!-- Previous -->
             <button
               :disabled="store.currentPage <= 1"
               @click="goToPage(store.currentPage - 1)"
@@ -705,6 +839,23 @@ function goToPage(page: number) {
               <ChevronLeft :size="14" />
               Previous
             </button>
+            <!-- Page Numbers -->
+            <div class="flex items-center gap-1">
+              <button
+                v-for="page in pageNumbers"
+                :key="page"
+                @click="typeof page === 'number' ? goToPage(page) : null"
+                class="inline-flex items-center justify-center w-8 h-8 text-xs font-medium rounded-lg border transition-all duration-200"
+                :class="page === '...'
+                  ? 'border-transparent text-[#6B7280] cursor-default'
+                  : page === store.currentPage
+                    ? 'bg-blue-500 text-white border-blue-500 cursor-pointer'
+                    : 'border-[#E5E7EB] text-[#374151] hover:bg-[#F8FAFC] cursor-pointer dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <!-- Next -->
             <button
               :disabled="store.currentPage >= store.lastPage"
               @click="goToPage(store.currentPage + 1)"
@@ -713,6 +864,16 @@ function goToPage(page: number) {
             >
               Next
               <ChevronRight :size="14" />
+            </button>
+            <!-- Last Page -->
+            <button
+              :disabled="store.currentPage >= store.lastPage"
+              @click="goToPage(store.lastPage)"
+              class="inline-flex items-center justify-center w-8 h-8 text-xs font-medium rounded-lg border border-[#E5E7EB] transition-all duration-200 dark:border-gray-700"
+              :class="store.currentPage >= store.lastPage ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-[#F8FAFC] cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
+              title="Last Page"
+            >
+              »
             </button>
           </div>
         </div>
@@ -922,6 +1083,188 @@ function goToPage(page: number) {
             >
               <RefreshCw v-if="isBulkUpdating" :size="14" class="animate-spin" />
               {{ isBulkUpdating ? 'Updating...' : 'Update' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Add Student Modal -->
+    <Teleport to="body">
+      <div v-if="showAddStudentModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="closeAddStudentModal"></div>
+        <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-[#111827] dark:text-white">Add New Student</h3>
+            <button
+              @click="closeAddStudentModal"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Student ID -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Student ID *</label>
+              <input
+                v-model="newStudent.studentIdNo"
+                type="text"
+                placeholder="Enter student ID"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Full Name -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Full Name *</label>
+              <input
+                v-model="newStudent.fullName"
+                type="text"
+                placeholder="Enter full name"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Gender -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Gender</label>
+              <select
+                v-model="newStudent.gender"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+
+            <!-- Date of Birth -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Date of Birth</label>
+              <input
+                v-model="newStudent.dob"
+                type="date"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Phone -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Phone</label>
+              <input
+                v-model="newStudent.phone"
+                type="tel"
+                placeholder="Enter phone number"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Email</label>
+              <input
+                v-model="newStudent.email"
+                type="email"
+                placeholder="Enter email address"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Province -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Province</label>
+              <select
+                v-model="newStudent.province"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="">Select Province</option>
+                <option v-for="province in provinces" :key="province" :value="province">{{ province }}</option>
+              </select>
+            </div>
+
+            <!-- High School -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">High School</label>
+              <input
+                v-model="newStudent.highSchool"
+                type="text"
+                placeholder="Enter high school name"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Selection Batch -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Selection Batch</label>
+              <select
+                v-model="newStudent.selectionBatchId"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option :value="null">Select Batch</option>
+                <option v-for="batch in batches" :key="batch.id" :value="batch.id">
+                  {{ batch.name }} ({{ batch.year }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Intake Year -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Intake Year</label>
+              <input
+                v-model="newStudent.intakeYear"
+                type="number"
+                placeholder="Enter intake year"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Enrolled Date -->
+            <div>
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Enrolled Date</label>
+              <input
+                v-model="newStudent.enrolledAt"
+                type="date"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            <!-- Enrollment Status -->
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Enrollment Status</label>
+              <select
+                v-model="newStudent.enrollmentStatus"
+                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="Pending">Pending</option>
+                <option value="Enrolled">Enrolled</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Graduated">Graduated</option>
+                <option value="Dropped">Dropped</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#E5E7EB] dark:border-gray-800">
+            <button
+              @click="closeAddStudentModal"
+              :disabled="isAddingStudent"
+              class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              @click="submitNewStudent"
+              :disabled="isAddingStudent"
+              class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg v-if="isAddingStudent" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              {{ isAddingStudent ? 'Adding...' : 'Add Student' }}
             </button>
           </div>
         </div>

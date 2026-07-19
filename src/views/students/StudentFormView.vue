@@ -57,6 +57,7 @@ const form = ref({
   selection_batch_id: null as number | null,
   enrollment_status: 'Pending' as 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped',
   intake_year: new Date().getFullYear(),
+  enrolled_at: '',
 })
 
 const selectionBatches = ref<SelectionBatch[]>([])
@@ -102,6 +103,7 @@ onMounted(async () => {
         selection_batch_id: student.selection_batch_id ?? null,
         enrollment_status: normalizeEnrollmentStatus(student.enrollment_status),
         intake_year: student.intake_year || new Date().getFullYear(),
+        enrolled_at: student.enrolled_at || '',
       }
       existingPhotoPath.value = student.photo_path || null
     } catch (error) {
@@ -156,6 +158,7 @@ async function handleSubmit() {
       selection_batch_id: selectionBatchId,
       enrollment_status: form.value.enrollment_status,
       intake_year: form.value.intake_year || null,
+      enrolled_at: form.value.enrolled_at || null,
       photo: selectedPhoto.value,
     }
 
@@ -421,6 +424,17 @@ function getInitials(name: string): string {
             v-model.number="form.intake_year"
             type="number"
             placeholder="e.g. 2025"
+            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            Enrolled Date
+          </label>
+          <input
+            v-model="form.enrolled_at"
+            type="date"
             class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
