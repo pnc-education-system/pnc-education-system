@@ -158,24 +158,21 @@ async function refreshData() {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Enrollment Management</h1>
-        <p class="text-sm text-gray-500 mt-1 dark:text-gray-400">
+        <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Enrollment Management</h1>
+        <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
           Manage student enrollment applications, review submissions, and update statuses.
         </p>
       </div>
       <div class="flex items-center gap-3">
         <button
           @click="refreshData"
-          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200 cursor-pointer dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#374151] bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800"
           title="Refresh data"
         >
-          <RefreshCw :size="16" />
-          <span class="hidden sm:inline">Refresh</span>
-        </button>
         <button
           v-if="canManage"
           @click="navigateToCreate"
@@ -192,12 +189,13 @@ async function refreshData() {
       <div
         v-for="card in statsCards"
         :key="card.label"
-        class="rounded-xl border border-gray-100 p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default dark:border-gray-700/50"
+        class="rounded-[14px] border p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default"
         :class="[card.bg]"
+        style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);"
       >
         <div class="flex items-center justify-between mb-3">
-          <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">{{ card.label }}</p>
-          <component :is="card.icon" :size="18" class="text-gray-400" />
+          <p class="text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ card.label }}</p>
+          <component :is="card.icon" :size="18" class="text-[#9CA3AF]" />
         </div>
         <p class="text-2xl font-bold tracking-tight" :class="card.color">{{ card.value }}</p>
       </div>
@@ -206,18 +204,18 @@ async function refreshData() {
     <!-- Filters -->
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
-        <Search :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search by student name, ID, or program..."
-          class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+          class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
       <div class="flex gap-2">
         <select
           v-model="statusFilter"
-          class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
+          class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
@@ -227,7 +225,7 @@ async function refreshData() {
         </select>
         <button
           @click="showFilters = !showFilters"
-          class="px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 cursor-pointer dark:bg-gray-800/50 dark:border-gray-700 dark:hover:bg-gray-800"
+          class="px-3 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-[#6B7280] hover:text-[#374151] hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer dark:hover:bg-gray-800"
           :class="{ 'border-blue-400 text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400': showFilters }"
           title="More filters"
         >
@@ -248,14 +246,14 @@ async function refreshData() {
       <div v-if="showFilters" class="flex flex-wrap gap-3">
         <select
           v-model="programFilter"
-          class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
+          class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
           <option value="">All Programs</option>
           <option v-for="program in programs" :key="program" :value="program">{{ program }}</option>
         </select>
         <select
           v-model="batchFilter"
-          class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
+          class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
           <option value="">All Batches</option>
           <option value="Morning">Morning</option>
@@ -266,23 +264,23 @@ async function refreshData() {
     </transition>
 
     <!-- Enrollments List -->
-    <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden dark:bg-gray-800/20 dark:border-gray-700/50">
+    <div class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 overflow-hidden" style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
       <!-- Table Header (Desktop) -->
-      <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-gray-50 border-b border-gray-100 dark:bg-white/[0.02] dark:border-gray-700/50">
-        <span class="col-span-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">Student</span>
-        <span class="col-span-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">Student ID</span>
-        <span class="col-span-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">Program</span>
-        <span class="col-span-1 text-xs font-semibold tracking-wider text-gray-400 uppercase">Batch</span>
-        <span class="col-span-1 text-xs font-semibold tracking-wider text-gray-400 uppercase">Status</span>
-        <span class="col-span-2 text-xs font-semibold tracking-wider text-gray-400 uppercase text-right">Actions</span>
+      <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-[#F8FAFC] dark:bg-white/[0.02] border-b border-[#E5E7EB] dark:border-gray-800">
+        <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Student</span>
+        <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Student ID</span>
+        <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Program</span>
+        <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Batch</span>
+        <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Status</span>
+        <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase text-right">Actions</span>
       </div>
 
       <!-- Enrollments -->
-      <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+      <div class="divide-y divide-[#E5E7EB] dark:divide-gray-800">
         <div
           v-for="enrollment in filteredEnrollments"
           :key="enrollment.id"
-          class="group px-4 md:px-6 py-4 hover:bg-gray-50/50 transition-colors duration-150 dark:hover:bg-white/[0.02]"
+          class="group px-4 md:px-6 py-4 hover:bg-[#F9FAFB] transition-colors duration-150 dark:hover:bg-white/[0.02]"
         >
           <!-- Mobile Layout -->
           <div class="md:hidden space-y-2">
@@ -292,8 +290,8 @@ async function refreshData() {
                   <span class="text-xs font-bold text-white">{{ getInitials(enrollment.studentName) }}</span>
                 </div>
                 <div>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ enrollment.studentName }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ enrollment.studentId }}</p>
+                  <p class="text-sm font-semibold text-[#111827] dark:text-white">{{ enrollment.studentName }}</p>
+                  <p class="text-xs text-[#6B7280] dark:text-gray-400">{{ enrollment.studentId }}</p>
                 </div>
               </div>
               <span
@@ -304,7 +302,7 @@ async function refreshData() {
                 {{ enrollment.status.charAt(0).toUpperCase() + enrollment.status.slice(1) }}
               </span>
             </div>
-            <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 pl-12">
+            <div class="flex items-center gap-3 text-xs text-[#6B7280] dark:text-gray-400 pl-12">
               <span>{{ enrollment.program }}</span>
               <span>·</span>
               <span>{{ enrollment.batch }}</span>
@@ -361,19 +359,18 @@ async function refreshData() {
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
                 <span class="text-xs font-bold text-white">{{ getInitials(enrollment.studentName) }}</span>
               </div>
-              <div>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ enrollment.studentName }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(enrollment.submittedAt) }}</p>
+              <div>                  <p class="text-sm font-semibold text-[#111827] dark:text-white">{{ enrollment.studentName }}</p>
+                  <p class="text-xs text-[#6B7280] dark:text-gray-400">{{ formatDate(enrollment.submittedAt) }}</p>
               </div>
             </div>
             <div class="col-span-2">
-              <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ enrollment.studentId }}</span>
+              <span class="text-sm font-mono text-[#374151] dark:text-gray-400">{{ enrollment.studentId }}</span>
             </div>
             <div class="col-span-3">
-              <span class="text-sm text-gray-700 dark:text-gray-300">{{ enrollment.program }}</span>
+              <span class="text-sm text-[#374151] dark:text-gray-300">{{ enrollment.program }}</span>
             </div>
             <div class="col-span-1">
-              <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F8FAFC] text-[#6B7280] dark:bg-gray-700 dark:text-gray-300">
                 {{ enrollment.batch }}
               </span>
             </div>
@@ -435,13 +432,13 @@ async function refreshData() {
         <!-- Empty State -->
         <div v-if="filteredEnrollments.length === 0" class="py-16 text-center">
           <div class="flex flex-col items-center gap-3">
-            <div class="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center dark:bg-gray-800">
-              <FileText :size="32" class="text-gray-300 dark:text-gray-600" />
+            <div class="w-16 h-16 rounded-[14px] bg-[#F8FAFC] flex items-center justify-center dark:bg-gray-800">
+              <FileText :size="32" class="text-[#9CA3AF] dark:text-gray-600" />
             </div>
-            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <p class="text-sm font-medium text-[#6B7280] dark:text-gray-400">
               {{ searchQuery || statusFilter !== 'all' ? 'No enrollments match your filters' : 'No enrollments yet' }}
             </p>
-            <p class="text-xs text-gray-400 dark:text-gray-500">
+            <p class="text-xs text-[#9CA3AF] dark:text-gray-500">
               {{ searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filters' : 'Create your first enrollment to get started' }}
             </p>
             <button
@@ -461,15 +458,15 @@ async function refreshData() {
     <Teleport to="body">
       <div v-if="deleteConfirmId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="cancelDelete"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 dark:bg-gray-800">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Confirm Delete</h3>
-          <p class="text-sm text-gray-500 mt-2 dark:text-gray-400">
+        <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
+          <h3 class="text-lg font-bold text-[#111827] dark:text-white">Confirm Delete</h3>
+          <p class="text-sm text-[#6B7280] mt-2 dark:text-gray-400">
             Are you sure you want to delete this enrollment? This action cannot be undone.
           </p>
           <div class="flex items-center justify-end gap-3 mt-6">
             <button
               @click="cancelDelete"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
+              class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
             >
               Cancel
             </button>
@@ -488,16 +485,16 @@ async function refreshData() {
     <Teleport to="body">
       <div v-if="statusChangeId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="cancelStatusChange"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 dark:bg-gray-800">
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Confirm Status Change</h3>
-          <p class="text-sm text-gray-500 mt-2 dark:text-gray-400">
+        <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
+          <h3 class="text-lg font-bold text-[#111827] dark:text-white">Confirm Status Change</h3>
+          <p class="text-sm text-[#6B7280] mt-2 dark:text-gray-400">
             Are you sure you want to change this enrollment status to
-            <strong class="text-gray-700 dark:text-gray-200 capitalize">{{ statusChangeTarget }}</strong>?
+            <strong class="text-[#374151] dark:text-gray-200 capitalize">{{ statusChangeTarget }}</strong>?
           </p>
           <div class="flex items-center justify-end gap-3 mt-6">
             <button
               @click="cancelStatusChange"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
+              class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
             >
               Cancel
             </button>

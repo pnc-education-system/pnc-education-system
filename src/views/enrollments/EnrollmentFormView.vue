@@ -3,10 +3,12 @@ defineOptions({ name: 'EnrollmentFormPage' })
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useEnrollmentsStore } from '@/stores/enrollments'
 import { useToast } from '@/composables/useToast'
 import { ArrowLeft, Save, User, Hash, BookOpen, Calendar, Clock, FileText } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = useEnrollmentsStore()
@@ -56,7 +58,7 @@ onMounted(() => {
         notes: existing.notes || '',
       }
     } else {
-      showErrorToast('Enrollment not found.', 'Error')
+      showErrorToast(t('enrollment_form.toast_not_found'), 'Error')
       router.push('/enrollments')
     }
   }
@@ -65,7 +67,7 @@ onMounted(() => {
 async function handleSubmit() {
   // Validate
   if (!form.value.studentName.trim() || !form.value.studentId.trim() || !form.value.program || !form.value.batch || !form.value.academicYear) {
-    showErrorToast('Please fill in all required fields.', 'Validation Error')
+    showErrorToast(t('enrollment_form.validation_required'), 'Validation Error')
     return
   }
 
@@ -82,7 +84,7 @@ async function handleSubmit() {
         status: form.value.status,
         notes: form.value.notes.trim() || undefined,
       })
-      showSuccessToast('Enrollment has been updated successfully.', 'Enrollment Updated')
+      showSuccessToast(t('enrollment_form.toast_updated'), t('enrollment_form.toast_updated_title'))
     } else {
       await store.create({
         student_name: form.value.studentName.trim(),
@@ -92,11 +94,11 @@ async function handleSubmit() {
         academic_year: form.value.academicYear,
         notes: form.value.notes.trim() || undefined,
       })
-      showSuccessToast('New enrollment has been created successfully.', 'Enrollment Created')
+      showSuccessToast(t('enrollment_form.toast_created'), t('enrollment_form.toast_created_title'))
     }
     router.push('/enrollments')
   } catch {
-    showErrorToast('An error occurred while saving.', 'Error')
+    showErrorToast(t('enrollment_form.toast_error'), 'Error')
   } finally {
     saving.value = false
   }
@@ -118,9 +120,9 @@ function goBack() {
         <ArrowLeft :size="20" />
       </button>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ isEdit ? 'Edit Enrollment' : 'New Enrollment' }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ isEdit ? t('enrollment_form.edit_title') : t('enrollment_form.new_title') }}</h1>
         <p class="text-sm text-gray-500 mt-1 dark:text-gray-400">
-          {{ isEdit ? 'Update enrollment details and information.' : 'Submit a new student enrollment application.' }}
+          {{ isEdit ? t('enrollment_form.edit_subtitle') : t('enrollment_form.new_subtitle') }}
         </p>
       </div>
     </div>
@@ -131,20 +133,20 @@ function goBack() {
       <div>
         <div class="flex items-center gap-2 mb-4">
           <User :size="16" class="text-blue-500" />
-          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Student Information</h2>
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{{ t('enrollment_form.section_student') }}</h2>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <!-- Student Name -->
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">
-              Full Name <span class="text-red-400">*</span>
+              {{ t('enrollment_form.label_full_name') }} <span class="text-red-400">*</span>
             </label>
             <div class="relative">
               <User :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 v-model="form.studentName"
                 type="text"
-                placeholder="e.g. Sophia Martinez"
+                :placeholder="t('enrollment_form.placeholder_name')"
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
               />
             </div>
@@ -153,14 +155,14 @@ function goBack() {
           <!-- Student ID -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">
-              Student ID <span class="text-red-400">*</span>
+              {{ t('enrollment_form.label_student_id') }} <span class="text-red-400">*</span>
             </label>
             <div class="relative">
               <Hash :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 v-model="form.studentId"
                 type="text"
-                placeholder="e.g. STU-2025-0001"
+                :placeholder="t('enrollment_form.placeholder_id')"
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
               />
             </div>
@@ -169,7 +171,7 @@ function goBack() {
           <!-- Program -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">
-              Program <span class="text-red-400">*</span>
+              {{ t('enrollment_form.label_program') }} <span class="text-red-400">*</span>
             </label>
             <div class="relative">
               <BookOpen :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -177,7 +179,7 @@ function goBack() {
                 v-model="form.program"
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
               >
-                <option value="" disabled>Select a program</option>
+                <option value="" disabled>{{ t('enrollment_form.select_program') }}</option>
                 <option v-for="prog in programOptions" :key="prog" :value="prog">{{ prog }}</option>
               </select>
               <svg class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -192,13 +194,13 @@ function goBack() {
       <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50">
         <div class="flex items-center gap-2 mb-4">
           <FileText :size="16" class="text-blue-500" />
-          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Enrollment Details</h2>
+          <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{{ t('enrollment_form.section_enrollment') }}</h2>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <!-- Batch -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">
-              Batch <span class="text-red-400">*</span>
+              {{ t('enrollment_form.label_batch') }} <span class="text-red-400">*</span>
             </label>
             <div class="relative">
               <Clock :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -206,7 +208,7 @@ function goBack() {
                 v-model="form.batch"
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
               >
-                <option value="" disabled>Select batch</option>
+                <option value="" disabled>{{ t('enrollment_form.select_batch') }}</option>
                 <option v-for="batch in batchOptions" :key="batch" :value="batch">{{ batch }}</option>
               </select>
               <svg class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -218,7 +220,7 @@ function goBack() {
           <!-- Academic Year -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">
-              Academic Year <span class="text-red-400">*</span>
+              {{ t('enrollment_form.label_academic_year') }} <span class="text-red-400">*</span>
             </label>
             <div class="relative">
               <Calendar :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -226,7 +228,7 @@ function goBack() {
                 v-model="form.academicYear"
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
               >
-                <option value="" disabled>Select year</option>
+                <option value="" disabled>{{ t('enrollment_form.select_year') }}</option>
                 <option v-for="year in academicYearOptions" :key="year" :value="year">{{ year }}</option>
               </select>
               <svg class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -237,7 +239,7 @@ function goBack() {
 
           <!-- Status (edit only) -->
           <div v-if="isEdit">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Status</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">{{ t('enrollment_form.label_status') }}</label>
             <select
               v-model="form.status"
               class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200"
@@ -253,11 +255,11 @@ function goBack() {
 
       <!-- Notes -->
       <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-        <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Notes</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">{{ t('enrollment_form.label_notes') }}</label>
         <textarea
           v-model="form.notes"
           rows="3"
-          placeholder="Any additional notes or comments about this enrollment..."
+          :placeholder="t('enrollment_form.placeholder_notes')"
           class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 resize-none dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
         ></textarea>
       </div>
@@ -268,7 +270,7 @@ function goBack() {
           @click="goBack"
           class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
         >
-          Cancel
+          {{ t('enrollment_form.cancel') }}
         </button>
         <button
           @click="handleSubmit"
@@ -276,7 +278,7 @@ function goBack() {
           class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <Save :size="16" />
-          {{ saving ? 'Saving...' : (isEdit ? 'Update Enrollment' : 'Create Enrollment') }}
+          {{ saving ? t('enrollment_form.saving_text') : (isEdit ? t('enrollment_form.update') : t('enrollment_form.create')) }}
         </button>
       </div>
     </div>

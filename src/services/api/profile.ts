@@ -12,4 +12,3 @@ export const profileApi = {
     return data
   },
 }
-
