@@ -22,6 +22,14 @@ export interface StudentFormPayload {
 export type CreateStudentPayload = StudentFormPayload
 export type UpdateStudentPayload = StudentFormPayload
 
+export interface StudentActivity {
+  id: string
+  type: 'status_change' | 'record_update' | 'evaluation'
+  title: string
+  description: string
+  performed_by: string
+  date: string
+}
 function isFormDataPayload(payload: unknown): payload is FormData {
   return payload instanceof FormData
 }
@@ -146,5 +154,9 @@ export const studentsApi = {
       student_ids: ids
     })
     return data.data as { confirmed_count: number }
+  },
+  async getHistory(id: number): Promise<StudentActivity[]> {
+    const { data } = await axiosInstance.get(`/students/${id}/history`)
+    return data.data as StudentActivity[]
   },
 }

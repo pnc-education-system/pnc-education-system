@@ -130,7 +130,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
-
+ 
   {
     path: '/profile',
     name: 'Profile',

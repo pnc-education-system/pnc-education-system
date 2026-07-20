@@ -434,6 +434,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'enrollment.batch_delete_failed': 'Failed to delete batch',
     'enrollment.upload_error_default': 'Failed to process file. Check the format and try again.',
 
+    // Student History
+    'student_history.title': 'Activity History',
+    'student_history.empty': 'No history found',
+    'student_history.loading': 'Loading activity history...',
+    'student_history.by': 'by {name}',
+
     // Enrollment form
     'enrollment_form.edit_title': 'Edit Enrollment',
     'enrollment_form.new_title': 'New Enrollment',
@@ -936,6 +942,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'enrollment.batch_deleted': 'វគ្គត្រូវបានលុបដោយជោគជ័យ',
     'enrollment.batch_delete_failed': 'មិនអាចលុបវគ្គបានទេ',
     'enrollment.upload_error_default': 'មិនអាចដំណើរការឯកសារបានទេ។ សូមពិនិត្យមើលទម្រង់ ហើយព្យាយាមម្តងទៀត។',
+
+    // Student History
+    'student_history.title': 'ប្រវត្តិកំណត់ត្រាសកម្មភាព',
+    'student_history.empty': 'រកមិនឃើញប្រវត្តិកំណត់ត្រាទេ',
+    'student_history.loading': 'កំពុងផ្ទុកប្រវត្តិកំណត់ត្រាសកម្មភាព...',
+    'student_history.by': 'ដោយ {name}',
 
     // Enrollment form
     'enrollment_form.edit_title': 'កែសម្រួលការចុះឈ្មោះ',
