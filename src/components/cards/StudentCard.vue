@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { CardStudent } from '@/services/api/cards'
 import QRCode from 'qrcode'
+import defaultSchoolLogo from '@/assets/images/PN_logo_clear.png'
 
 const props = withDefaults(
   defineProps<{
@@ -14,6 +15,7 @@ const props = withDefaults(
     issueDate?: string
     expiredDate?: string
     showBack?: boolean
+    schoolLogo?: string | null
   }>(),
   {
     size: 'md',
@@ -22,6 +24,7 @@ const props = withDefaults(
     layout: 'classic',
     managerName: 'SIM HUL',
     showBack: false,
+    schoolLogo: null,
   },
 )
 
@@ -31,13 +34,23 @@ const emit = defineEmits<{
   reprint: [studentId: number]
   download: [studentId: number]
   'photo-upload': [studentId: number, file: File]
+  'logo-upload': [file: File]
 }>()
 
 const qrDataUrl = ref<string>('')
 const photoError = ref(false)
+const logoError = ref(false)
 const photoInput = ref<HTMLInputElement | null>(null)
+const logoInput = ref<HTMLInputElement | null>(null)
 const localPhotoUrl = ref<string | null>(null)
+const localLogoUrl = ref<string | null>(null)
 const isFlipped = ref(props.showBack)
+
+const schoolLogoUrl = computed(() => {
+  if (localLogoUrl.value) return localLogoUrl.value
+  if (props.schoolLogo) return props.schoolLogo
+  return defaultSchoolLogo
+})
 
 const sizePx = computed(() => {
   switch (props.size) {
@@ -140,12 +153,25 @@ function handlePhotoChange(event: Event) {
   emit('photo-upload', props.student.id, file)
 }
 
+function handleLogoClick() { logoInput.value?.click() }
+
+function handleLogoChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (localLogoUrl.value) URL.revokeObjectURL(localLogoUrl.value)
+  localLogoUrl.value = URL.createObjectURL(file)
+  logoError.value = false
+  emit('logo-upload', file)
+}
+
 function toggleFlip() { isFlipped.value = !isFlipped.value }
 
 onMounted(() => { generateQR() })
 
 onUnmounted(() => {
   if (localPhotoUrl.value) URL.revokeObjectURL(localPhotoUrl.value)
+  if (localLogoUrl.value) URL.revokeObjectURL(localLogoUrl.value)
 })
 
 watch(() => props.student, () => {
@@ -158,11 +184,18 @@ watch(() => props.student, () => {
   generateQR()
 })
 
+watch(() => props.schoolLogo, () => {
+  if (props.schoolLogo) {
+    logoError.value = false
+  }
+})
+
 watch(() => props.showBack, (val) => { isFlipped.value = val })
 </script>
 
 <template>
   <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoChange" />
+  <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden" @change="handleLogoChange" />
 
   <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px', perspective: '1000px' }">
     <div
@@ -182,8 +215,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           <!-- Header bar -->
           <div class="bg-[#1e3a5f] px-3.5 py-2">
             <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center flex-shrink-0">
-                <span class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+              <div @click="handleLogoClick"
+                class="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
@@ -271,8 +311,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           <!-- Top gradient band -->
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-7">
             <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center shrink-0">
-                <span class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+              <div @click="handleLogoClick"
+                class="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
@@ -358,8 +405,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           <!-- Header -->
           <div class="px-3.5 pt-2 pb-1">
             <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-sm">
-                <span class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+              <div @click="handleLogoClick"
+                class="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold text-amber-100/90 leading-tight truncate">Passerelles Numériques</p>
@@ -454,7 +508,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         >
           <div class="bg-[#1e3a5f] px-3.5 py-2.5">
             <div class="flex items-center gap-2">
-              <div class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0"><span class="text-[8px] font-extrabold text-white">PNC</span></div>
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-2.5 h-2.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
+              </div>
               <div>
                 <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
@@ -493,7 +555,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-3">
             <div class="flex items-center gap-2">
-              <div class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0"><span class="text-[8px] font-extrabold text-white">PNC</span></div>
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-2.5 h-2.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
+              </div>
               <div>
                 <p class="text-[10px] font-bold text-white leading-tight drop-shadow-sm">Passerelles Numériques Cambodge</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
@@ -533,7 +603,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-3.5 pt-2.5 pb-2">
             <div class="flex items-center gap-2">
-              <div class="w-6 h-6 rounded bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0"><span class="text-[8px] font-extrabold text-white">PNC</span></div>
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-2.5 h-2.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
+              </div>
               <div>
                 <p class="text-[10px] font-bold text-amber-100/90 leading-tight">Passerelles Numériques Cambodge</p>
                 <p class="text-[7px] font-medium text-amber-400/50 leading-tight">Education for a Better Future</p>

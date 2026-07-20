@@ -13,6 +13,7 @@ const closeSidebar = inject('closeSidebar') as () => void
 const studentsDropdown = ref(false)
 const enrollmentDropdown = ref(false)
 const adminDropdown = ref(false)
+const cardDropdown = ref(false)
 
 const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
@@ -25,6 +26,7 @@ const navigate = (path: string) => {
   studentsDropdown.value = false
   enrollmentDropdown.value = false
   adminDropdown.value = false
+  cardDropdown.value = false
 }
 
 const isActive = (path: string) => route.path === path
@@ -32,6 +34,7 @@ const isActive = (path: string) => route.path === path
 const isStudentsActive = computed(() => route.path.startsWith('/students'))
 const isEnrollmentActive = computed(() => route.path.startsWith('/enrollment'))
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
+const isCardActive = computed(() => route.path.startsWith('/cards'))
 
 const onStudentsClick = () => {
   studentsDropdown.value = !studentsDropdown.value
@@ -43,6 +46,10 @@ const onEnrollmentClick = () => {
 
 const onAdminClick = () => {
   adminDropdown.value = !adminDropdown.value
+}
+
+const onCardClick = () => {
+  cardDropdown.value = !cardDropdown.value
 }
 </script>
 
@@ -245,12 +252,12 @@ const onAdminClick = () => {
         </transition>
       </div>
 
-      <!-- ID Cards -->
+      <!-- Card -->
       <div class="relative" v-if="canGenerateCards">
         <button
-          @click="navigate('/cards')"
+          @click="onCardClick"
           class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-          :class="route.path === '/cards'
+          :class="isCardActive || cardDropdown
             ? 'bg-blue-500/10 text-blue-400 shadow-sm'
             : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
         >
@@ -261,8 +268,72 @@ const onAdminClick = () => {
             <line x1="10" x2="10" y1="7" y2="7.01" />
             <path d="M8 17h8" />
           </svg>
-          <span>ID Cards</span>
+          <span class="flex-1">Card</span>
+          <svg
+            class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+            :class="{ 'rotate-180': cardDropdown }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
         </button>
+        <transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="cardDropdown"
+            class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
+          >
+            <button
+              @click="navigate('/cards/id-card')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/cards/id-card'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="2" x2="22" y1="10" y2="10" />
+                <path d="M6 17h12" />
+              </svg>
+              <span>ID Card</span>
+            </button>
+            <button
+              @click="navigate('/cards/batch-card')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/cards/batch-card'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+              </svg>
+              <span>Batch Card</span>
+            </button>
+            <button
+              @click="navigate('/cards/qr-verify')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/cards/qr-verify'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="5" height="5" rx="1" /><rect x="16" y="3" width="5" height="5" rx="1" /><rect x="3" y="16" width="5" height="5" rx="1" /><path d="M21 16h-5v-5" /><path d="M3 12h.01" /><path d="M12 3v.01" /><path d="M12 21v.01" />
+              </svg>
+              <span>QR Verify</span>
+            </button>
+          </div>
+        </transition>
       </div>
 
       <!-- Admin Dropdown -->

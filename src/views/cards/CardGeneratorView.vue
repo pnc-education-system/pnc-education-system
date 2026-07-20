@@ -43,6 +43,9 @@ const showPreviewModal = ref(false)
 const previewStudent = ref<CardStudent | null>(null)
 const generatedCards = ref<Set<number>>(new Set())
 
+// ── School Logo (persisted to localStorage) ──
+const schoolLogoUrl = ref<string | null>(localStorage.getItem('card_school_logo'))
+
 // ── Template Selection (persisted to localStorage) ──
 const savedLayout = localStorage.getItem('card_template_preference')
 const selectedLayout = ref<'classic' | 'modern' | 'premium'>(
@@ -343,6 +346,17 @@ function handlePhotoUpload() {
   showSuccessToast('Photo added to card preview.', 'Photo Updated')
 }
 
+function handleLogoUpload(file: File) {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const dataUrl = e.target?.result as string
+    schoolLogoUrl.value = dataUrl
+    localStorage.setItem('card_school_logo', dataUrl)
+    showSuccessToast('School logo uploaded successfully.', 'Logo Updated')
+  }
+  reader.readAsDataURL(file)
+}
+
 // ── Helpers ──
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
@@ -531,7 +545,9 @@ onUnmounted(() => {
             size="sm"
             :generated="previewDemoStudent ? generatedCards.has(previewDemoStudent.id) : false"
             :showBack="showCardBack"
+            :schoolLogo="schoolLogoUrl"
             @photo-upload="handlePhotoUpload"
+            @logo-upload="handleLogoUpload"
           />
         </div>
 
@@ -810,7 +826,9 @@ onUnmounted(() => {
                 :layout="selectedLayout"
                 size="lg"
                 :generated="generatedCards.has(previewStudent.id)"
+                :schoolLogo="schoolLogoUrl"
                 @photo-upload="handlePhotoUpload"
+                @logo-upload="handleLogoUpload"
               />
             </div>
 

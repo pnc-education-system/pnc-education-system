@@ -114,6 +114,13 @@ async function handleLogin() {
 const emailError = computed(() => fieldErrors.value.email)
 const passwordError = computed(() => fieldErrors.value.password)
 
+function handleDemoLogin() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  authStore.demoLogin()
+  router.push('/dashboard')
+}
+
 function clearFieldError(field: 'email' | 'password') {
   if (fieldErrors.value[field]) {
     fieldErrors.value = { ...fieldErrors.value, [field]: undefined }
@@ -246,6 +253,26 @@ function clearFieldError(field: 'email' | 'password') {
               <path d="M15 12H3" />
             </svg>
             {{ isSubmitting ? loginSigningIn : loginSignIn }}
+          </button>
+
+          <!-- Demo Login -->
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-slate-200 dark:border-gray-700"></div>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="bg-white dark:bg-[#131B2E] px-3 text-slate-400 dark:text-gray-500">or</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="handleDemoLogin"
+            class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 dark:border-gray-600 py-3 text-sm font-semibold text-slate-600 dark:text-gray-300 transition-all duration-200 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-500/5"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Demo Login (Bypass Backend)
           </button>
           <div class="flex items-start gap-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 px-4 py-3.5 border border-blue-100 dark:border-blue-500/20">
             <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

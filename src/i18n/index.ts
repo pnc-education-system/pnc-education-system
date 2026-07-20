@@ -513,8 +513,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'import_history.downloaded_title': 'Downloaded',
 
     // Card Generator
-    'cards.title': 'ID Card Generator',
+    'cards.title': 'ID Card',
     'cards.subtitle': 'Generate, preview, and print student ID cards',
+    'cards.batch_title': 'Batch Card',
+    'cards.batch_subtitle': 'Print or export multiple student ID cards at once',
+    'cards.qr_title': 'QR Verify',
+    'cards.qr_subtitle': 'Verify student identities through QR codes and generate verification links',
     'cards.eligible': 'eligible',
     'cards.generate': 'Generate',
     'cards.generate_selected': 'Generate ({count})',
@@ -1059,8 +1063,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'import_history.downloaded_title': 'បានទាញយក',
 
     // Card Generator (Khmer)
-    'cards.title': 'កម្មវិធីបង្កើតអត្តសញ្ញាណប័ណ្ណ',
+    'cards.title': 'អត្តសញ្ញាណប័ណ្ណ',
     'cards.subtitle': 'បង្កើត, មើលជាមុន, និងបោះពុម្ពអត្តសញ្ញាណប័ណ្ណនិស្សិត',
+    'cards.batch_title': 'បោះពុម្ពច្រើន',
+    'cards.batch_subtitle': 'បោះពុម្ព ឬនាំចេញអត្តសញ្ញាណប័ណ្ណនិស្សិតច្រើនសន្លឹកក្នុងពេលតែមួយ',
+    'cards.qr_title': 'ផ្ទៀងផ្ទាត់ QR',
+    'cards.qr_subtitle': 'ផ្ទៀងផ្ទាត់អត្តសញ្ញាណនិស្សិតតាមរយៈ QR និងបង្កើតតំណភ្ជាប់ផ្ទៀងផ្ទាត់',
     'cards.eligible': 'មានសិទ្ធិ',
     'cards.generate': 'បង្កើត',
     'cards.generate_selected': 'បង្កើត ({count})',
