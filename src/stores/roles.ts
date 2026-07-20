@@ -27,8 +27,9 @@ export const useRolesStore = defineStore('roles', () => {
     try {
       const data = await rolesApi.list()
       roles.value = data.map(mapBackendRole)
-    } catch (err: any) {
-      const status = err?.response?.status
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number } }
+      const status = apiErr?.response?.status
       if (status === 403) {
         roles.value = []
         error.value = null
@@ -44,14 +45,7 @@ export const useRolesStore = defineStore('roles', () => {
   async function fetchPermissions() {
     try {
       permissions.value = await rolesApi.permissions()
-    } catch (err: any) {
-      const status = err?.response?.status
-      if (status === 403) {
-        permissions.value = []
-        return
-      }
-
-      console.error('[roles store] fetchPermissions failed:', err)
+    } catch {
       permissions.value = []
     }
   }

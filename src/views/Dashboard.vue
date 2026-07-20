@@ -2,12 +2,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'DashboardPage' })
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentsStore } from '@/stores/students'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useToast } from '@/composables/useToast'
 import type { User } from '@/types'
 
 // Lucide Icons
@@ -15,9 +14,7 @@ import {
   FileDown,
   UserCheck,
   FileText,
-  FilePenLine,
   ChevronRight,
-  ChevronLeft,
   Plus,
   Eye,
   Users,
@@ -48,7 +45,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const studentsStore = useStudentsStore()
 const router = useRouter()
-const { showSuccessToast } = useToast()
+
 
 const user = ref<User | null>(null)
 

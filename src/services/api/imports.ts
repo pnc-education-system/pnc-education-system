@@ -109,8 +109,8 @@ export const importsApi = {
     return data.data as ImportPreview
   },
 
-  async commit(importId: number, rows: any[], batchId?: number): Promise<ImportLog> {
-    const payload: { rows: any[]; selection_batch_id?: number } = { rows }
+  async commit(importId: number, rows: Record<string, unknown>[], batchId?: number): Promise<ImportLog> {
+    const payload: { rows: Record<string, unknown>[]; selection_batch_id?: number } = { rows }
     if (batchId) {
       payload.selection_batch_id = batchId
     }

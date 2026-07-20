@@ -32,8 +32,9 @@ export const useUsersStore = defineStore('users', () => {
     try {
       const paginated = await usersApi.list()
       users.value = paginated.data.map(mapBackendUser)
-    } catch (err: any) {
-      const status = err?.response?.status
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number } }
+      const status = apiErr?.response?.status
       if (status === 403) {
         users.value = []
         error.value = null

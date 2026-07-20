@@ -58,8 +58,9 @@ export const useStudentsStore = defineStore('students', () => {
       currentPage.value = paginated.current_page
       lastPage.value = paginated.last_page
       total.value = paginated.total
-    } catch (err: any) {
-      const status = err?.response?.status
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number } }
+      const status = apiErr?.response?.status
       if (status === 403) {
         students.value = []
         error.value = null

@@ -21,7 +21,6 @@ import {
   CreditCard,
   RotateCcw,
   Loader2,
-  Printer,
 } from 'lucide-vue-next'
 
 // ── Data ──
@@ -81,6 +80,9 @@ const isBatchGenerating = ref(false)
 const isReprinting = ref(false)
 const generationProgress = ref(0)
 
+// ── Card side toggle ──
+const showCardBack = ref(false)
+
 // ── Toast ──
 const { showSuccessToast, showErrorToast } = useToast()
 
@@ -88,7 +90,7 @@ const { showSuccessToast, showErrorToast } = useToast()
 const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // ── Status Filters ──
-const statusFilter = ref<string>('enrolled')
+const statusFilter = ref<string>('all')
 const statusOptions = [
   { value: 'all', label: 'All Status' },
   { value: 'enrolled', label: 'Enrolled' },
@@ -337,7 +339,7 @@ function closePreview() {
   previewStudent.value = null
 }
 
-function handlePhotoUpload(studentId: number, file: File) {
+function handlePhotoUpload() {
   showSuccessToast('Photo added to card preview.', 'Photo Updated')
 }
 
@@ -433,7 +435,7 @@ onUnmounted(() => {
             v-if="totalStudents > 0"
             class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
           >
-            {{ totalStudents }} eligible
+            {{ totalStudents }} students
           </span>
         </p>
       </div>
@@ -479,34 +481,22 @@ onUnmounted(() => {
     </div>
 
     <!-- Stats Summary -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
-        <div class="flex items-center justify-between mb-1">
-          <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Eligible</p>
-          <CreditCard :size="16" class="text-gray-400" />
-        </div>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ totalStudents }}</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ totalStudents }}</p>
       </div>
-      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
-        <div class="flex items-center justify-between mb-1">
-          <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Selected</p>
-          <CheckCircle :size="16" class="text-emerald-500" />
-        </div>
-        <p class="text-2xl font-bold text-emerald-600">{{ selectedCount }}</p>
+      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Selected</p>
+        <p class="text-lg font-bold text-emerald-600 mt-0.5">{{ selectedCount }}</p>
       </div>
-      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
-        <div class="flex items-center justify-between mb-1">
-          <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Generated</p>
-          <CheckCircle :size="16" class="text-blue-500" />
-        </div>
-        <p class="text-2xl font-bold text-blue-600">{{ generatedCards.size }}</p>
+      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Generated</p>
+        <p class="text-lg font-bold text-blue-600 mt-0.5">{{ generatedCards.size }}</p>
       </div>
-      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
-        <div class="flex items-center justify-between mb-1">
-          <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Ready to Print</p>
-          <Printer :size="16" :class="generatedCards.size > 0 ? 'text-emerald-500' : 'text-gray-300'" />
-        </div>
-        <p class="text-2xl font-bold" :class="generatedCards.size > 0 ? 'text-emerald-600' : 'text-gray-400'">{{ generatedCards.size > 0 ? 'Yes' : 'No' }}</p>
+      <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Print</p>
+        <p class="text-lg font-bold mt-0.5" :class="generatedCards.size > 0 ? 'text-emerald-600' : 'text-gray-400'">{{ generatedCards.size > 0 ? 'Ready' : '—' }}</p>
       </div>
     </div>
 
@@ -516,99 +506,101 @@ onUnmounted(() => {
         <CreditCard :size="14" class="text-gray-400" />
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Card Designer</h3>
         <div class="flex-1"></div>
+        <!-- Front / Back Toggle -->
+        <div class="flex items-center gap-0.5 bg-gray-200/70 dark:bg-gray-700/50 rounded-lg p-0.5 mr-2">
+          <button
+            @click="showCardBack = false"
+            class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
+            :class="!showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+          >Front</button>
+          <button
+            @click="showCardBack = true"
+            class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
+            :class="showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+          >Back</button>
+        </div>
         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 capitalize">{{ selectedLayout }}</span>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-4 p-4">
-        <!-- Preview Card (left) -->
+      <div class="flex flex-col sm:flex-row gap-3 p-3">
+        <!-- Preview Card -->
         <div class="flex-shrink-0 flex justify-center">
           <StudentCard
             :student="previewDemoStudent"
             :layout="selectedLayout"
             size="sm"
             :generated="previewDemoStudent ? generatedCards.has(previewDemoStudent.id) : false"
+            :showBack="showCardBack"
             @photo-upload="handlePhotoUpload"
           />
         </div>
 
-        <!-- Right side: template picker + info + actions -->
-        <div class="flex-1 flex flex-col gap-3 min-w-0">
+        <!-- Right side -->
+        <div class="flex-1 flex flex-col gap-2 min-w-0">
           <!-- Template Tabs -->
           <div>
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Template</p>
-            <div class="flex flex-wrap gap-1.5">
+            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Template</p>
+            <div class="flex flex-wrap gap-1">
               <button
                 v-for="tpl in templates"
                 :key="tpl.id"
                 @click="selectedLayout = tpl.id"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer border"
+                class="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 cursor-pointer border"
                 :class="selectedLayout === tpl.id
                   ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
                   : 'bg-transparent border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
               >
-                <span class="w-2 h-2 rounded-full" :class="tpl.id === 'classic' ? 'bg-blue-500' : tpl.id === 'modern' ? 'bg-indigo-500' : 'bg-amber-500'"></span>
+                <span class="w-1.5 h-1.5 rounded-full" :class="tpl.id === 'classic' ? 'bg-blue-500' : tpl.id === 'modern' ? 'bg-indigo-500' : 'bg-amber-500'"></span>
                 <span class="font-semibold">{{ tpl.name }}</span>
-                <span v-if="tpl.popular && selectedLayout !== tpl.id" class="text-[9px] text-indigo-400">★</span>
+                <span v-if="tpl.popular && selectedLayout !== tpl.id" class="text-[8px] text-indigo-400">★</span>
                 <span v-if="selectedLayout === tpl.id" class="text-blue-600 dark:text-blue-400">✓</span>
               </button>
             </div>
           </div>
 
           <!-- Student Info -->
-          <div class="min-h-0 flex-1">
-            <template v-if="previewDemoStudent">
-              <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Student</p>
-              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ previewDemoStudent.full_name }}</p>
-              <p class="text-xs font-mono text-gray-400">{{ previewDemoStudent.student_id_no }}</p>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-                  :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).bg, color: getStatusStyle(previewDemoStudent.enrollment_status).text }">
-                  <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).dot }"></span>
-                  {{ previewDemoStudent.enrollment_status.charAt(0).toUpperCase() + previewDemoStudent.enrollment_status.slice(1) }}
-                </span>
-                <span v-if="previewDemoStudent.selection_batch_name" class="text-[10px] text-gray-400">{{ previewDemoStudent.selection_batch_name }}</span>
+          <template v-if="previewDemoStudent">
+            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Student</p>
+            <p class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ previewDemoStudent.full_name }}</p>
+            <p class="text-[10px] font-mono text-gray-400">{{ previewDemoStudent.student_id_no }}</p>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).bg, color: getStatusStyle(previewDemoStudent.enrollment_status).text }">
+                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).dot }"></span>
+                {{ previewDemoStudent.enrollment_status.charAt(0).toUpperCase() + previewDemoStudent.enrollment_status.slice(1) }}
+              </span>
+              <span v-if="previewDemoStudent.selection_batch_name" class="text-[9px] text-gray-400">{{ previewDemoStudent.selection_batch_name }}</span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <CreditCard :size="12" class="text-gray-300" />
               </div>
-            </template>
-            <template v-else>
-              <div class="flex items-center gap-2 h-full">
-                <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  <CreditCard :size="14" class="text-gray-300" />
-                </div>
-                <p class="text-xs text-gray-400">Select a student below to preview</p>
-              </div>
-            </template>
-          </div>
+              <p class="text-[10px] text-gray-400">Select a student below to preview</p>
+            </div>
+          </template>
 
           <!-- Action Buttons -->
-          <div class="flex items-center gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-700/50">
-            <button
-              v-if="previewDemoStudent"
-              @click="openPreview(previewDemoStudent)"
-              class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors cursor-pointer dark:text-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/20"
-            >
-              <Eye :size="13" />
+          <div class="flex items-center gap-1 pt-1.5 mt-auto border-t border-gray-100 dark:border-gray-700/50">
+            <button v-if="previewDemoStudent" @click="openPreview(previewDemoStudent)"
+              class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors cursor-pointer dark:text-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
+              <Eye :size="11" />
               Details
             </button>
-            <button
-              v-if="previewDemoStudent"
-              @click="handleGenerate(previewDemoStudent.id)"
-              :disabled="isGenerating"
-              class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors cursor-pointer dark:text-emerald-400 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <CreditCard :size="13" />
-              {{ generatedCards.has(previewDemoStudent.id) ? 'Regenerate' : 'Generate' }}
+            <button v-if="previewDemoStudent" @click="handleGenerate(previewDemoStudent.id)" :disabled="isGenerating"
+              class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors cursor-pointer dark:text-emerald-400 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+              <CreditCard :size="11" />
+              {{ generatedCards.has(previewDemoStudent.id) ? 'Regen' : 'Generate' }}
             </button>
-            <button
-              v-if="previewDemoStudent"
-              @click="handleDownload(previewDemoStudent.id)"
-              class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-gray-600 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-700"
-            >
-              <Download :size="13" />
+            <button v-if="previewDemoStudent" @click="handleDownload(previewDemoStudent.id)"
+              class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-gray-500 bg-gray-50 rounded hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-700">
+              <Download :size="11" />
               PDF
             </button>
             <div class="flex-1"></div>
-            <span v-if="previewDemoStudent && generatedCards.has(previewDemoStudent.id)" class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
-              <CheckCircle :size="11" />
+            <span v-if="previewDemoStudent && generatedCards.has(previewDemoStudent.id)" class="inline-flex items-center gap-1 text-[8px] font-semibold text-emerald-600">
+              <CheckCircle :size="10" />
               Generated
             </span>
           </div>
@@ -617,46 +609,31 @@ onUnmounted(() => {
     </div>
 
     <!-- Filters -->
-    <div class="flex flex-col sm:flex-row gap-3">
+    <div class="flex flex-col sm:flex-row gap-2">
       <div class="relative flex-1">
-        <Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search by name or student ID..."
-          class="w-full pl-9 pr-3 py-2 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-        />
+        <Search :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input v-model="searchQuery" type="text" placeholder="Search by name or ID..."
+          class="w-full pl-8 pr-2.5 py-1.5 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md text-xs text-gray-900 dark:text-gray-200 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-500/20" />
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-1.5">
         <div class="relative">
-          <Filter :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <select
-            v-model="selectedBatchId"
-            :disabled="loadingBatches || batches.length === 0"
-            class="pl-9 pr-8 py-2 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed appearance-none min-w-[150px]"
-          >
+          <Filter :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <select v-model="selectedBatchId" :disabled="loadingBatches || batches.length === 0"
+            class="pl-8 pr-7 py-1.5 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md text-xs text-gray-600 dark:text-gray-300 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-500/20 cursor-pointer disabled:opacity-50 appearance-none min-w-[130px]">
             <option :value="null">All Batches</option>
-            <option v-for="batch in batches" :key="batch.id" :value="batch.id">
-              {{ batch.name }} ({{ batch.year }})
-            </option>
+            <option v-for="batch in batches" :key="batch.id" :value="batch.id">{{ batch.name }} ({{ batch.year }})</option>
           </select>
-          <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </div>
         <div class="relative">
-          <select
-            v-model="statusFilter"
-            class="px-3 pr-8 py-2 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none"
-          >
+          <select v-model="statusFilter"
+            class="px-2.5 pr-7 py-1.5 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md text-xs text-gray-600 dark:text-gray-300 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-500/20 cursor-pointer appearance-none">
             <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
-          <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </div>
-        <button
-          @click="loadStudents()"
-          class="px-3 py-2 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 cursor-pointer dark:hover:bg-gray-800"
-          title="Refresh"
-        >
-          <RefreshCw :size="16" :class="{ 'animate-spin': loading }" />
+        <button @click="loadStudents()" class="px-2 py-1.5 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-50 cursor-pointer dark:hover:bg-gray-800" title="Refresh">
+          <RefreshCw :size="13" :class="{ 'animate-spin': loading }" />
         </button>
       </div>
     </div>
@@ -673,148 +650,95 @@ onUnmounted(() => {
 
       <template v-if="!loading">
         <!-- Table Header -->
-        <div class="hidden md:grid grid-cols-12 gap-3 px-5 py-3 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-700">
+        <div class="hidden md:grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-700">
           <div class="col-span-1 flex items-center">
-            <input
-              ref="selectAllCheckbox"
-              type="checkbox"
-              :checked="isAllSelected"
-              @change="toggleSelectAll"
-              class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-            />
+            <input ref="selectAllCheckbox" type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
           </div>
-          <span class="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider self-center">Student</span>
-          <span class="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider self-center">Student ID</span>
-          <span class="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider self-center">Batch / Year</span>
-          <span class="col-span-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider self-center">Status</span>
-          <span class="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider self-center">Card</span>
-          <span class="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider self-center text-right">Actions</span>
+          <span class="col-span-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider self-center">Student</span>
+          <span class="col-span-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider self-center">Student ID</span>
+          <span class="col-span-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider self-center">Batch / Year</span>
+          <span class="col-span-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider self-center">Status</span>
+          <span class="col-span-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider self-center">Card</span>
+          <span class="col-span-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider self-center text-right">Actions</span>
         </div>
 
         <!-- Student Rows -->
         <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
-          <div
-            v-for="(student, index) in students"
-            :key="student.id"
-            class="group px-4 md:px-5 py-3.5"
-            :class="index % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.02]'"
-          >
-            <!-- Mobile Layout -->
-            <div class="md:hidden space-y-2">
+          <div v-for="(student, index) in students" :key="student.id" class="group px-3 md:px-3 py-2.5" :class="index % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.02]'">
+            <!-- Mobile -->
+            <div class="md:hidden space-y-1.5">
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    :checked="selectedStudentIds.has(student.id)"
-                    @change="toggleStudent(student.id)"
-                    class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                   </div>
                   <div>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.full_name }}</p>
-                    <p class="text-xs text-gray-400 font-mono">{{ student.student_id_no }}</p>
+                    <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ student.full_name }}</p>
+                    <p class="text-[9px] text-gray-400 font-mono">{{ student.student_id_no }}</p>
                   </div>
                 </div>
-                <span
-                  class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                  :style="{ backgroundColor: getStatusStyle(student.enrollment_status).bg, color: getStatusStyle(student.enrollment_status).text }"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).dot }"></span>
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).bg, color: getStatusStyle(student.enrollment_status).text }">
+                  <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).dot }"></span>
                   {{ student.enrollment_status.charAt(0).toUpperCase() + student.enrollment_status.slice(1) }}
                 </span>
               </div>
-              <div class="flex items-center justify-between pl-12">
-                <div class="flex gap-2">
-                  <button @click="openPreview(student)" class="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer dark:hover:bg-blue-500/10" title="Preview">
-                    <Eye :size="15" />
-                  </button>
-                  <button @click="handleGenerate(student.id)" :disabled="isGenerating" class="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer dark:hover:bg-emerald-500/10 disabled:opacity-40" title="Generate">
-                    <CreditCard :size="15" />
-                  </button>
-                  <button @click="handleReprint(student.id)" :disabled="isReprinting" class="p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 transition-colors cursor-pointer dark:hover:bg-amber-500/10 disabled:opacity-40" title="Reprint">
-                    <RotateCcw :size="15" />
-                  </button>
-                  <button @click="handleDownload(student.id)" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer dark:hover:bg-gray-700" title="Download PDF">
-                    <Download :size="15" />
-                  </button>
+              <div class="flex items-center justify-between pl-9">
+                <div class="flex gap-1">
+                  <button @click="openPreview(student)" class="p-1 rounded text-blue-500 hover:bg-blue-50 cursor-pointer dark:hover:bg-blue-500/10" title="Preview"><Eye :size="13" /></button>
+                  <button @click="handleGenerate(student.id)" :disabled="isGenerating" class="p-1 rounded text-emerald-500 hover:bg-emerald-50 cursor-pointer dark:hover:bg-emerald-500/10 disabled:opacity-40" title="Generate"><CreditCard :size="13" /></button>
+                  <button @click="handleReprint(student.id)" :disabled="isReprinting" class="p-1 rounded text-amber-500 hover:bg-amber-50 cursor-pointer dark:hover:bg-amber-500/10 disabled:opacity-40" title="Reprint"><RotateCcw :size="13" /></button>
+                  <button @click="handleDownload(student.id)" class="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer dark:hover:bg-gray-700" title="Download PDF"><Download :size="13" /></button>
                 </div>
-                <span v-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                  <CheckCircle :size="12" />
-                  Generated
-                </span>
+                <span v-if="generatedCards.has(student.id)" class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600"><CheckCircle :size="10" /> Generated</span>
               </div>
             </div>
 
-            <!-- Desktop Layout -->
-            <div class="hidden md:grid grid-cols-12 gap-3 items-center">
+            <!-- Desktop -->
+            <div class="hidden md:grid grid-cols-12 gap-2 items-center">
               <div class="col-span-1 flex items-center">
-                <input
-                  type="checkbox"
-                  :checked="selectedStudentIds.has(student.id)"
-                  @change="toggleStudent(student.id)"
-                  class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
+                <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
               </div>
-              <div class="col-span-2 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                  <span class="text-xs font-bold text-white">{{ getInitials(student.full_name) }}</span>
+              <div class="col-span-2 flex items-center gap-2">
+                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+                  <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                 </div>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ student.full_name }}</p>
+                <p class="text-xs font-semibold text-gray-900 dark:text-white truncate">{{ student.full_name }}</p>
               </div>
               <div class="col-span-2">
-                <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ student.student_id_no }}</span>
+                <span class="text-[11px] font-mono text-gray-500 dark:text-gray-400">{{ student.student_id_no }}</span>
               </div>
               <div class="col-span-2">
-                <span class="text-sm text-gray-400">
-                  {{ student.selection_batch_name || '—' }}
-                  <span v-if="student.intake_year" class="text-gray-300 dark:text-gray-600">· {{ student.intake_year }}</span>
-                </span>
+                <span class="text-[11px] text-gray-400">{{ student.selection_batch_name || '—' }}<span v-if="student.intake_year" class="text-gray-300 dark:text-gray-600"> · {{ student.intake_year }}</span></span>
               </div>
               <div class="col-span-1">
-                <span
-                  class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                  :style="{ backgroundColor: getStatusStyle(student.enrollment_status).bg, color: getStatusStyle(student.enrollment_status).text }"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).dot }"></span>
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                  :style="{ backgroundColor: getStatusStyle(student.enrollment_status).bg, color: getStatusStyle(student.enrollment_status).text }">
+                  <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).dot }"></span>
                   {{ student.enrollment_status.charAt(0).toUpperCase() + student.enrollment_status.slice(1) }}
                 </span>
               </div>
               <div class="col-span-2">
-                <span v-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  <CheckCircle :size="12" />
-                  Generated
-                </span>
-                <span v-else class="text-xs text-gray-300 dark:text-gray-600">Not generated</span>
+                <span v-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full"><CheckCircle :size="10" /> Generated</span>
+                <span v-else class="text-[9px] text-gray-300 dark:text-gray-600">Not generated</span>
               </div>
-              <div class="col-span-2 flex items-center justify-end gap-1">
-                <button @click="openPreview(student)" class="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-all duration-150 cursor-pointer dark:hover:bg-blue-500/10" title="Preview Card">
-                  <Eye :size="15" />
-                </button>
-                <button @click="handleGenerate(student.id)" :disabled="isGenerating" class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all duration-150 cursor-pointer dark:hover:bg-emerald-500/10 disabled:opacity-30" title="Generate Card">
-                  <CreditCard :size="15" />
-                </button>
-                <button @click="handleReprint(student.id)" :disabled="isReprinting" class="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-all duration-150 cursor-pointer dark:hover:bg-amber-500/10 disabled:opacity-30" title="Reprint Card">
-                  <RotateCcw :size="15" />
-                </button>
-                <button @click="handleDownload(student.id)" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-150 cursor-pointer dark:hover:bg-gray-700" title="Download PDF">
-                  <Download :size="15" />
-                </button>
+              <div class="col-span-2 flex items-center justify-end gap-0.5">
+                <button @click="openPreview(student)" class="p-1 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 cursor-pointer dark:hover:bg-blue-500/10" title="Preview"><Eye :size="13" /></button>
+                <button @click="handleGenerate(student.id)" :disabled="isGenerating" class="p-1 rounded text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 cursor-pointer dark:hover:bg-emerald-500/10 disabled:opacity-30" title="Generate"><CreditCard :size="13" /></button>
+                <button @click="handleReprint(student.id)" :disabled="isReprinting" class="p-1 rounded text-gray-400 hover:text-amber-500 hover:bg-amber-50 cursor-pointer dark:hover:bg-amber-500/10 disabled:opacity-30" title="Reprint"><RotateCcw :size="13" /></button>
+                <button @click="handleDownload(student.id)" class="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer dark:hover:bg-gray-700" title="Download PDF"><Download :size="13" /></button>
               </div>
             </div>
           </div>
 
           <!-- Empty State -->
-          <div v-if="students.length === 0 && !loading" class="py-16 text-center">
+          <div v-if="students.length === 0 && !loading" class="py-12 text-center">
             <div class="flex flex-col items-center gap-2">
-              <div class="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <svg class="w-7 h-7 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-                </svg>
+              <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
               </div>
-              <p class="text-sm font-medium text-gray-500">No students found</p>
-              <p class="text-xs text-gray-400 max-w-xs">Students with "Enrolled" status are eligible for card generation. Try adjusting your filters.</p>
+              <p class="text-xs font-medium text-gray-500">No students found</p>
+              <p class="text-[10px] text-gray-400 max-w-xs">Try adjusting your filters or import student data first.</p>
             </div>
           </div>
         </div>
@@ -823,24 +747,14 @@ onUnmounted(() => {
 
     <!-- Pagination -->
     <div v-if="lastPage > 1 && !loading" class="flex items-center justify-between">
-      <p class="text-sm text-gray-400">Page {{ currentPage }} of {{ lastPage }}</p>
-      <div class="flex items-center gap-1">
-        <button @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1"
-          class="p-2 rounded-lg text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer dark:hover:bg-gray-800">
-          <ChevronLeft :size="16" />
-        </button>
+      <p class="text-[11px] text-gray-400">Page {{ currentPage }} of {{ lastPage }}</p>
+      <div class="flex items-center gap-0.5">
+        <button @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1" class="p-1.5 rounded text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer dark:hover:bg-gray-800"><ChevronLeft :size="14" /></button>
         <template v-for="page in pageNumbers" :key="page">
-          <button v-if="page === '...'" disabled class="w-8 h-8 text-xs text-gray-300 cursor-default">...</button>
-          <button v-else @click="goToPage(page as number)"
-            class="w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
-            :class="page === currentPage ? 'bg-blue-500 text-white' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'">
-            {{ page }}
-          </button>
+          <button v-if="page === '...'" disabled class="w-6 h-6 text-[10px] text-gray-300 cursor-default">...</button>
+          <button v-else @click="goToPage(page as number)" class="w-6 h-6 rounded text-[10px] font-semibold cursor-pointer" :class="page === currentPage ? 'bg-blue-500 text-white' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'">{{ page }}</button>
         </template>
-        <button @click="goToPage(currentPage + 1)" :disabled="currentPage >= lastPage"
-          class="p-2 rounded-lg text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer dark:hover:bg-gray-800">
-          <ChevronRight :size="16" />
-        </button>
+        <button @click="goToPage(currentPage + 1)" :disabled="currentPage >= lastPage" class="p-1.5 rounded text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer dark:hover:bg-gray-800"><ChevronRight :size="14" /></button>
       </div>
     </div>
 
