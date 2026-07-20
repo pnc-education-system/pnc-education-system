@@ -27,7 +27,7 @@ defineOptions({ name: 'ImportTips' })
       </li>
       <li class="flex items-start gap-2.5 text-[13px] text-[#6B7280] dark:text-gray-400 leading-relaxed">
         <span class="text-[#355C8C] dark:text-blue-400 font-bold mt-0.5 shrink-0">•</span>
-        Only CSV files are supported. Convert XLSX to CSV before uploading.
+        Only .xlsx (Excel) files are supported.
       </li>
     </ul>
   </div>

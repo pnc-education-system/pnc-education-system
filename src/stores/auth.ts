@@ -28,8 +28,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 function saveToStorage(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-  }
+  } catch {}
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -46,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const hasPermission = (perm: string) => permissions.value.includes(perm)
 
-  const hasAnyPermission = (perms: string[]) => perms.some(p => permissions.value.includes(p))
+  const hasAnyPermission = (perms: string[]) => perms.some((p) => permissions.value.includes(p))
 
   const setToken = (newToken: string) => {
     token.value = newToken
@@ -203,4 +202,3 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
   }
 })
-

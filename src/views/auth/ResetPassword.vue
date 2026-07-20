@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '@/services/api'
+import { useI18n } from 'vue-i18n'
 import type { PasswordResetConfirm } from '@/types'
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher.vue'
 
@@ -15,6 +16,7 @@ const form = ref<PasswordResetConfirm>({
   password_confirmation: '',
 })
 
+const { t } = useI18n()
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const isSubmitting = ref(false)
@@ -32,7 +34,7 @@ async function handleSubmit() {
   successMessage.value = ''
 
   try {
-    const response = await authApi.resetPassword(form.value)
+    const response = await authApi.confirmPasswordReset(form.value)
     successMessage.value = response.message
     setTimeout(() => {
       router.push('/login')
@@ -41,7 +43,7 @@ async function handleSubmit() {
     const apiErr = err as { response?: { data?: { error?: { message?: string }; message?: string; errors?: Record<string, string[]> } } }
     errorMessage.value = apiErr.response?.data?.error?.message
       || apiErr.response?.data?.message
-      || 'Failed to reset password. Please try again.'
+      || t('reset_password.error_generic')
   } finally {
     isSubmitting.value = false
   }
@@ -66,8 +68,8 @@ function goToLogin() {
             class="w-20 h-20 object-contain"
           />
         </div>
-        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Reset password</h2>
-        <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">Enter your new password below</p>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">{{ t('reset_password.title') }}</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-gray-400">{{ t('reset_password.subtitle') }}</p>
       </div>
 
       <form class="space-y-5" @submit.prevent="handleSubmit">
@@ -86,7 +88,7 @@ function goToLogin() {
         <input type="hidden" v-model="form.email" />
         <input type="hidden" v-model="form.reset_token" />
         <div>
-          <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">New Password</label>
+          <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ t('reset_password.new_password_label') }}</label>
           <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -120,7 +122,7 @@ function goToLogin() {
           </div>
         </div>
         <div>
-          <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">Confirm Password</label>
+          <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ t('reset_password.confirm_password_label') }}</label>
           <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -162,7 +164,7 @@ function goToLogin() {
             <path d="M10 17l5-5-5-5" />
             <path d="M15 12H3" />
           </svg>
-          {{ isSubmitting ? 'Resetting...' : 'Reset Password' }}
+          {{ isSubmitting ? t('reset_password.resetting') : t('reset_password.reset_button') }}
         </button>
         <div class="text-center">
           <button
@@ -170,7 +172,7 @@ function goToLogin() {
             @click="goToLogin"
             class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
           >
-            ← Back to Login
+            {{ t('reset_password.back_to_login') }}
           </button>
         </div>
       </form>

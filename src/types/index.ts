@@ -29,6 +29,7 @@ export interface AdminUser {
   lastLogin?: string
   avatar?: string
 }
+
 export interface Role {
   id: string
   name: string
@@ -49,6 +50,7 @@ export interface ApiResponse<T> {
   data?: T
   errors?: Record<string, string[]>
 }
+
 export interface BackendUser {
   id: number
   role_id: number | null
@@ -60,6 +62,7 @@ export interface BackendUser {
   updated_at: string
   role?: BackendRole | null
 }
+
 export interface BackendRole {
   id: number
   name: string
@@ -86,7 +89,7 @@ export interface PasswordResetRequest {
 
 export interface PasswordResetConfirm {
   email: string
-  reset_token: string
+  token: string
   password: string
   password_confirmation: string
 }
@@ -95,8 +98,6 @@ export interface PasswordResetResponse {
   status: string
   message: string
 }
-
-export type ProfileResponse = AuthResponse
 
 export interface PaginatedData<T> {
   data: T[]
@@ -156,28 +157,55 @@ export interface UpdateEnrollmentPayload {
   notes?: string
 }
 
-export type ImportStatus = 'Pending' | 'Processing' | 'Completed' | 'Failed'
+// ── Student Types ──
+export type StudentStatus = 'pending' | 'approved' | 'enrolled' | 'rejected' | 'inactive' | 'graduated' | 'dropped'
 
-export interface ImportLog {
+export interface BackendStudent {
   id: number
-  file_name: string
-  status: ImportStatus
-  total_rows: number
-  success_count: number
-  error_count: number
-  imported_by: { id: number; name: string } | null
+  student_id_no: string
+  full_name: string
+  gender: string
+  dob: string | null
+  province?: string
+  phone?: string
+  email?: string
+  high_school?: string
+  selection_batch_id?: number
+  selection_batch?: {
+    id: number
+    name: string
+  }
+  selection_batch_name?: string
+  enrollment_status: string
+  status: string
+  photo_path?: string
+  intake_year?: number
+  enrolled_at?: string
+  created_by?: number
   created_at: string
   updated_at: string
 }
 
-export interface ImportError {
-  row_number: number
-  field: string
-  error_message: string
-}
-
-export interface ImportLogDetail extends ImportLog {
-  errors: ImportError[]
+export interface Student {
+  id: string
+  studentIdNo: string
+  fullName: string
+  gender: string
+  dob: string
+  province?: string
+  phone?: string
+  email?: string
+  highSchool?: string
+  program?: string
+  batch?: string
+  intakeYear?: string
+  selectionBatchId?: number
+  selectionBatchName?: string
+  status: StudentStatus
+  enrolledAt?: string
+  createdAt: string
+  updatedAt: string
+  importLogId?: number
 }
 
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
