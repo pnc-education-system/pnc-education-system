@@ -21,7 +21,7 @@ function mapBackendStudent(backend: BackendStudent): Student {
     selectionBatchId: backend.selection_batch_id ?? undefined,
     selectionBatchName: backend.selection_batch_name ?? undefined,
     status: ((backend.enrollment_status || backend.status || 'Pending') as string).toLowerCase() as StudentStatus,
-    enrolledAt: undefined,
+    enrolledAt: backend.enrolled_at ?? undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
     importLogId: undefined,
@@ -44,7 +44,7 @@ export const useStudentsStore = defineStore('students', () => {
   const inactiveCount = computed(() => students.value.filter(s => s.status === 'inactive').length)
 
   // ── Actions ──
-  async function fetchAll(params?: { page?: number; status?: string; search?: string; batch?: number }) {
+  async function fetchAll(params?: { page?: number; status?: string; search?: string; batch?: number; province?: string }) {
     loading.value = true
     error.value = null
     try {
@@ -52,6 +52,7 @@ export const useStudentsStore = defineStore('students', () => {
         ...(params?.status && params.status !== 'all' ? { status: params.status } : {}),
         ...(params?.search ? { search: params.search } : {}),
         ...(params?.batch ? { batch: params.batch } : {}),
+        ...(params?.province && params.province !== 'all' ? { province: params.province } : {}),
       })
       students.value = paginated.data.map(mapBackendStudent)
       currentPage.value = paginated.current_page

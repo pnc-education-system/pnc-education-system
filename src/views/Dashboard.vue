@@ -63,16 +63,7 @@ onMounted(() => {
   // Fetch student stats for dashboard
   studentsStore.fetchAll()
   
-  // Lazy-load Chart.js to keep Dashboard chunk small
-  Promise.all([
-    import('vue-chartjs'),
-    import('chart.js'),
-  ]).then(([{ Bar, Doughnut }, { Chart, registerables }]) => {
-    Chart.register(...registerables)
-    BarChart.value = Bar
-    DoughnutChart.value = Doughnut
-    chartReady.value = true
-  })
+  // Stats are already updated dynamically from store
 })
 
 // ── Student Stats Cards (live from studentsStore) ──
@@ -160,7 +151,7 @@ const flowChartOptions: ChartOptions<'bar'> = {
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#6B7280',
-        font: { family: 'Inter, sans-serif', size: 11, weight: '500' },
+        font: { family: 'Inter, sans-serif', size: 11, weight: 500 },
         padding: 16,
       },
     },
@@ -182,7 +173,8 @@ const flowChartOptions: ChartOptions<'bar'> = {
       },
     },
     y: {
-      grid: { color: '#F1F5F9', drawBorder: false },
+      grid: { color: '#F1F5F9' },
+      border: { display: false },
       ticks: {
         color: '#9CA3AF',
         font: { family: 'Inter, sans-serif', size: 10 },
@@ -233,11 +225,12 @@ const batchChartOptions: ChartOptions<'bar'> = {
       grid: { display: false },
       ticks: {
         color: '#9CA3AF',
-        font: { family: 'Inter, sans-serif', size: 12, weight: '500' },
+        font: { family: 'Inter, sans-serif', size: 12, weight: 500 },
       },
     },
     y: {
-      grid: { color: '#F1F5F9', drawBorder: false },
+      grid: { color: '#F1F5F9' },
+      border: { display: false },
       ticks: {
         color: '#9CA3AF',
         font: { family: 'Inter, sans-serif', size: 11 },
@@ -280,7 +273,7 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#6B7280',
-        font: { family: 'Inter, sans-serif', size: 10, weight: '500' },
+        font: { family: 'Inter, sans-serif', size: 10, weight: 500 },
         padding: 12,
       },
     },

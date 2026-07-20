@@ -181,6 +181,7 @@ export interface BackendStudent {
   status: string
   photo_path?: string
   intake_year?: number
+  enrolled_at?: string
   created_by?: number
   created_at: string
   updated_at: string
