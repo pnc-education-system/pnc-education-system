@@ -11,6 +11,7 @@ import type { StudentStatus, Student } from '@/types'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { studentsApi } from '@/services/api'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
+import StudentHistory from '../components/StudentHistory.vue'
 
 import {
   Search,
@@ -55,6 +56,7 @@ const statusChangeTarget = ref<StudentStatus>('enrolled')
 const statusChangeNote = ref('')
 const showDetailModal = ref(false)
 const detailStudentObj = ref<Student | null>(null)
+const activeTab = ref<'details' | 'history'>('details')
 
 // ── Bulk Selection ──
 const selectedStudentIds = ref<Set<string>>(new Set())
@@ -344,6 +346,7 @@ function openDetail(student: Student) {
 function closeDetail() {
   showDetailModal.value = false
   detailStudentObj.value = null
+  activeTab.value = 'details'
 }
 
 // ── Navigation ──
@@ -956,8 +959,30 @@ function goToPage(page: number) {
               </span>
             </div>
 
+            <!-- Tabs Navigation -->
+            <div class="flex border-b border-gray-100 dark:border-gray-800 mb-5">
+              <button
+                @click="activeTab = 'details'"
+                class="px-4 py-2 text-sm font-semibold border-b-2 transition-all cursor-pointer"
+                :class="activeTab === 'details'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+              >
+                General Info
+              </button>
+              <button
+                @click="activeTab = 'history'"
+                class="px-4 py-2 text-sm font-semibold border-b-2 transition-all cursor-pointer"
+                :class="activeTab === 'history'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+              >
+                {{ t('student_history.title') }}
+              </button>
+            </div>
+
             <!-- Details Grid -->
-            <div class="grid grid-cols-2 gap-4">
+            <div v-if="activeTab === 'details'" class="grid grid-cols-2 gap-4">
               <div class="p-3 rounded-xl bg-[#F8FAFC] dark:bg-gray-800/50">
                 <div class="flex items-center gap-2 text-xs text-[#9CA3AF] mb-1">
                   <Calendar :size="12" />
@@ -1023,6 +1048,10 @@ function goToPage(page: number) {
               </div>
             </div>
 
+            <!-- History Timeline -->
+            <div v-else-if="activeTab === 'history'">
+              <StudentHistory :studentId="detailStudentObj.id" />
+            </div>
             <!-- Footer -->
             <div class="flex items-center justify-end mt-6 pt-4 border-t border-[#E5E7EB] dark:border-gray-800">
               <button
