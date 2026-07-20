@@ -176,7 +176,7 @@ const userInitials = authStore.user?.name
                 </button>
                 <button
                   class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                  @click="showProfileMenu = false; router.push('/me')"
+                  @click="showProfileMenu = false; router.push('/profile')"
                 >
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
