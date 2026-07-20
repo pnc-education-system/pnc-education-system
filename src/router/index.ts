@@ -132,6 +132,20 @@ const routes: RouteRecordRaw[] = [
 
  
   {
+    path: '/cards',
+    name: 'CardGenerator',
+    component: () => import('@/views/cards/CardGeneratorView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+
+  {
+    path: '/verify/:studentId',
+    name: 'StudentVerify',
+    component: () => import('@/views/cards/StudentVerifyView.vue'),
+    meta: { requiresAuth: false },
+  },
+
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/profile/ProfileView.vue'),
@@ -168,7 +182,7 @@ router.beforeEach((to) => {
   }
 
   // Pre-fetch selection batches so the dropdown is ready instantly
-  if (to.name === 'Enrollment' || to.name === 'ImportViews') {
+  if (to.name === 'Enrollment' || to.name === 'ImportViews' || to.name === 'CardGenerator') {
     prefetchBatches()
   }
 })

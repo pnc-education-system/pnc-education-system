@@ -17,6 +17,7 @@ const adminDropdown = ref(false)
 const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
+const canGenerateCards = computed(() => authStore.hasPermission('cards.generate'))
 
 const navigate = (path: string) => {
   router.push(path)
@@ -242,6 +243,26 @@ const onAdminClick = () => {
             </button>
           </div>
         </transition>
+      </div>
+
+      <!-- ID Cards -->
+      <div class="relative" v-if="canGenerateCards">
+        <button
+          @click="navigate('/cards')"
+          class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+          :class="route.path === '/cards'
+            ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+        >
+          <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="2" x2="22" y1="10" y2="10" />
+            <line x1="6" x2="6" y1="7" y2="7.01" />
+            <line x1="10" x2="10" y1="7" y2="7.01" />
+            <path d="M8 17h8" />
+          </svg>
+          <span>ID Cards</span>
+        </button>
       </div>
 
       <!-- Admin Dropdown -->
