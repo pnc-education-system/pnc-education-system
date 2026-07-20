@@ -21,7 +21,7 @@ function mapBackendStudent(backend: BackendStudent): Student {
     selectionBatchId: backend.selection_batch_id ?? undefined,
     selectionBatchName: backend.selection_batch_name ?? undefined,
     status: ((backend.enrollment_status || backend.status || 'Pending') as string).toLowerCase() as StudentStatus,
-    enrolledAt: undefined,
+    enrolledAt: backend.enrolled_at ?? undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
     importLogId: undefined,

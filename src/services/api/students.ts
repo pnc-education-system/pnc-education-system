@@ -15,6 +15,7 @@ export interface StudentFormPayload {
   selection_batch_id: number
   enrollment_status: EnrollmentStatusValue
   intake_year: number | null
+  enrolled_at?: string | null
   photo?: File | null
 }
 
@@ -47,6 +48,7 @@ function toFormData(payload: UpdateStudentPayload): FormData {
   appendNullable(formData, 'selection_batch_id', payload.selection_batch_id)
   appendNullable(formData, 'enrollment_status', payload.enrollment_status)
   appendNullable(formData, 'intake_year', payload.intake_year)
+  appendNullable(formData, 'enrolled_at', payload.enrolled_at)
 
   if (payload.photo) {
     formData.append('photo', payload.photo)
