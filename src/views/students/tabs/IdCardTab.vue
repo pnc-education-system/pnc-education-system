@@ -372,7 +372,7 @@ function printCard() {
       </div>
       <script>
         window.onload = function() { window.print(); window.close(); }
-      </script>
+      <\/script>
     </body>
     </html>
   `)
