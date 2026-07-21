@@ -9,8 +9,18 @@ export interface CardStudent {
   dob?: string | null
   province?: string | null
   selection_batch_name?: string | null
+  selection_batch_id?: number | null
   enrollment_status: string
   intake_year?: number | null
+}
+
+export interface CardTemplate {
+  id: number
+  name: string
+  layout_json: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface CardGenerationResult {
@@ -19,6 +29,21 @@ export interface CardGenerationResult {
   qr_data?: string
   status: 'success' | 'failed'
   error?: string
+}
+
+export interface BatchCardRequest {
+  selection_batch_id: number
+  template_id: number
+}
+
+export interface BatchCardResponse {
+  status: string
+  message: string
+  data: {
+    job_id: string
+    selection_batch_id: number
+    template_id: number
+  }
 }
 
 export const cardsApi = {
@@ -47,7 +72,7 @@ export const cardsApi = {
   },
 
   /** Batch generate ID cards for multiple students */
-  async batchGenerate(studentIds: number[]): Promise<{ results: CardGenerationResult[] }> {
+  async batchGenerateByIds(studentIds: number[]): Promise<{ results: CardGenerationResult[] }> {
     const { data } = await axiosInstance.post('/cards/batch-generate', { student_ids: studentIds })
     return data.data as { results: CardGenerationResult[] }
   },
@@ -86,5 +111,49 @@ export const cardsApi = {
   async getByStudentIdNo(studentIdNo: string): Promise<CardStudent> {
     const { data } = await axiosInstance.get(`/students/verify/${encodeURIComponent(studentIdNo)}`)
     return (data.data ?? data) as CardStudent
+  },
+
+  /** Generate batch cards for a selection batch */
+  async batchGenerate(request: BatchCardRequest): Promise<BatchCardResponse> {
+    console.log('batchGenerate called with:', request)
+    const { data } = await axiosInstance.post('/cards/batch', request)
+    console.log('batchGenerate response:', data)
+    return data as BatchCardResponse
+  },
+
+  /** Get available card templates */
+  async getTemplates(): Promise<CardTemplate[]> {
+    const { data } = await axiosInstance.get('/cards/templates')
+    return data.data as CardTemplate[]
+  },
+
+  /** Get students by batch for card generation */
+  async getStudentsByBatch(batchId: number, filter?: 'all' | 'enrolled' | 'with_photo'): Promise<CardStudent[]> {
+    const params: { batch_id: number; filter?: string } = { batch_id: batchId }
+    if (filter) params.filter = filter
+    const { data } = await axiosInstance.get('/cards/students-by-batch', { params })
+    return data.data as CardStudent[]
+  },
+
+  /** Batch upload student photos */
+  async batchUploadPhotos(photos: Array<{ student_id: number; file: File }>): Promise<{
+    uploaded: Array<{ student_id: number; photo_path: string; url: string }>
+    failed: Array<{ student_id: number; error: string }>
+    total: number
+    success_count: number
+    failed_count: number
+  }> {
+    const formData = new FormData()
+    photos.forEach((photo, index) => {
+      formData.append(`photos[${index}][student_id]`, photo.student_id.toString())
+      formData.append(`photos[${index}][file]`, photo.file)
+    })
+
+    const { data } = await axiosInstance.post('/cards/batch-upload-photos', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return data.data
   },
 }

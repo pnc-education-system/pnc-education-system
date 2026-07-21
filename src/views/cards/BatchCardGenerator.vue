@@ -1,0 +1,556 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { cardsApi, type CardStudent, type CardTemplate } from '@/services/api/cards'
+import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
+import { useToast } from '@/composables/useToast'
+import StudentCard from '@/components/cards/StudentCard.vue'
+import { Check, X, ChevronDown, Download, Upload, Image as ImageIcon } from 'lucide-vue-next'
+
+const { t } = useI18n()
+const { showSuccessToast, showErrorToast } = useToast()
+
+// State
+const selectedBatch = ref<number | null>(null)
+const selectedFilter = ref<'all' | 'enrolled' | 'with_photo'>('enrolled')
+const selectedStudents = ref<Set<number>>(new Set())
+const selectAll = ref(false)
+const isGenerating = ref(false)
+const generationProgress = ref(0)
+const generationTotal = ref(0)
+const isUploadingPhotos = ref(false)
+const uploadProgress = ref(0)
+const photoFiles = ref<Array<{ student_id: number; file: File; preview?: string }>>([])
+const showPhotoUpload = ref(false)
+
+// Data
+const batches = ref<SelectionBatch[]>([])
+const students = ref<CardStudent[]>([])
+const cardTemplates = ref<CardTemplate[]>([])
+const selectedTemplate = ref<number | null>(null)
+
+// Computed
+const filteredStudents = computed(() => {
+  let list = students.value
+
+  if (selectedBatch.value) {
+    list = list.filter(s => s.selection_batch_id === selectedBatch.value)
+  }
+
+  if (selectedFilter.value === 'enrolled') {
+    list = list.filter(s => s.enrollment_status === 'Enrolled')
+  } else if (selectedFilter.value === 'with_photo') {
+    list = list.filter(s => s.photo_path)
+  }
+
+  return list
+})
+
+const studentsWithPhotos = computed(() =>
+  filteredStudents.value.filter(s => s.photo_path).length
+)
+
+const eligibleStudents = computed(() =>
+  filteredStudents.value.filter(s => s.photo_path && s.enrollment_status === 'Enrolled')
+)
+
+const previewStudents = computed(() => eligibleStudents.value.slice(0, 8))
+
+const previewRows = computed(() => {
+  const cards = previewStudents.value
+  return Array.from({ length: 8 }, (_, index) => cards[index] ?? null)
+})
+
+const selectedTemplateName = computed(() => {
+  const selected = cardTemplates.value.find((template) => template.id === selectedTemplate.value)
+  return selected?.name ?? 'Modern'
+})
+
+const selectedLayout = computed<'classic' | 'modern' | 'premium'>(() => {
+  const name = selectedTemplateName.value.toLowerCase()
+  if (name.includes('premium')) return 'premium'
+  if (name.includes('modern')) return 'modern'
+  if (name.includes('standard') || name.includes('pnc') || name.includes('passerelles')) return 'modern'
+  return 'classic'
+})
+
+const totalPages = computed(() =>
+  Math.ceil(eligibleStudents.value.length / 8)
+)
+
+const batchLabel = computed(() => {
+  const batch = batches.value.find(b => b.id === selectedBatch.value)
+  if (!batch) return 'Select Batch'
+  return `${batch.name} · ${String(batch.year).slice(-2)}`
+})
+
+// Methods
+async function fetchBatches() {
+  try {
+    batches.value = await selectionBatchesApi.list()
+  } catch (error) {
+    showErrorToast('Failed to fetch batches', 'Error')
+  }
+}
+
+async function fetchStudents() {
+  if (!selectedBatch.value) {
+    console.log('No batch selected, skipping fetch')
+    return
+  }
+
+  try {
+    console.log('Fetching students for batch:', selectedBatch.value, 'filter:', selectedFilter.value)
+    const filter = selectedFilter.value === 'all' ? undefined : selectedFilter.value
+    students.value = await cardsApi.getStudentsByBatch(selectedBatch.value, filter)
+    console.log('Students loaded:', students.value.length)
+  } catch (error) {
+    console.error('Failed to fetch students:', error)
+    showErrorToast('Failed to fetch students', 'Error')
+  }
+}
+
+async function fetchCardTemplates() {
+  try {
+    cardTemplates.value = await cardsApi.getTemplates()
+    if (cardTemplates.value.length > 0 && cardTemplates.value[0]) {
+      selectedTemplate.value = cardTemplates.value[0].id
+    }
+  } catch (error) {
+    showErrorToast('Failed to fetch card templates', 'Error')
+  }
+}
+
+function toggleSelectAll() {
+  selectAll.value = !selectAll.value
+  if (selectAll.value) {
+    selectedStudents.value = new Set(eligibleStudents.value.map(s => s.id))
+  } else {
+    selectedStudents.value.clear()
+  }
+}
+
+function toggleStudent(id: number) {
+  const next = new Set(selectedStudents.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  selectedStudents.value = next
+  selectAll.value = next.size === eligibleStudents.value.length && eligibleStudents.value.length > 0
+}
+
+async function handleGenerate() {
+  if (!selectedBatch.value || !selectedTemplate.value) {
+    showErrorToast('Please select a batch and template', 'Missing Selection')
+    return
+  }
+
+  const studentsToGenerate = selectedStudents.value.size > 0
+    ? selectedStudents.value
+    : new Set(eligibleStudents.value.map(s => s.id))
+
+  if (studentsToGenerate.size === 0) {
+    showErrorToast('No eligible students to generate cards for', 'No Students')
+    return
+  }
+
+  isGenerating.value = true
+  generationProgress.value = 0
+  generationTotal.value = studentsToGenerate.size
+
+  try {
+    console.log('Sending batch generate request:', {
+      selection_batch_id: selectedBatch.value,
+      template_id: selectedTemplate.value
+    })
+    await cardsApi.batchGenerate({
+      selection_batch_id: selectedBatch.value,
+      template_id: selectedTemplate.value
+    })
+
+    // Simulate progress (in real app, use WebSocket or polling)
+    const interval = setInterval(() => {
+      if (generationProgress.value < generationTotal.value) {
+        generationProgress.value += Math.ceil(generationTotal.value / 10)
+      } else {
+        clearInterval(interval)
+        isGenerating.value = false
+        showSuccessToast(
+          `${generationTotal.value} cards generated successfully. Download will start shortly.`,
+          'Generation Complete'
+        )
+      }
+    }, 500)
+
+  } catch (error) {
+    isGenerating.value = false
+    showErrorToast('Failed to generate batch cards', 'Error')
+  }
+}
+
+function getPhotoStatus(student: CardStudent) {
+  if (student.photo_path) return 'has'
+  return 'none'
+}
+
+function getCardStatus(student: CardStudent) {
+  if (!student.photo_path) return 'no photo - skipped'
+  if (student.enrollment_status !== 'Enrolled') return 'not enrolled - skipped'
+  return 'ready'
+}
+
+function handlePhotoUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const files = Array.from(target.files || [])
+
+  if (files.length === 0) return
+
+  // For simplicity, assign photos to students without photos in order
+  const studentsWithoutPhotos = filteredStudents.value.filter(s => !s.photo_path)
+
+  files.forEach((file, index) => {
+    if (index < studentsWithoutPhotos.length) {
+      const student = studentsWithoutPhotos[index]
+      if (student) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          photoFiles.value.push({
+            student_id: student.id,
+            file: file,
+            preview: e.target?.result as string
+          })
+        }
+        reader.readAsDataURL(file)
+      }
+    }
+  })
+
+  // Reset input
+  target.value = ''
+}
+
+async function handleUploadPhotos() {
+  if (photoFiles.value.length === 0) {
+    showErrorToast('No photos selected', 'Error')
+    return
+  }
+
+  isUploadingPhotos.value = true
+  uploadProgress.value = 0
+
+  try {
+    const result = await cardsApi.batchUploadPhotos(photoFiles.value)
+
+    showSuccessToast(
+      `${result.success_count} photos uploaded successfully. ${result.failed_count} failed.`,
+      'Upload Complete'
+    )
+
+    // Refresh student data
+    await fetchStudents()
+
+    // Clear uploaded photos
+    photoFiles.value = []
+    showPhotoUpload.value = false
+  } catch (error) {
+    showErrorToast('Failed to upload photos', 'Error')
+  } finally {
+    isUploadingPhotos.value = false
+  }
+}
+
+function removePhoto(index: number) {
+  photoFiles.value.splice(index, 1)
+}
+
+onMounted(async () => {
+  await fetchBatches()
+  await fetchCardTemplates()
+})
+</script>
+
+<template>
+  <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Batch Card Generator</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Generate ID cards for students in batches</p>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex flex-col sm:flex-row gap-4">
+      <!-- Batch Dropdown -->
+      <div class="relative flex-1">
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Batch</label>
+        <div class="relative">
+          <select
+            v-model="selectedBatch"
+            @change="fetchStudents"
+            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 appearance-none cursor-pointer"
+          >
+            <option :value="null">Select Batch</option>
+            <option v-for="batch in batches" :key="batch.id" :value="batch.id">
+              {{ batch.name }} · {{ String(batch.year).slice(-2) }}
+            </option>
+          </select>
+          <ChevronDown :size="16" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+      </div>
+
+      <!-- Filter Dropdown -->
+      <div class="relative w-full sm:w-48">
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Filter</label>
+        <div class="relative">
+          <select
+            v-model="selectedFilter"
+            @change="fetchStudents"
+            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 appearance-none cursor-pointer"
+          >
+            <option value="all">All Students</option>
+            <option value="enrolled">Enrolled only</option>
+            <option value="with_photo">With photos only</option>
+          </select>
+          <ChevronDown :size="16" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+      </div>
+
+      <!-- Template Dropdown -->
+      <div class="relative w-full sm:w-48">
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Template</label>
+        <div class="relative">
+          <select
+            v-model="selectedTemplate"
+            class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 appearance-none cursor-pointer"
+          >
+            <option :value="null">Select Template</option>
+            <option v-for="template in cardTemplates" :key="template.id" :value="template.id">
+              {{ template.name }}
+            </option>
+          </select>
+          <ChevronDown :size="16" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex gap-6">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ filteredStudents.length }} students</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ studentsWithPhotos }} have photos</span>
+      </div>
+      <button
+        @click="showPhotoUpload = !showPhotoUpload"
+        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
+      >
+        <Upload :size="14" />
+        Upload Photos
+      </button>
+    </div>
+
+    <!-- Photo Upload Section -->
+    <div v-if="showPhotoUpload" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Upload Student Photos</h3>
+
+      <div class="space-y-4">
+        <!-- Upload Area -->
+        <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png"
+            @change="handlePhotoUpload"
+            class="hidden"
+            id="photo-upload-input"
+          />
+          <label
+            for="photo-upload-input"
+            class="cursor-pointer flex flex-col items-center gap-2"
+          >
+            <ImageIcon :size="32" class="text-gray-400" />
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+              Click to select photos or drag and drop
+            </span>
+            <span class="text-xs text-gray-400">
+              JPEG, JPG, PNG up to 5MB each
+            </span>
+          </label>
+        </div>
+
+        <!-- Photo Previews -->
+        <div v-if="photoFiles.length > 0" class="space-y-3">
+          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            {{ photoFiles.length }} photo(s) selected
+          </h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <div
+              v-for="(photo, index) in photoFiles"
+              :key="index"
+              class="relative group"
+            >
+              <img
+                :src="photo.preview"
+                alt="Preview"
+                class="w-full aspect-square object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+              />
+              <button
+                @click="removePhoto(index)"
+                class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              >
+                <X :size="12" />
+              </button>
+              <div class="absolute bottom-1 left-1 right-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
+                Student ID: {{ photo.student_id }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Button -->
+          <button
+            @click="handleUploadPhotos"
+            :disabled="isUploadingPhotos"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+          >
+            <Upload :size="16" />
+            {{ isUploadingPhotos ? 'Uploading...' : 'Upload Photos' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selection Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+            Selection
+          </h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Cards with no photo are skipped & listed
+          </p>
+        </div>
+      </div>
+
+      <!-- Table Header -->
+      <div class="grid grid-cols-[40px_1fr_1fr_1fr] gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <div class="flex items-center justify-center">
+          <input
+            type="checkbox"
+            :checked="selectAll"
+            :indeterminate="selectedStudents.size > 0 && selectedStudents.size < eligibleStudents.length"
+            @change="toggleSelectAll"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
+          />
+        </div>
+        <span>Student ID</span>
+        <span>Name</span>
+        <span>Card Status</span>
+      </div>
+
+      <!-- Table Body -->
+      <div v-if="filteredStudents.length === 0" class="px-4 py-12 text-center">
+        <p class="text-sm font-medium text-gray-400">No students found</p>
+        <p class="text-xs text-gray-400 mt-1">Select a batch to view students</p>
+      </div>
+
+      <div
+        v-for="student in filteredStudents"
+        :key="student.id"
+        class="grid grid-cols-[40px_1fr_1fr_1fr] gap-4 px-4 py-3 items-center border-b border-gray-100 dark:border-gray-700/50 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors"
+        :class="{ 'opacity-50': !student.photo_path || student.enrollment_status !== 'Enrolled' }"
+      >
+        <div class="flex items-center justify-center">
+          <input
+            type="checkbox"
+            :checked="selectedStudents.has(student.id)"
+            :disabled="!student.photo_path || student.enrollment_status !== 'Enrolled'"
+            @change="toggleStudent(student.id)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+        </div>
+        <span class="text-sm font-mono text-gray-900 dark:text-white">{{ student.student_id_no || '—' }}</span>
+        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ student.full_name }}</span>
+        <div class="flex items-center gap-2">
+          <!-- Photo Status -->
+          <div v-if="getPhotoStatus(student) === 'has'" class="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20">
+            <Check :size="12" class="text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div v-else class="flex items-center justify-center w-5 h-5 rounded-full bg-red-100 dark:bg-red-500/20">
+            <X :size="12" class="text-red-600 dark:text-red-400" />
+          </div>
+          <span class="text-xs text-gray-600 dark:text-gray-400">{{ getCardStatus(student) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- A4 Sheet Preview -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">A4 sheet preview</h3>
+        <span class="text-xs text-gray-500 dark:text-gray-400">8 / page</span>
+      </div>
+
+      <div class="flex justify-center">
+        <div class="relative bg-white border-2 border-gray-300 rounded overflow-hidden" style="width: 210mm; height: 297mm; max-width: 100%; aspect-ratio: 210/297;">
+          <!-- Grid of 8 cards -->
+          <div class="grid grid-cols-2 grid-rows-4 gap-2 p-3 h-full">
+            <template v-for="(student, index) in previewRows" :key="index">
+              <div v-if="student" class="border border-gray-200 rounded bg-white shadow-sm overflow-hidden">
+                <StudentCard
+                  :student="student"
+                  :layout="selectedLayout"
+                  size="sm"
+                  :showActions="false"
+                  :generated="false"
+                />
+              </div>
+              <div v-else class="border border-dashed border-gray-200 rounded bg-gray-50 flex items-center justify-center text-xs text-gray-400">
+                Empty slot
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Generate</h3>
+
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          {{ eligibleStudents.length }} cards → {{ totalPages }} A4 pages. Runs as a background job; you'll get a download when ready.
+        </p>
+
+        <!-- Progress Bar -->
+        <div v-if="isGenerating" class="space-y-2">
+          <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+            <span>Generating...</span>
+            <span>{{ generationProgress }} / {{ generationTotal }}</span>
+          </div>
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div
+              class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              :style="{ width: `${(generationProgress / generationTotal) * 100}%` }"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button
+          @click="handleGenerate"
+          :disabled="isGenerating || !selectedBatch"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+        >
+          <Download :size="16" />
+          {{ isGenerating ? 'Generating...' : 'Generate batch PDF' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

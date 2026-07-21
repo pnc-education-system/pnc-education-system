@@ -144,7 +144,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cards/batch-card',
     name: 'CardBatchCard',
-    component: () => import('@/views/cards/BatchCardView.vue'),
+    component: () => import('@/views/cards/BatchCardGenerator.vue'),
     meta: { requiresAuth: true, permission: 'cards.generate' },
   },
   {
