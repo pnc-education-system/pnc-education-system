@@ -142,12 +142,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/students/StudentProfilePage.vue'),
     meta: { requiresAuth: true, permission: 'students.view' },
   },
-
- 
-  {
-    
-  },
-
   {
     path: '/',
     redirect: '/dashboard',

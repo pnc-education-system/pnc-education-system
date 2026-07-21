@@ -99,7 +99,7 @@ const chartOptions: ChartOptions<'radar'> = {
       },
       pointLabels: {
         color: '#6B7280',
-        font: { size: 11, family: 'Inter, sans-serif', weight: '600' },
+        font: { size: 11, family: 'Inter, sans-serif', weight: 600 },
       },
     },
   },
@@ -113,7 +113,7 @@ const chartOptions: ChartOptions<'radar'> = {
       cornerRadius: 8,
       displayColors: false,
       callbacks: {
-        title: (items) => items[0].label,
+        title: (items) => items[0]?.label ?? '',
         label: (ctx) => `Score: ${ctx.parsed.r.toFixed(1)} / 5`,
       },
     },

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, shallowRef, onMounted, type Component } from 'vue'
+import { ref, computed, shallowRef, onMounted, onUnmounted, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStudentsStore } from '@/stores/students'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import { useToast } from '@/composables/useToast'
 import { studentsApi } from '@/services/api'
 import type { Student, BackendStudent } from '@/types'
 import {
@@ -29,6 +30,18 @@ const student = ref<Student | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const transitioning = ref(false)
+
+// ── Photo Upload State ──
+const photoInput = ref<HTMLInputElement | null>(null)
+const photoPreviewUrl = ref<string | null>(null)
+const isUploadingPhoto = ref(false)
+const allowedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
+
+const displayPhotoUrl = computed(() => {
+  if (photoPreviewUrl.value) return photoPreviewUrl.value
+  if (student.value?.photoPath) return resolvePhotoUrl(student.value.photoPath)
+  return null
+})
 
 type TabId = 'profile' | 'enrollment' | 'records' | 'evaluation' | 'id-card'
 
@@ -92,6 +105,7 @@ function mapBackendStudent(backend: BackendStudent): Student {
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
     importLogId: undefined,
+    photoPath: backend.photo_path ?? undefined,
   }
 }
 
@@ -101,7 +115,7 @@ async function loadStudent() {
   // If no specific student ID, try to auto-select the first student from the store
   if (!id) {
     if (studentsStore.students.length > 0) {
-      student.value = studentsStore.students[0]
+      student.value = studentsStore.students[0] ?? null
       await loadTabComponent(activeTab.value)
       loading.value = false
       return
@@ -110,7 +124,7 @@ async function loadStudent() {
     try {
       await studentsStore.fetchAll({ page: 1 })
       if (studentsStore.students.length > 0) {
-        student.value = studentsStore.students[0]
+        student.value = studentsStore.students[0] ?? null
         await loadTabComponent(activeTab.value)
       }
     } catch { /* fall through to empty state */ }
@@ -121,7 +135,7 @@ async function loadStudent() {
   loading.value = true
   error.value = null
   try {
-    const found = studentsStore.getById(id)
+    const found = studentsStore.getById(id) ?? null
     if (found) {
       student.value = found
     } else {
@@ -146,7 +160,7 @@ function formatDate(dateStr?: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-function getStatusStyle(status: string) {
+function getStatusStyle(status: string): { bg: string; text: string; ring: string } {
   const styles: Record<string, { bg: string; text: string; ring: string }> = {
     pending:   { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-600 dark:text-gray-300', ring: 'ring-gray-200 dark:ring-gray-600' },
     rejected:  { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-500 dark:text-gray-400', ring: 'ring-gray-200 dark:ring-gray-600' },
@@ -154,7 +168,7 @@ function getStatusStyle(status: string) {
     graduated: { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-600 dark:text-gray-300', ring: 'ring-gray-200 dark:ring-gray-600' },
     dropped:   { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-500 dark:text-gray-400', ring: 'ring-gray-200 dark:ring-gray-600' },
   }
-  return styles[status] ?? styles.pending
+  return (styles[status] ?? styles.pending)!
 }
 
 const statusLabels: Record<string, string> = {
@@ -164,6 +178,93 @@ const statusLabels: Record<string, string> = {
 function goBack() { router.push('/students') }
 function editProfile() { if (student.value) router.push({ name: 'StudentEdit', params: { id: student.value.id } }) }
 const canEdit = computed(() => authStore.hasPermission('students.edit'))
+const canUploadPhoto = computed(() => authStore.hasPermission('students.edit'))
+const canGenerateIdCard = computed(() => authStore.hasPermission('cards.generate'))
+
+function goToIdCardTab() {
+  switchTab('id-card')
+}
+
+// ── Photo Upload Handlers ──
+function triggerPhotoUpload() {
+  if (!canUploadPhoto.value) return
+  photoInput.value?.click()
+}
+
+function handlePhotoChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] || null
+
+  if (!file) {
+    clearPhotoPreview()
+    return
+  }
+
+  if (!allowedPhotoTypes.includes(file.type)) {
+    showErrorToast('Photo must be a JPG, PNG, or WEBP file.', 'Invalid Photo')
+    input.value = ''
+    return
+  }
+
+  clearPhotoPreview()
+  photoPreviewUrl.value = URL.createObjectURL(file)
+  uploadPhoto(file)
+}
+
+function clearPhotoPreview() {
+  if (photoPreviewUrl.value) {
+    URL.revokeObjectURL(photoPreviewUrl.value)
+    photoPreviewUrl.value = null
+  }
+}
+
+async function uploadPhoto(file: File) {
+  if (!student.value) return
+  isUploadingPhoto.value = true
+  try {
+    const formData = new FormData()
+    formData.append('photo', file)
+    const updated = await studentsApi.update(Number(student.value.id), formData)
+    student.value.photoPath = updated.photo_path ?? undefined
+    clearPhotoPreview()
+    // Refresh the student in the store
+    const storeStudent = studentsStore.getById(student.value.id)
+    if (storeStudent) {
+      storeStudent.photoPath = student.value.photoPath
+    }
+  } catch (err: any) {
+    console.error('Failed to upload photo:', err)
+    clearPhotoPreview()
+    const errorMessage = err?.response?.data?.message || 'Failed to upload photo.'
+    showErrorToast(errorMessage, 'Upload Failed')
+  } finally {
+    isUploadingPhoto.value = false
+  }
+}
+
+function resolvePhotoUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (/^https?:\/\//i.test(path)) return path
+
+  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+  const apiOrigin = new URL(apiBase).origin
+
+  if (path.startsWith('/storage/')) {
+    return `${apiOrigin}${path}`
+  }
+  if (path.startsWith('storage/')) {
+    return `${apiOrigin}/${path}`
+  }
+  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
+}
+
+const { showErrorToast } = useToast()
+
+onUnmounted(() => {
+  if (photoPreviewUrl.value) {
+    URL.revokeObjectURL(photoPreviewUrl.value)
+  }
+})
 </script>
 
 <template>
@@ -231,13 +332,20 @@ const canEdit = computed(() => authStore.hasPermission('students.edit'))
         </div>
 
         <div class="px-6 sm:px-8 pb-6">
-          <div class="flex flex-col sm:flex-row items-start gap-5 sm:gap-6 -mt-14 sm:-mt-16">
-            <div class="relative flex-shrink-0">
-              <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-slate-400 to-slate-500 dark:from-slate-500 dark:to-slate-600 flex items-center justify-center shadow-xl ring-4 ring-white dark:ring-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-                <span class="text-3xl sm:text-4xl font-bold text-white tracking-wide">{{ getInitials(student.fullName) }}</span>
+          <div class="flex flex-col sm:flex-row items-start gap-5 sm:gap-6 -mt-14 sm:-mt-16">              <div class="relative flex-shrink-0 group/avatar">
+              <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-slate-400 to-slate-500 dark:from-slate-500 dark:to-slate-600 flex items-center justify-center shadow-xl ring-4 ring-white dark:ring-gray-800 transition-transform duration-300 hover:scale-[1.02] overflow-hidden">
+                <img v-if="displayPhotoUrl" :src="displayPhotoUrl" :alt="student.fullName" class="w-full h-full object-cover" />
+                <span v-else class="text-3xl sm:text-4xl font-bold text-white tracking-wide">{{ getInitials(student.fullName) }}</span>
               </div>
-              <button class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-slate-500 text-white flex items-center justify-center hover:bg-slate-600 transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer" :title="t('student_profile.update_photo')">
-                <Camera :size="14" />
+              <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" @change="handlePhotoChange" class="hidden" />
+              <button
+                v-if="canUploadPhoto"
+                @click="triggerPhotoUpload"
+                :disabled="isUploadingPhoto"
+                class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-slate-500 text-white flex items-center justify-center hover:bg-slate-600 transition-all duration-200 shadow-md hover:scale-110 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                :title="t('student_profile.update_photo')"
+              >
+                <Camera :size="14" class="group-hover/avatar:scale-110 transition-transform" />
               </button>
             </div>
 
@@ -264,7 +372,11 @@ const canEdit = computed(() => authStore.hasPermission('students.edit'))
           </div>
 
           <div class="flex flex-wrap items-center gap-3 mt-5">
-            <button class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 cursor-pointer">
+            <button
+              v-if="canGenerateIdCard"
+              @click="goToIdCardTab"
+              class="group inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 cursor-pointer"
+            >
               <CreditCard :size="16" class="transition-transform duration-200 group-hover:scale-110" />
               {{ t('student_profile.generate_id_card') }}
             </button>

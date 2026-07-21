@@ -24,6 +24,7 @@ function mapBackendStudent(backend: BackendStudent): Student {
     enrolledAt: backend.enrolled_at ?? undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
+    photoPath: backend.photo_path ?? undefined,
     importLogId: undefined,
   }
 }
