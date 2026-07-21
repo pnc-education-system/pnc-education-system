@@ -21,7 +21,7 @@ const students = computed(() => studentsStore.students || [])
 const batches = computed(() => {
   const set = new Set<string>()
   students.value.forEach((s: Record<string, unknown>) => {
-    if (s.selection_batch_name) set.add(s.selection_batch_name)
+    if (s.selectionBatchName) set.add(s.selectionBatchName as string)
   })
   return Array.from(set).sort()
 })
@@ -29,35 +29,36 @@ const batches = computed(() => {
 const filteredStudents = computed(() => {
   let list = students.value
   if (selectedBatch.value) {
-    list = list.filter((s: Record<string, unknown>) => s.selection_batch_name === selectedBatch.value)
+    list = list.filter((s: Record<string, unknown>) => s.selectionBatchName === selectedBatch.value)
   }
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
     list = list.filter((s: Record<string, unknown>) =>
-      ((s.full_name as string)?.toLowerCase() || '').includes(q) ||
-      ((s.student_id_no as string)?.toLowerCase() || '').includes(q)
+      ((s.fullName as string)?.toLowerCase() || '').includes(q) ||
+      ((s.studentIdNo as string)?.toLowerCase() || '').includes(q)
     )
   }
   return list
 })
 
-const eligibleCount = computed(() => students.value.filter((s: Record<string, unknown>) => s.enrollment_status === 'enrolled').length)
+const eligibleCount = computed(() => students.value.filter((s: Record<string, unknown>) => s.status === 'enrolled').length)
 
 function toggleSelectAll() {
   selectAll.value = !selectAll.value
   if (selectAll.value) {
-    selectedStudents.value = new Set(filteredStudents.value.map((s: Record<string, unknown>) => s.id as number))
+    selectedStudents.value = new Set(filteredStudents.value.map((s: Record<string, unknown>) => Number(s.id)))
   } else {
     selectedStudents.value.clear()
   }
 }
 
-function toggleStudent(id: number) {
+function toggleStudent(id: string) {
   const next = new Set(selectedStudents.value)
-  if (next.has(id)) {
-    next.delete(id)
+  const numericId = Number(id)
+  if (next.has(numericId)) {
+    next.delete(numericId)
   } else {
-    next.add(id)
+    next.add(numericId)
   }
   selectedStudents.value = next
   selectAll.value = next.size === filteredStudents.value.length && filteredStudents.value.length > 0
@@ -86,17 +87,17 @@ async function handleExportCsv() {
 }
 
 async function handleRefresh() {
-  await studentsStore.fetchStudents()
+  await studentsStore.fetchAll()
   showSuccessToast('Student data refreshed.', 'Refreshed')
 }
 
-function viewStudentCards(studentId: number) {
+function viewStudentCards(studentId: string) {
   router.push(`/cards/id-card?studentId=${studentId}`)
 }
 
 onMounted(async () => {
   if (!students.value.length) {
-    await studentsStore.fetchStudents()
+    await studentsStore.fetchAll()
   }
 })
 </script>
@@ -219,44 +220,44 @@ onMounted(async () => {
         <div class="flex items-center justify-center">
           <input
             type="checkbox"
-            :checked="selectedStudents.has(student.id)"
-            @change="toggleStudent(student.id)"
+            :checked="selectedStudents.has(Number(student.id))"
+            @change="toggleStudent(student.id as string)"
             class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
           />
         </div>
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
-            {{ (student.full_name || '?').charAt(0).toUpperCase() }}
+            {{ (student.fullName || '?').charAt(0).toUpperCase() }}
           </div>
-          <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ student.full_name }}</span>
+          <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ student.fullName }}</span>
         </div>
-        <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ student.student_id_no || '—' }}</span>
-        <span class="text-sm text-gray-600 dark:text-gray-400">{{ student.selection_batch_name || '—' }}</span>
+        <span class="text-sm font-mono text-gray-600 dark:text-gray-400">{{ student.studentIdNo || '—' }}</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ student.selectionBatchName || '—' }}</span>
         <div>
           <span
             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
             :class="{
-              'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400': student.enrollment_status === 'enrolled',
-              'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400': student.enrollment_status === 'pending',
-              'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400': student.enrollment_status === 'graduated',
-              'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400': ['rejected', 'dropped'].includes(student.enrollment_status),
+              'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400': student.status === 'enrolled',
+              'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400': student.status === 'pending',
+              'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400': student.status === 'graduated',
+              'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400': ['rejected', 'dropped'].includes(student.status),
             }"
           >
             <span
               class="w-1.5 h-1.5 rounded-full"
               :class="{
-                'bg-emerald-500': student.enrollment_status === 'enrolled',
-                'bg-amber-500': student.enrollment_status === 'pending',
-                'bg-purple-500': student.enrollment_status === 'graduated',
-                'bg-red-500': ['rejected', 'dropped'].includes(student.enrollment_status),
+                'bg-emerald-500': student.status === 'enrolled',
+                'bg-amber-500': student.status === 'pending',
+                'bg-purple-500': student.status === 'graduated',
+                'bg-red-500': ['rejected', 'dropped'].includes(student.status),
               }"
             ></span>
-            {{ (student.enrollment_status || 'unknown').charAt(0).toUpperCase() + (student.enrollment_status || 'unknown').slice(1) }}
+            {{ (student.status || 'unknown').charAt(0).toUpperCase() + (student.status || 'unknown').slice(1) }}
           </span>
         </div>
         <div class="flex justify-center">
           <button
-            @click="viewStudentCards(student.id)"
+            @click="viewStudentCards(student.id as string)"
             class="text-xs font-medium text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
           >
             View

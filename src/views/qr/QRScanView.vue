@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { QrcodeStream } from 'vue-qrcode-reader'
 import { useToast } from '@/composables/useToast'
-import axiosInstance from '@/services/axios'
+import { cardsApi } from '@/services/api/cards'
 
 const router = useRouter()
 const { showErrorToast, showSuccessToast } = useToast()
@@ -42,7 +42,10 @@ async function onDetect(detectedCodes: Array<{ rawValue: string }>) {
     return
   }
 
-  const token = detectedCodes[0].rawValue
+  const token = detectedCodes[0]?.rawValue
+  if (!token) {
+    return
+  }
 
   // Prevent duplicate scans of the same token
   if (token === lastScannedToken.value) {
@@ -60,14 +63,13 @@ async function verifyQRToken(token: string) {
 
   try {
     // Call the backend verification endpoint
-    // Assuming the endpoint is POST /api/v1/qr/verify with { token }
-    const { data } = await axiosInstance.post('/qr/verify', { token })
+    const student = await cardsApi.verifyQrToken(token)
 
-    if (data.status === 'success' && data.data?.student_id) {
+    if (student && student.id) {
       showSuccessToast('QR verified successfully', 'Success')
       
-      // Navigate to student profile
-      router.push(`/students/${data.data.student_id}`)
+      // Navigate to student profile edit page
+      router.push(`/students/${student.id}/edit`)
     } else {
       throw new Error('Invalid response from server')
     }
@@ -75,13 +77,13 @@ async function verifyQRToken(token: string) {
     console.error('QR verification error:', error)
     
     // Handle different error scenarios
-    const axiosError = error as { response?: { status?: number; data?: { message?: string } }; code?: string; message?: string }
+    const axiosError = error as { response?: { status?: number; data?: { message?: string; success?: boolean } }; code?: string; message?: string }
     
     if (axiosError.response?.status === 404) {
-      errorMessage.value = 'Student not found. The QR code may be invalid.'
-      showErrorToast('Student not found', 'Verification Failed')
+      errorMessage.value = 'Invalid or unknown QR token.'
+      showErrorToast('Invalid QR token', 'Verification Failed')
     } else if (axiosError.response?.status === 400) {
-      errorMessage.value = axiosError.response.data?.message || 'Invalid or expired QR token.'
+      errorMessage.value = axiosError.response.data?.message || 'Invalid QR token.'
       showErrorToast('Invalid QR code', 'Verification Failed')
     } else if (axiosError.response?.status === 401) {
       errorMessage.value = 'Authentication required. Please log in again.'
@@ -93,7 +95,7 @@ async function verifyQRToken(token: string) {
       errorMessage.value = 'Network error. Please check your connection.'
       showErrorToast('Network error', 'Error')
     } else {
-      errorMessage.value = axiosError.response?.data?.message || 'An unexpected error occurred.'
+      errorMessage.value = axiosError.response.data?.message || 'An unexpected error occurred.'
       showErrorToast('Verification failed', 'Error')
     }
 

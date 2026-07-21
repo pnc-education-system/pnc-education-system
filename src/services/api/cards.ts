@@ -11,6 +11,9 @@ export interface CardStudent {
   selection_batch_name?: string | null
   enrollment_status: string
   intake_year?: number | null
+  phone?: string | null
+  email?: string | null
+  high_school?: string | null
 }
 
 export interface CardGenerationResult {
@@ -85,6 +88,12 @@ export const cardsApi = {
   /** Get student details by student_id_no (public — used for QR verification) */
   async getByStudentIdNo(studentIdNo: string): Promise<CardStudent> {
     const { data } = await axiosInstance.get(`/students/verify/${encodeURIComponent(studentIdNo)}`)
+    return (data.data ?? data) as CardStudent
+  },
+
+  /** Verify QR token and return student profile */
+  async verifyQrToken(qrToken: string): Promise<CardStudent> {
+    const { data } = await axiosInstance.get(`/cards/verify/${encodeURIComponent(qrToken)}`)
     return (data.data ?? data) as CardStudent
   },
 }
