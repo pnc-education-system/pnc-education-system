@@ -84,6 +84,9 @@ axiosInstance.interceptors.response.use(
       processQueue(error, null)
       authStore.logout()
       isRefreshing = false
+
+      // Redirect to login page
+      window.location.href = '/login'
     }
 
     return Promise.reject(error)

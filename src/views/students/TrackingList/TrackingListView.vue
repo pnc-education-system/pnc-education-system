@@ -347,6 +347,13 @@ function closeDetail() {
 }
 
 // ── Navigation ──
+function navigateToRecords(student: Student) {
+  router.push({
+    path: '/records',
+    query: { student_id: student.id },
+  })
+}
+
 function navigateToImport() {
   router.push('/enrollment')
 }
@@ -666,6 +673,13 @@ function goToPage(page: number) {
                   <Eye :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
+                  @click="navigateToRecords(student)"
+                  class="group relative p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-all duration-200 cursor-pointer dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
+                  title="View Records"
+                >
+                  <FileText :size="16" class="transition-transform group-hover:scale-110" />
+                </button>
+                <button
                   v-if="canManage"
                   @click="openEdit(student)"
                   class="group relative p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
@@ -755,6 +769,13 @@ function goToPage(page: number) {
                   :title="t('students.action_view')"
                 >
                   <Eye :size="16" class="transition-transform group-hover:scale-110" />
+                </button>
+                <button
+                  @click="navigateToRecords(student)"
+                  class="group relative p-2 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-all duration-200 cursor-pointer dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
+                  title="View Records"
+                >
+                  <FileText :size="16" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="canManage"
@@ -1024,7 +1045,14 @@ function goToPage(page: number) {
             </div>
 
             <!-- Footer -->
-            <div class="flex items-center justify-end mt-6 pt-4 border-t border-[#E5E7EB] dark:border-gray-800">
+            <div class="flex items-center justify-between mt-6 pt-4 border-t border-[#E5E7EB] dark:border-gray-800">
+              <button
+                @click="navigateToRecords(detailStudentObj!); closeDetail()"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all duration-200 cursor-pointer dark:text-indigo-400 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20"
+              >
+                <FileText :size="16" />
+                View Records
+              </button>
               <button
                 @click="closeDetail"
                 class="px-5 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
