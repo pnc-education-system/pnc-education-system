@@ -124,6 +124,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.edit' },
   },
   {
+    path: '/qr/scan',
+    name: 'QRScan',
+    component: () => import('@/views/qr/QRScanView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/settings/SettingsView.vue'),
