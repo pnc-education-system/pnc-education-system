@@ -240,6 +240,18 @@ const onAdminClick = () => {
               </svg>
               <span>Tracking List</span>
             </button>
+            <button
+              @click="navigate('/students/profile')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/students/profile' || (route.path.startsWith('/students/') && route.path.includes('/profile'))
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>Student Profile</span>
+            </button>
           </div>
         </transition>
       </div>
