@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { importsApi } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
 import { useStudentsStore } from '@/stores/students'
-import type { ImportPreview, ImportValidationError } from '@/services/api/imports'
+import type { ImportPreview } from '@/services/api/imports'
 import type { SelectionBatch } from '@/services/api/selectionBatches'
 
 defineOptions({ name: 'ImportViewsView' })

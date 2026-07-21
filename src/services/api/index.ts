@@ -6,6 +6,6 @@ import { enrollmentsApi } from './enrollments'
 import { studentsApi } from './students'
 import { importsApi } from './imports'
 import { selectionBatchesApi } from './selectionBatches'
+import { cardsApi } from './cards'
 
-export { authApi, usersApi, rolesApi, profileApi, enrollmentsApi, importsApi, selectionBatchesApi, studentsApi }
-
+export { authApi, usersApi, rolesApi, profileApi, enrollmentsApi, importsApi, selectionBatchesApi, studentsApi, cardsApi }

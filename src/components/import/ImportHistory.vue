@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Component } from 'vue'
 import {
   Search,
   Filter,
@@ -139,7 +139,7 @@ const filteredRecords = computed(() => {
 })
 
 // ─── Status Badge Config ─────────────────────────────────
-const statusConfig: Record<DisplayStatus, { label: string; icon: any; classes: string }> = {
+const statusConfig: Record<DisplayStatus, { label: string; icon: Component; classes: string }> = {
   completed: {
     label: 'Completed',
     icon: CheckCircle,
@@ -183,6 +183,7 @@ function onFilterChange(): void {
 }
 
 // ─── Actions ─────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function viewDetails(record: DisplayRecord): void {
   // TODO: Navigate to import details
 }

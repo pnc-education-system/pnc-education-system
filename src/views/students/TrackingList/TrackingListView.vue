@@ -28,7 +28,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Check,
   RefreshCw,
   Pencil,
 } from 'lucide-vue-next'
@@ -251,8 +250,9 @@ async function executeBulkStatusUpdate() {
     selectedStudentIds.value.clear()
     closeBulkStatusModal()
     loadStudents()
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update student status.'
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'Failed to update student status.'
     showErrorToast(errorMessage, 'Error')
   } finally {
     isBulkUpdating.value = false
@@ -381,6 +381,7 @@ async function submitNewStudent() {
 
   isAddingStudent.value = true
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: any = {
       student_id_no: newStudent.value.studentIdNo,
       full_name: newStudent.value.fullName,
@@ -404,8 +405,9 @@ async function submitNewStudent() {
     showSuccessToast('Student added successfully.', 'Success')
     closeAddStudentModal()
     loadStudents()
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add student.'
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'Failed to add student.'
     showErrorToast(errorMessage, 'Error')
   } finally {
     isAddingStudent.value = false
