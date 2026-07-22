@@ -191,6 +191,34 @@ export interface BackendStudent {
   updated_at: string
 }
 
+
+export interface StudentRecord {
+  id: number
+  student_id: number
+  title: string
+  description: string
+  record_type: 'academic' | 'disciplinary' | 'medical' | 'general'
+  recorded_by: number
+  recorded_at: string
+  created_at: string
+  updated_at: string
+  attachments: StudentAttachment[]
+}
+
+export interface StudentAttachment {
+  id: number
+  student_id: number
+  record_id: number | null
+  file_name: string
+  file_path: string
+  file_size: number
+  mime_type: string
+  uploaded_by: number
+  uploaded_at: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Student {
   id: string
   studentIdNo: string
