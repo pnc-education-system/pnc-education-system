@@ -130,7 +130,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
- 
   {
     path: '/cards',
     redirect: '/cards/id-card',
@@ -160,7 +159,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/cards/StudentVerifyView.vue'),
     meta: { requiresAuth: false },
   },
-
+{
+    path: '/students/profile',
+    name: 'StudentProfileList',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/:id/profile',
+    name: 'StudentProfile',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
   {
     path: '/',
     redirect: '/dashboard',

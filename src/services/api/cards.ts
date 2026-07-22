@@ -66,8 +66,15 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number): Promise<CardGenerationResult> {
-    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`)
+  async generate(studentId: number, pdfBlob: Blob): Promise<CardGenerationResult> {
+    const formData = new FormData()
+    formData.append('pdf', pdfBlob, `student-card-${studentId}.pdf`)
+
+    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return data.data as CardGenerationResult
   },
 
@@ -95,13 +102,11 @@ export const cardsApi = {
       responseType: 'blob',
     })
     return data as Blob
-  },
-
-  /** Download batch PDF */
-  async batchDownloadPdf(studentIds: number[]): Promise<Blob> {
+  },  /** Download batch PDF */
+  async batchDownloadPdf(studentIds: number[], layout?: string): Promise<Blob> {
     const { data } = await axiosInstance.post(
       '/cards/batch-download',
-      { student_ids: studentIds },
+      { student_ids: studentIds, layout },
       { responseType: 'blob' },
     )
     return data as Blob

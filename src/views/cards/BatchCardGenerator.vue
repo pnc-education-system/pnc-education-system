@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cardsApi, type CardStudent, type CardTemplate } from '@/services/api/cards'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { useToast } from '@/composables/useToast'
 import StudentCard from '@/components/cards/StudentCard.vue'
+import html2canvas from 'html2canvas-pro'
+import jsPDF from 'jspdf'
 import { Check, X, ChevronDown, Download, Upload, Image as ImageIcon } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -22,6 +24,9 @@ const isUploadingPhotos = ref(false)
 const uploadProgress = ref(0)
 const photoFiles = ref<Array<{ student_id: number; file: File; preview?: string }>>([])
 const showPhotoUpload = ref(false)
+
+// ── Batch generation: render hidden cards for frontend capture ──
+const batchGeneratingStudentIds = ref<Set<number>>(new Set())
 
 // Data
 const batches = ref<SelectionBatch[]>([])
@@ -54,11 +59,18 @@ const eligibleStudents = computed(() =>
   filteredStudents.value.filter(s => s.photo_path && s.enrollment_status === 'Enrolled')
 )
 
-const previewStudents = computed(() => eligibleStudents.value.slice(0, 8))
+const previewStudents = computed(() => eligibleStudents.value.slice(0, 3))
 
-const previewRows = computed(() => {
-  const cards = previewStudents.value
-  return Array.from({ length: 8 }, (_, index) => cards[index] ?? null)
+// Create 6 card slots (3 students × 2 sides: front then back)
+const previewCardSlots = computed(() => {
+  const slots: Array<{ student: CardStudent | null; showBack: boolean; label: string }> = []
+  const students = previewStudents.value
+  for (let i = 0; i < 3; i++) {
+    const s = students[i] ?? null
+    slots.push({ student: s, showBack: false, label: s ? `${s.full_name} (Front)` : 'Empty' })
+    slots.push({ student: s, showBack: true, label: s ? `${s.full_name} (Back)` : 'Empty' })
+  }
+  return slots
 })
 
 const selectedTemplateName = computed(() => {
@@ -75,7 +87,7 @@ const selectedLayout = computed<'classic' | 'modern' | 'premium'>(() => {
 })
 
 const totalPages = computed(() =>
-  Math.ceil(eligibleStudents.value.length / 8)
+  Math.ceil(eligibleStudents.value.length / 3)
 )
 
 const batchLabel = computed(() => {
@@ -141,6 +153,20 @@ function toggleStudent(id: number) {
   selectAll.value = next.size === eligibleStudents.value.length && eligibleStudents.value.length > 0
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 100)
+}
+
 async function handleGenerate() {
   if (!selectedBatch.value || !selectedTemplate.value) {
     showErrorToast('Please select a batch and template', 'Missing Selection')
@@ -161,32 +187,125 @@ async function handleGenerate() {
   generationTotal.value = studentsToGenerate.size
 
   try {
-    console.log('Sending batch generate request:', {
-      selection_batch_id: selectedBatch.value,
-      template_id: selectedTemplate.value
-    })
-    await cardsApi.batchGenerate({
-      selection_batch_id: selectedBatch.value,
-      template_id: selectedTemplate.value
+    const studentIds = Array.from(studentsToGenerate)
+    const layout = selectedLayout.value
+    console.log('Generating batch PDF for', studentIds.length, 'students, layout:', layout)
+
+    // Render hidden cards for all selected students
+    batchGeneratingStudentIds.value = new Set(studentIds)
+    await nextTick()
+    // Wait for Vue to render cards and QR codes to generate
+    await new Promise(r => setTimeout(r, 800))
+
+    // Capture each card with html2canvas
+    generationProgress.value = 1
+    const canvasImages: HTMLCanvasElement[] = []
+
+    // Get the offscreen container and its card-wrapper children
+    const offscreenContainer = document.getElementById('batch-generation-cards')
+    if (!offscreenContainer) {
+      throw new Error('Offscreen card container not found')
+    }
+    const cardWrappers = offscreenContainer.children
+
+    for (let i = 0; i < studentIds.length; i++) {
+      // Each student has 2 card wrappers: front (i*2) and back (i*2+1)
+      for (let side = 0; side < 2; side++) {
+        const idx = i * 2 + side
+        const cardWrapper = cardWrappers[idx] as HTMLElement | undefined
+        if (!cardWrapper) {
+          console.warn('Card wrapper not found for index', idx)
+          continue
+        }
+        // Front cards use data-student-card, back cards use data-student-card-back
+        const selector = side === 0 ? '[data-student-card]' : '[data-student-card-back]'
+        const el = cardWrapper.querySelector(selector) as HTMLElement
+        if (!el) {
+          console.warn('Card element not found for student at index', idx, 'side:', side)
+          continue
+        }
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          allowTaint: true,
+        })
+        canvasImages.push(canvas)
+      }
+      generationProgress.value = i + 1
+    }
+
+    // Create PDF with cards laid out on A4 pages
+    // A4: 210mm x 297mm, with 10mm margins
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
     })
 
-    // Simulate progress (in real app, use WebSocket or polling)
-    const interval = setInterval(() => {
-      if (generationProgress.value < generationTotal.value) {
-        generationProgress.value += Math.ceil(generationTotal.value / 10)
+    const margin = 12
+    const pageW = 210 - margin * 2 // 186mm
+    const pageH = 297 - margin * 2 // 273mm
+    const cols = 2
+    const rows = 3
+    const gapX = 6 // horizontal gap in mm
+    const gapY = 6 // vertical gap in mm
+
+    // Calculate cell dimensions
+    const cellW = (pageW - gapX * (cols - 1)) / cols
+    const cellH = (pageH - gapY * (rows - 1)) / rows
+
+    // 6 cards per page = 3 students × 2 sides (front + back)
+    const cardsPerPage = cols * rows // 6
+
+    for (let i = 0; i < canvasImages.length; i++) {
+      const canvas = canvasImages[i]
+
+      // Calculate card image dimensions to fit cell while maintaining aspect ratio
+      const cardAspect = canvas.width / canvas.height
+      let cardW, cardH
+      if (cellW / cellH > cardAspect) {
+        cardH = cellH
+        cardW = cellH * cardAspect
       } else {
-        clearInterval(interval)
-        isGenerating.value = false
-        showSuccessToast(
-          `${generationTotal.value} cards generated successfully. Download will start shortly.`,
-          'Generation Complete'
-        )
+        cardW = cellW
+        cardH = cellW / cardAspect
       }
-    }, 500)
+
+      // Calculate position: center the card in its cell
+      const col = i % cols
+      const row = Math.floor(i / cols) % rows
+      const cellX = margin + col * (cellW + gapX)
+      const cellY = margin + row * (cellH + gapY)
+      const x = cellX + (cellW - cardW) / 2
+      const y = cellY + (cellH - cardH) / 2
+
+      // Add new page if needed
+      if (i > 0 && i % cardsPerPage === 0) {
+        pdf.addPage()
+      }
+
+      pdf.addImage(canvas, 'PNG', x, y, cardW, cardH)
+    }
+
+    // Generate blob and download
+    const pdfBlob = pdf.output('blob')
+    const batchName = batchLabel.value.replace(/[^a-zA-Z0-9_-]/g, '_')
+    downloadBlob(pdfBlob, `ID_Cards_Batch_${batchName}_${Date.now()}.pdf`)
+
+    showSuccessToast(
+      `Successfully generated ${canvasImages.length} cards. PDF downloaded.`,
+      'Generation Complete'
+    )
 
   } catch (error) {
+    console.error('Failed to generate batch cards:', error)
+    showErrorToast('Failed to generate batch cards. Check console for details.', 'Generation Failed')
+  } finally {
     isGenerating.value = false
-    showErrorToast('Failed to generate batch cards', 'Error')
+    generationProgress.value = 0
+    batchGeneratingStudentIds.value = new Set()
   }
 }
 
@@ -492,25 +611,28 @@ onMounted(async () => {
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">A4 sheet preview</h3>
-        <span class="text-xs text-gray-500 dark:text-gray-400">8 / page</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400">3 students / page (front + back)</span>
       </div>
 
       <div class="flex justify-center">
         <div class="relative bg-white border-2 border-gray-300 rounded overflow-hidden" style="width: 210mm; height: 297mm; max-width: 100%; aspect-ratio: 210/297;">
-          <!-- Grid of 8 cards -->
-          <div class="grid grid-cols-2 grid-rows-4 gap-2 p-3 h-full">
-            <template v-for="(student, index) in previewRows" :key="index">
-              <div v-if="student" class="border border-gray-200 rounded bg-white shadow-sm overflow-hidden">
-                <StudentCard
-                  :student="student"
-                  :layout="selectedLayout"
-                  size="sm"
-                  :showActions="false"
-                  :generated="false"
-                />
+          <!-- Grid of 6 card sides (3 students × front + back) -->
+          <div class="grid grid-cols-2 grid-rows-3 gap-3 p-4 w-full h-full">
+            <template v-for="(slot, index) in previewCardSlots" :key="index">
+              <div v-if="slot.student" class="border border-gray-200 rounded bg-white shadow-sm overflow-hidden flex items-center justify-center">
+                <div class="shrink-0" style="transform: scale(1.0); transform-origin: center center;">
+                  <StudentCard
+                    :student="slot.student"
+                    :layout="selectedLayout"
+                    size="sm"
+                    :showActions="false"
+                    :generated="false"
+                    :showBack="slot.showBack"
+                  />
+                </div>
               </div>
               <div v-else class="border border-dashed border-gray-200 rounded bg-gray-50 flex items-center justify-center text-xs text-gray-400">
-                Empty slot
+                Empty
               </div>
             </template>
           </div>
@@ -518,7 +640,36 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Generate Section -->
+    <!-- Hidden offscreen cards for batch PDF generation -->
+  <!-- NOTE: must NOT use display:none / class=hidden — cards need to be rendered in DOM for html2canvas to capture them -->
+  <div
+    v-if="batchGeneratingStudentIds.size > 0"
+    id="batch-generation-cards"
+    style="position: fixed; left: -9999px; top: 0; z-index: -1; pointer-events: none;"
+  >
+    <div v-for="id in batchGeneratingStudentIds" :key="'batch-'+id">
+      <!-- Front side -->
+      <StudentCard
+        :student="students.find(s => s.id === id) || null"
+        :layout="selectedLayout"
+        size="sm"
+        :showActions="false"
+        :generated="false"
+        :showBack="false"
+      />
+      <!-- Back side -->
+      <StudentCard
+        :student="students.find(s => s.id === id) || null"
+        :layout="selectedLayout"
+        size="sm"
+        :showActions="false"
+        :generated="false"
+        :showBack="true"
+      />
+    </div>
+  </div>
+
+  <!-- Generate Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Generate</h3>
 

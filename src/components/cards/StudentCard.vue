@@ -80,12 +80,12 @@ const photoUrl = computed(() => {
   if (localPhotoUrl.value) return localPhotoUrl.value
   if (!props.student?.photo_path) return null
   if (/^https?:\/\//i.test(props.student.photo_path)) return props.student.photo_path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
+  // Use relative URL so Vite proxy handles it (same origin, no CORS issues)
+  // In production, /storage/ works if frontend/backend are on the same domain
   const path = props.student.photo_path
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
+  if (path.startsWith('/storage/')) return path
+  if (path.startsWith('storage/')) return `/${path}`
+  return `/storage/${path.replace(/^\/+/, '')}`
 })
 
 const qrContent = computed(() => {
@@ -165,8 +165,6 @@ function handleLogoChange(event: Event) {
   emit('logo-upload', file)
 }
 
-function toggleFlip() { isFlipped.value = !isFlipped.value }
-
 onMounted(() => { generateQR() })
 
 onUnmounted(() => {
@@ -197,20 +195,17 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
   <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoChange" />
   <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden" @change="handleLogoChange" />
 
-  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px', perspective: '1000px' }">
-    <div
-      class="card-inner relative w-full h-full"
-      :class="{ flipped: isFlipped }"
-      :style="{ transformStyle: 'preserve-3d', transition: 'transform 0.5s ease' }"
-    >
+  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px' }">
+    <div class="card-inner relative w-full h-full">
       <!-- ══ FRONT ══ -->
-      <div class="card-face absolute inset-0">
+      <div v-if="!isFlipped" class="card-face w-full h-full">
 
         <!-- ── CLASSIC ── -->
         <div v-if="layout === 'classic'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
-          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :style="{ background: '#fff' }"
+          :data-student-card="student?.id"
         >
           <!-- Header bar -->
           <div class="bg-[#1e3a5f] px-3.5 py-2">
@@ -240,7 +235,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <div @click="handlePhotoClick"
               class="rounded-full overflow-hidden border-2 border-gray-100 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
                 <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
               </div>
@@ -289,10 +284,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-          <!-- Flip -->
-          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-gray-100/60 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer border border-gray-200/40">
-            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
-          </button>
+
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -306,7 +298,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'modern'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
-          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :style="{ background: '#fff' }"
+          :data-student-card="student?.id"
         >
           <!-- Top gradient band -->
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-7">
@@ -336,7 +329,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <div @click="handlePhotoClick"
               class="rounded-full overflow-hidden border-[3px] border-white shadow bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-300 to-blue-500">
                 <span class="font-bold text-white drop-shadow-sm" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
               </div>
@@ -381,9 +374,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-white/70 text-gray-400 hover:bg-white hover:text-gray-500 transition cursor-pointer border border-gray-200/60 backdrop-blur-sm shadow-xs">
-            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
-          </button>
+
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100 bg-white">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -397,7 +388,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'premium'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300 shadow-md' : 'border-gray-200/60 dark:border-gray-600/60 shadow'"
-          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
+          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
+          :data-student-card="student?.id"
         >
           <!-- Gold line -->
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
@@ -434,7 +426,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               <div @click="handlePhotoClick"
                 class="rounded-full overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer group relative"
                 :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-                <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+                <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-600 to-amber-800">
                   <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
                 </div>
@@ -484,9 +476,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
 
-          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-black/30 text-amber-300/50 hover:bg-black/50 hover:text-amber-300 transition cursor-pointer border border-amber-400/15 backdrop-blur-sm">
-            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
-          </button>
+
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-amber-400/10">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 transition cursor-pointer border border-blue-500/15">Preview</button>
@@ -498,13 +488,14 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
       </div>
 
       <!-- ══ BACK ══ -->
-      <div class="card-face absolute inset-0">
+      <div v-else class="card-face w-full h-full">
 
         <!-- ── BACK: CLASSIC ── -->
         <div v-if="layout === 'classic'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
-          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :style="{ background: '#fff' }"
+          :data-student-card-back="student?.id"
         >
           <div class="bg-[#1e3a5f] px-3.5 py-2.5">
             <div class="flex items-center gap-2">
@@ -541,9 +532,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
-            </button>
           </div>
         </div>
 
@@ -551,7 +539,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'modern'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
-          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :style="{ background: '#fff' }"
+          :data-student-card-back="student?.id"
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-3">
             <div class="flex items-center gap-2">
@@ -588,9 +577,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
-            </button>
           </div>
         </div>
 
@@ -598,7 +584,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'premium'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300' : 'border-gray-200/60 dark:border-gray-600/60'"
-          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
+          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
+          :data-student-card-back="student?.id"
         >
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-3.5 pt-2.5 pb-2">
@@ -637,9 +624,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-amber-400/20 text-[6px] font-medium">Property of PNC Cambodia</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-white/5 text-amber-300/50 hover:bg-white/10 hover:text-amber-300 transition cursor-pointer border border-amber-400/15">
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
-            </button>
+
           </div>
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
         </div>
@@ -652,20 +637,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 .card-wrap {
   display: inline-block;
 }
-.card-inner {
-  transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-inner.flipped {
-  transform: rotateY(180deg);
-}
 .card-face {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   border-radius: 0.75rem;
   overflow: hidden;
-}
-.card-face:last-child {
-  transform: rotateY(180deg);
 }
 </style>
