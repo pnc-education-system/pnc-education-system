@@ -130,44 +130,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
- 
   {
-    path: '/cards',
-    redirect: '/cards/id-card',
+    path: '/students/profile',
+    name: 'StudentProfileList',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
   },
   {
-    path: '/cards/id-card',
-    name: 'CardIdCard',
-    component: () => import('@/views/cards/CardGeneratorView.vue'),
-    meta: { requiresAuth: true, permission: 'cards.generate' },
+    path: '/students/:id/profile',
+    name: 'StudentProfile',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
   },
-  {
-    path: '/cards/batch-card',
-    name: 'CardBatchCard',
-    component: () => import('@/views/cards/BatchCardView.vue'),
-    meta: { requiresAuth: true, permission: 'cards.generate' },
-  },
-  {
-    path: '/cards/qr-verify',
-    name: 'CardQrVerify',
-    component: () => import('@/views/cards/QRVerifyView.vue'),
-    meta: { requiresAuth: true, permission: 'cards.generate' },
-  },
-
-  {
-    path: '/verify/:token',
-    name: 'StudentVerify',
-    component: () => import('@/views/cards/StudentVerifyView.vue'),
-    meta: { requiresAuth: false },
-  },
-
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true },
-  },
-
   {
     path: '/',
     redirect: '/dashboard',

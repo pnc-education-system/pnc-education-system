@@ -335,8 +335,20 @@ async function executeStatusChange() {
   statusChangeNote.value = ''
 }
 
-// ── Detail View ──
+// ── Navigate to Profile Page ──
 function openDetail(student: Student) {
+  router.push({
+    name: 'StudentProfile',
+    params: { id: student.id },
+  })
+}
+
+// ── Navigation ──
+function navigateToImport() {
+  router.push('/enrollment')
+}
+
+function openDetailModal(student: Student) {
   detailStudentObj.value = student
   showDetailModal.value = true
 }
@@ -344,11 +356,6 @@ function openDetail(student: Student) {
 function closeDetail() {
   showDetailModal.value = false
   detailStudentObj.value = null
-}
-
-// ── Navigation ──
-function navigateToImport() {
-  router.push('/enrollment')
 }
 
 function openAddStudentModal() {
