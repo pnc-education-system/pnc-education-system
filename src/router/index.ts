@@ -136,14 +136,47 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
- 
   {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true },
+    path: '/cards',
+    redirect: '/cards/id-card',
+  },
+  {
+    path: '/cards/id-card',
+    name: 'CardIdCard',
+    component: () => import('@/views/cards/CardGeneratorView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+  {
+    path: '/cards/batch-card',
+    name: 'CardBatchCard',
+    component: () => import('@/views/cards/BatchCardGenerator.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+  {
+    path: '/cards/qr-verify',
+    name: 'CardQrVerify',
+    component: () => import('@/views/cards/QRVerifyView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
   },
 
+  {
+    path: '/verify/:studentId',
+    name: 'StudentVerify',
+    component: () => import('@/views/cards/StudentVerifyView.vue'),
+    meta: { requiresAuth: false },
+  },
+{
+    path: '/students/profile',
+    name: 'StudentProfileList',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/:id/profile',
+    name: 'StudentProfile',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
   {
     path: '/',
     redirect: '/dashboard',
@@ -174,7 +207,7 @@ router.beforeEach((to) => {
   }
 
   // Pre-fetch selection batches so the dropdown is ready instantly
-  if (to.name === 'Enrollment' || to.name === 'ImportViews') {
+  if (to.name === 'Enrollment' || to.name === 'ImportViews' || to.name === 'CardIdCard') {
     prefetchBatches()
   }
 })

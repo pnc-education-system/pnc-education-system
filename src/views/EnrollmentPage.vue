@@ -218,7 +218,7 @@ async function onDeleteBatch() {
     batches.value = batches.value.filter((b) => b.id !== deletingBatch.value!.id)
     // If the deleted batch was selected, clear or pick the first available
     if (selectedBatch.value?.id === deletingBatch.value.id) {
-      selectedBatch.value = batches.value.length > 0 ? batches.value[0] : null
+      selectedBatch.value = batches.value[0] ?? null
     }
 
     clearCache() // Ensure fresh data on next navigation

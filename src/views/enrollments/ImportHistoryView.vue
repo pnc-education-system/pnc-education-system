@@ -1,30 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { importsApi } from '@/services/api/imports'
 import type { ImportLog } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth'
 
 defineOptions({ name: 'ImportHistoryView' })
 
 const { t } = useI18n()
 const router = useRouter()
 const { showErrorToast, showSuccessToast } = useToast()
-const authStore = useAuthStore()
-
-const userInitials = computed(() => {
-  const name = authStore.user?.name?.trim()
-  if (!name) return '?'
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toUpperCase()
-})
-
 const imports = ref<ImportLog[]>([])
 const isLoading = ref(false)
 const downloadingId = ref<number | null>(null)

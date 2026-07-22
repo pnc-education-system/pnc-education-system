@@ -87,6 +87,11 @@ export interface PasswordResetRequest {
   email: string
 }
 
+export interface ProfileResponse {
+  user: User
+  permissions: string[]
+}
+
 export interface PasswordResetConfirm {
   email: string
   token: string
@@ -229,6 +234,7 @@ export interface Student {
   intakeYear?: string
   selectionBatchId?: number
   selectionBatchName?: string
+  photoPath?: string
   status: StudentStatus
   enrolledAt?: string
   createdAt: string

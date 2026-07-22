@@ -28,8 +28,6 @@ const sectionDetails = computed(() => t('student_form.section_details'))
 const labelName = computed(() => t('student_form.label_name'))
 const labelEmail = computed(() => t('student_form.label_email'))
 const labelPhone = computed(() => t('student_form.label_phone'))
-const labelProgram = computed(() => t('student_form.label_program'))
-const placeholderProgram = computed(() => t('student_form.placeholder_program'))
 const labelStatus = computed(() => t('student_form.label_status'))
 const required = computed(() => t('student_form.required'))
 const cancel = computed(() => t('student_form.cancel'))
@@ -39,9 +37,7 @@ const createLabel = computed(() =>
 )
 const toastCreated = computed(() => t('student_form.toast_created'))
 const toastCreatedTitle = computed(() => t('student_form.toast_created_title'))
-const toastUpdated = computed(() => t('student_form.toast_updated'))
 const toastUpdatedTitle = computed(() => t('student_form.toast_updated_title'))
-const toastSaveError = computed(() => t('student_form.toast_save_error'))
 const toastValidation = computed(() => t('student_form.toast_validation'))
 const toastValidationTitle = computed(() => t('student_form.toast_validation_title'))
 
@@ -82,8 +78,8 @@ onMounted(async () => {
     if (selectionBatches.value.length > 0 && selectionBatches.value[0]) {
       form.value.selection_batch_id = selectionBatches.value[0].id
     }
-  } catch (error) {
-    console.error('Failed to load selection batches:', error)
+  } catch {
+    console.error('Failed to load selection batches:')
     showErrorToast('Failed to load selection batches', 'Error')
   }
 
@@ -106,7 +102,7 @@ onMounted(async () => {
         enrolled_at: student.enrolled_at || '',
       }
       existingPhotoPath.value = student.photo_path || null
-    } catch (error) {
+    } catch {
       showErrorToast('Failed to load student data', 'Error')
       router.push('/students')
     } finally {
@@ -170,9 +166,10 @@ async function handleSubmit() {
       showSuccessToast(toastCreated.value, toastCreatedTitle.value)
     }
     router.push(getTrackingRoute())
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating student:', error)
-    const errorMessage = error?.response?.data?.message || error?.message || 'An error occurred while saving'
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'An error occurred while saving'
     showErrorToast(errorMessage, toastValidationTitle.value)
   } finally {
     isSaving.value = false

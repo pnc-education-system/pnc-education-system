@@ -24,6 +24,7 @@ function mapBackendStudent(backend: BackendStudent): Student {
     enrolledAt: backend.enrolled_at ?? undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
+    photoPath: backend.photo_path ?? undefined,
     importLogId: undefined,
   }
 }
@@ -58,8 +59,9 @@ export const useStudentsStore = defineStore('students', () => {
       currentPage.value = paginated.current_page
       lastPage.value = paginated.last_page
       total.value = paginated.total
-    } catch (err: any) {
-      const status = err?.response?.status
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number } }
+      const status = apiErr?.response?.status
       if (status === 403) {
         students.value = []
         error.value = null

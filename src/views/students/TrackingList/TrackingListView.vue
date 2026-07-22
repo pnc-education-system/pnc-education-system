@@ -28,7 +28,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Check,
   RefreshCw,
   Pencil,
 } from 'lucide-vue-next'
@@ -41,12 +40,10 @@ const { showSuccessToast, showErrorToast } = useToast()
 const { t } = useI18n()
 const hasExplicitBatchQuery = Object.prototype.hasOwnProperty.call(route.query, 'batch')
 
-// ── Batch Filter ──
 const batches = ref<SelectionBatch[]>([])
 const selectedBatchId = ref<number | null>(parseOptionalNumber(route.query.batch))
 const loadingBatches = ref(false)
 
-// ── Filters ──
 const searchQuery = ref(getQueryString(route.query.search))
 const statusFilter = ref<string>(getQueryString(route.query.status) || 'all')
 const provinceFilter = ref<string>(getQueryString(route.query.province) || 'all')
@@ -55,18 +52,14 @@ const statusChangeTarget = ref<StudentStatus>('enrolled')
 const statusChangeNote = ref('')
 const showDetailModal = ref(false)
 const detailStudentObj = ref<Student | null>(null)
-
-// ── Bulk Selection ──
 const selectedStudentIds = ref<Set<string>>(new Set())
 const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 
-// ── Bulk Status Update ──
 const showBulkStatusModal = ref(false)
 const bulkStatusTarget = ref<StudentStatus>('enrolled')
 const bulkStatusNote = ref('')
 const isBulkUpdating = ref(false)
 
-// ── Add Student Modal ──
 const showAddStudentModal = ref(false)
 const isAddingStudent = ref(false)
 const newStudent = ref({
@@ -87,7 +80,6 @@ const newStudent = ref({
 const canManage = computed(() => authStore.hasPermission('students.edit'))
 const canImport = computed(() => authStore.hasPermission('students.import'))
 
-// ── Filtered Students ──
 const filteredStudents = computed<Student[]>(() => {
   return store.students.filter(s => {
     const q = searchQuery.value.toLowerCase()
@@ -102,7 +94,6 @@ const filteredStudents = computed<Student[]>(() => {
   })
 })
 
-// ── Selection Computed ──
 const isAllSelected = computed(() => {
   return filteredStudents.value.length > 0 && selectedStudentIds.value.size === filteredStudents.value.length
 })
@@ -112,31 +103,23 @@ const isSomeSelected = computed(() => {
 })
 
 const hasSelectedStudents = computed(() => selectedStudentIds.value.size > 0)
-
-// ── Load Batches ──
 async function loadBatches() {
   loadingBatches.value = true
   try {
-    // Try cache first for instant load
     const cached = getCachedBatches()
     if (cached) {
       batches.value = cached
       loadingBatches.value = false
     }
 
-    // If cache wasn't available, kick off a fetch and await it
     if (!cached) {
       prefetchBatches()
       const inFlight = getFetchPromise()
       const data = inFlight ? await inFlight : await selectionBatchesApi.list()
       batches.value = data
     } else {
-      // Cache available — just refresh in background to stay current
       prefetchBatches()
     }
-
-    // Default to 'All Batches' — user selects a batch from the dropdown
-    // Only auto-select if explicitly set via URL query
     if (batches.value.length > 0 && !selectedBatchId.value && hasExplicitBatchQuery) {
       selectedBatchId.value = batches.value[0]?.id ?? null
     }
@@ -147,7 +130,6 @@ async function loadBatches() {
   }
 }
 
-// ── Load Students ──
 function loadStudents(page = 1) {
   store.fetchAll({
     page,
@@ -158,26 +140,20 @@ function loadStudents(page = 1) {
   })
 }
 
-// ── Watch for changes ──
 watch([selectedBatchId, statusFilter, provinceFilter], () => {
   loadStudents()
-  // Clear selection when filters change
   selectedStudentIds.value.clear()
 })
 
 watch(searchQuery, () => {
-  // Debounce search
   if (searchDebounce.value) {
     clearTimeout(searchDebounce.value)
   }
   searchDebounce.value = setTimeout(() => {
     loadStudents()
-    // Clear selection when search changes
     selectedStudentIds.value.clear()
   }, 300)
 })
-
-// Update select all checkbox indeterminate state
 watch([isAllSelected, isSomeSelected], () => {
   if (selectAllCheckbox.value) {
     selectAllCheckbox.value.indeterminate = isSomeSelected.value
@@ -190,8 +166,6 @@ onMounted(() => {
   loadBatches()
   loadStudents(parseOptionalNumber(route.query.page) ?? 1)
 })
-
-// ── Selection Functions ──
 function toggleSelectAll() {
   if (isAllSelected.value) {
     selectedStudentIds.value.clear()
@@ -214,7 +188,6 @@ function isStudentSelected(studentId: string): boolean {
   return selectedStudentIds.value.has(studentId)
 }
 
-// ── Bulk Status Update Functions ──
 function openBulkStatusModal() {
   if (selectedStudentIds.value.size === 0) {
     showErrorToast('Please select at least one student.', 'Selection Required')
@@ -244,22 +217,19 @@ async function executeBulkStatusUpdate() {
   try {
     const ids = Array.from(selectedStudentIds.value).map(id => Number(id))
     const result = await studentsApi.bulkStatusUpdate(ids, bulkStatusTarget.value, bulkStatusNote.value)
-    
+
     showSuccessToast(`Successfully updated status for ${result.updated_count} student(s).`, 'Bulk Update Complete')
-    
-    // Clear selection and reload
     selectedStudentIds.value.clear()
     closeBulkStatusModal()
     loadStudents()
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update student status.'
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'Failed to update student status.'
     showErrorToast(errorMessage, 'Error')
   } finally {
     isBulkUpdating.value = false
   }
 }
-
-// ── Status Styling ──
 const STATUS_STYLES = {
   pending:   { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316' },
   rejected:  { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
@@ -310,7 +280,6 @@ const provinces = [
   'Tboung Khmum'
 ]
 
-// ── Status Change ──
 function confirmStatusChange(id: string, newStatus: StudentStatus) {
   statusChangeId.value = id
   statusChangeTarget.value = newStatus
@@ -335,8 +304,20 @@ async function executeStatusChange() {
   statusChangeNote.value = ''
 }
 
-// ── Detail View ──
+// ── Navigate to Profile Page ──
 function openDetail(student: Student) {
+  router.push({
+    name: 'StudentProfile',
+    params: { id: student.id },
+  })
+}
+
+// ── Navigation ──
+function navigateToImport() {
+  router.push('/enrollment')
+}
+
+function openDetailModal(student: Student) {
   detailStudentObj.value = student
   showDetailModal.value = true
 }
@@ -346,17 +327,6 @@ function closeDetail() {
   detailStudentObj.value = null
 }
 
-// ── Navigation ──
-function navigateToRecords(student: Student) {
-  router.push({
-    path: '/records',
-    query: { student_id: student.id },
-  })
-}
-
-function navigateToImport() {
-  router.push('/enrollment')
-}
 
 function openAddStudentModal() {
   showAddStudentModal.value = true
@@ -401,18 +371,19 @@ async function submitNewStudent() {
       intake_year: newStudent.value.intakeYear,
       enrolled_at: newStudent.value.enrolledAt,
     }
-    
+
     if (newStudent.value.selectionBatchId) {
       payload.selection_batch_id = newStudent.value.selectionBatchId
     }
-    
+
     await studentsApi.create(payload)
 
     showSuccessToast('Student added successfully.', 'Success')
     closeAddStudentModal()
     loadStudents()
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to add student.'
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'Failed to add student.'
     showErrorToast(errorMessage, 'Error')
   } finally {
     isAddingStudent.value = false
@@ -449,28 +420,23 @@ function getListQuery(): Record<string, string> {
     page: String(store.currentPage || 1),
   }
 }
-
-// ── Pagination Helpers ──
 const pageNumbers = computed(() => {
   const pages: (number | string)[] = []
   const current = store.currentPage
   const last = store.lastPage
-  const delta = 2 // Number of pages to show on each side
+  const delta = 2
 
   if (last <= 7) {
-    // Show all pages if total is small
     for (let i = 1; i <= last; i++) {
       pages.push(i)
     }
   } else {
-    // Always show first page
     pages.push(1)
 
     if (current > delta + 3) {
       pages.push('...')
     }
 
-    // Show pages around current
     const start = Math.max(2, current - delta)
     const end = Math.min(last - 1, current + delta)
 
@@ -481,15 +447,11 @@ const pageNumbers = computed(() => {
     if (current < last - delta - 2) {
       pages.push('...')
     }
-
-    // Always show last page
     pages.push(last)
   }
 
   return pages
 })
-
-// ── Helpers ──
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -510,8 +472,7 @@ function goToPage(page: number) {
 </script>
 
 <template>
-  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
-    <!-- Page Header -->
+  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('students.title') }}</h1>
@@ -551,8 +512,6 @@ function goToPage(page: number) {
         </button>
       </div>
     </div>
-
-    <!-- Filters -->
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
         <Search :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
@@ -593,10 +552,7 @@ function goToPage(page: number) {
         </select>
       </div>
     </div>
-
-    <!-- Students Table -->
     <div class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 overflow-hidden" style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
-      <!-- Loading -->
       <div v-if="store.loading" class="flex items-center justify-center py-16">
         <svg class="w-8 h-8 text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
