@@ -9,12 +9,22 @@ export interface CardStudent {
   dob?: string | null
   province?: string | null
   selection_batch_name?: string | null
+  selection_batch_id?: number | null
   enrollment_status: string
   intake_year?: number | null
   phone?: string | null
   email?: string | null
   high_school?: string | null
   qr_token?: string | null
+}
+
+export interface CardTemplate {
+  id: number
+  name: string
+  layout_json: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface CardGenerationResult {
@@ -25,38 +35,19 @@ export interface CardGenerationResult {
   error?: string
 }
 
-export interface StudentCard {
-  id: number
-  student_id: number
-  qr_token: string
-  issue_date: string
-  expired_date: string
-  manager_name?: string | null
-  card_layout?: string | null
-  generated_at?: string | null
-  created_at: string
-  updated_at: string
+export interface BatchCardRequest {
+  selection_batch_id: number
+  template_id: number
 }
 
-export interface StoreCardData {
-  student_id: number
-  issue_date?: string
-  expired_date?: string
-  manager_name?: string
-  card_layout?: string
-}
-
-export interface QrResolveResult {
-  student: CardStudent
-  card: StudentCard | null
-  valid: boolean
-}
-
-export interface VerifyResult {
-  valid: boolean
-  student?: CardStudent
-  card?: StudentCard
-  message?: string
+export interface BatchCardResponse {
+  status: string
+  message: string
+  data: {
+    job_id: string
+    selection_batch_id: number
+    template_id: number
+  }
 }
 
 export const cardsApi = {
@@ -79,13 +70,20 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number): Promise<CardGenerationResult> {
-    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`)
+  async generate(studentId: number, pdfBlob: Blob): Promise<CardGenerationResult> {
+    const formData = new FormData()
+    formData.append('pdf', pdfBlob, `student-card-${studentId}.pdf`)
+
+    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return data.data as CardGenerationResult
   },
 
   /** Batch generate ID cards for multiple students */
-  async batchGenerate(studentIds: number[]): Promise<{ results: CardGenerationResult[] }> {
+  async batchGenerateByIds(studentIds: number[]): Promise<{ results: CardGenerationResult[] }> {
     const { data } = await axiosInstance.post('/cards/batch-generate', { student_ids: studentIds })
     return data.data as { results: CardGenerationResult[] }
   },
@@ -108,13 +106,11 @@ export const cardsApi = {
       responseType: 'blob',
     })
     return data as Blob
-  },
-
-  /** Download batch PDF */
-  async batchDownloadPdf(studentIds: number[]): Promise<Blob> {
+  },  /** Download batch PDF */
+  async batchDownloadPdf(studentIds: number[], layout?: string): Promise<Blob> {
     const { data } = await axiosInstance.post(
       '/cards/batch-download',
-      { student_ids: studentIds },
+      { student_ids: studentIds, layout },
       { responseType: 'blob' },
     )
     return data as Blob
@@ -126,92 +122,47 @@ export const cardsApi = {
     return (data.data ?? data) as CardStudent
   },
 
-  /** Store/Create a student card record */
-  async store(cardData: StoreCardData): Promise<StudentCard> {
-    const { data } = await axiosInstance.post('/student-cards', cardData)
-    return (data.data ?? data) as StudentCard
+  /** Generate batch cards for a selection batch */
+  async batchGenerate(request: BatchCardRequest): Promise<BatchCardResponse> {
+    console.log('batchGenerate called with:', request)
+    const { data } = await axiosInstance.post('/cards/batch', request)
+    console.log('batchGenerate response:', data)
+    return data as BatchCardResponse
   },
 
-  /** Resolve QR token to get student and card information */
-  async resolveQr(qrToken: string): Promise<QrResolveResult> {
-    const { data } = await axiosInstance.get(`/student-cards/qr/${encodeURIComponent(qrToken)}`)
-    if (data && data.success && data.data) {
-      const studentData = data.data
-      const firstCard = studentData.cards ? studentData.cards[0] : null
-      return {
-        valid: true,
-        student: {
-          id: studentData.id,
-          student_id_no: studentData.student_id_no,
-          full_name: studentData.full_name,
-          gender: studentData.gender,
-          photo_path: studentData.photo_path,
-          dob: studentData.dob,
-          province: studentData.province,
-          selection_batch_name: studentData.selection_batch?.name || studentData.selection_batch_name || 'N/A',
-          enrollment_status: studentData.enrollment_status,
-          intake_year: studentData.intake_year,
-          phone: studentData.phone,
-          email: studentData.email,
-          high_school: studentData.high_school,
-          qr_token: studentData.qr_token,
-        },
-        card: firstCard ? {
-          id: firstCard.id,
-          student_id: firstCard.student_id,
-          qr_token: firstCard.qr_token,
-          issue_date: firstCard.issued_date || firstCard.issued_at,
-          expired_date: firstCard.expired_date,
-          created_at: firstCard.created_at,
-          updated_at: firstCard.updated_at,
-        } : null
-      }
-    }
-    return {
-      valid: false,
-      student: {} as CardStudent,
-      card: null
-    }
+  /** Get available card templates */
+  async getTemplates(): Promise<CardTemplate[]> {
+    const { data } = await axiosInstance.get('/cards/templates')
+    return data.data as CardTemplate[]
   },
 
-  /** Verify student card by QR token */
-  async verify(qrToken: string): Promise<VerifyResult> {
-    const { data } = await axiosInstance.get(`/student-cards/verify/${encodeURIComponent(qrToken)}`)
-    if (data && data.success && data.data) {
-      const studentData = data.data
-      const firstCard = studentData.cards ? studentData.cards[0] : null
-      return {
-        valid: true,
-        student: {
-          id: studentData.id,
-          student_id_no: studentData.student_id_no,
-          full_name: studentData.full_name,
-          gender: studentData.gender,
-          photo_path: studentData.photo_path,
-          dob: studentData.dob,
-          province: studentData.province,
-          selection_batch_name: studentData.selection_batch?.name || studentData.selection_batch_name || 'N/A',
-          enrollment_status: studentData.enrollment_status,
-          intake_year: studentData.intake_year,
-          phone: studentData.phone,
-          email: studentData.email,
-          high_school: studentData.high_school,
-          qr_token: studentData.qr_token,
-        },
-        card: firstCard ? {
-          id: firstCard.id,
-          student_id: firstCard.student_id,
-          qr_token: firstCard.qr_token,
-          issue_date: firstCard.issued_date || firstCard.issued_at,
-          expired_date: firstCard.expired_date,
-          created_at: firstCard.created_at,
-          updated_at: firstCard.updated_at,
-        } : undefined
-      }
-    }
-    return {
-      valid: false,
-      message: data?.message || 'Invalid or expired QR token',
-    }
+  /** Get students by batch for card generation */
+  async getStudentsByBatch(batchId: number, filter?: 'all' | 'enrolled' | 'with_photo'): Promise<CardStudent[]> {
+    const params: { batch_id: number; filter?: string } = { batch_id: batchId }
+    if (filter) params.filter = filter
+    const { data } = await axiosInstance.get('/cards/students-by-batch', { params })
+    return data.data as CardStudent[]
+  },
+
+  /** Batch upload student photos */
+  async batchUploadPhotos(photos: Array<{ student_id: number; file: File }>): Promise<{
+    uploaded: Array<{ student_id: number; photo_path: string; url: string }>
+    failed: Array<{ student_id: number; error: string }>
+    total: number
+    success_count: number
+    failed_count: number
+  }> {
+    const formData = new FormData()
+    photos.forEach((photo, index) => {
+      formData.append(`photos[${index}][student_id]`, photo.student_id.toString())
+      formData.append(`photos[${index}][file]`, photo.file)
+    })
+
+    const { data } = await axiosInstance.post('/cards/batch-upload-photos', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return data.data
   },
 }

@@ -112,14 +112,14 @@ const photoSize = computed(() => {
 // Photo URL computation with backend URL prepended
 const photoUrl = computed(() => {
   if (localPhotoUrl.value) return localPhotoUrl.value
-  if (!currentStudent.value?.photo_path) return null
-  if (/^https?:\/\//i.test(currentStudent.value.photo_path)) return currentStudent.value.photo_path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  const path = currentStudent.value.photo_path
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
+  if (!props.student?.photo_path) return null
+  if (/^https?:\/\//i.test(props.student.photo_path)) return props.student.photo_path
+  // Use relative URL so Vite proxy handles it (same origin, no CORS issues)
+  // In production, /storage/ works if frontend/backend are on the same domain
+  const path = props.student.photo_path
+  if (path.startsWith('/storage/')) return path
+  if (path.startsWith('storage/')) return `/${path}`
+  return `/storage/${path.replace(/^\/+/, '')}`
 })
 
 // QR Code contents generated using qr_token (requirement 6)
@@ -209,25 +209,7 @@ function handleLogoChange(event: Event) {
   emit('logo-upload', file)
 }
 
-function toggleFlip() {
-  isFlipped.value = !isFlipped.value
-}
-
-// Fetch student details from API if not passed as a prop
-async function loadStudentData() {
-  if (!props.student) {
-    const studentId = route.params.studentId || route.query.studentId || route.params.id
-    if (studentId) {
-      await studentStore.fetchStudent(studentId as string)
-    }
-  }
-  generateQR()
-}
-
-// Lifecycle hooks
-onMounted(() => {
-  loadStudentData()
-})
+onMounted(() => { generateQR() })
 
 onUnmounted(() => {
   if (localPhotoUrl.value) URL.revokeObjectURL(localPhotoUrl.value)
@@ -261,37 +243,17 @@ watch(() => props.showBack, (val) => {
   <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoChange" />
   <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden" @change="handleLogoChange" />
 
-  <!-- Loading State (requirement 7) -->
-  <div v-if="isLoading" class="flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-2xl shadow" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px' }">
-    <Loader2 class="w-10 h-10 text-blue-500 animate-spin mb-3" />
-    <p class="text-sm text-gray-500 dark:text-gray-400 font-semibold">Loading Student Card...</p>
-  </div>
-
-  <!-- Error State (requirement 8) -->
-  <div v-else-if="errorMessage" class="flex flex-col items-center justify-center p-6 border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 rounded-2xl shadow text-center" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px' }">
-    <AlertCircle class="w-10 h-10 text-red-500 mb-3" />
-    <p class="text-sm font-bold text-red-700 dark:text-red-400 mb-1">Identity Check Error</p>
-    <p class="text-xs text-red-500 dark:text-red-400/80 mb-4 px-2">{{ errorMessage }}</p>
-    <button @click="loadStudentData" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow transition-colors">
-      <RefreshCw class="w-3.5 h-3.5" />
-      Retry
-    </button>
-  </div>
-
-  <!-- Main Card Container -->
-  <div v-else class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px', perspective: '1000px' }">
-    <div
-      class="card-inner relative w-full h-full"
-      :class="{ flipped: isFlipped }"
-      :style="{ transformStyle: 'preserve-3d', transition: 'transform 0.5s ease' }"
-    >
+  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px' }">
+    <div class="card-inner relative w-full h-full">
       <!-- ══ FRONT ══ -->
-      <div class="card-face absolute inset-0">
+      <div v-if="!isFlipped" class="card-face w-full h-full">
 
         <!-- ── CLASSIC ── -->
         <div v-if="layout === 'classic'"
-          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow"
-          :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
+          :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
+          :style="{ background: '#fff' }"
+          :data-student-card="student?.id"
         >
           <!-- Header bar -->
           <div class="bg-[#1e3a5f] px-4 py-2.5">
@@ -316,10 +278,13 @@ watch(() => props.showBack, (val) => {
             <div @click="handlePhotoClick"
               class="rounded-2xl overflow-hidden border-2 border-gray-200 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
-              <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
+                <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
+              </div>
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center rounded-full">
+                <svg class="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
                 </svg>
               </div>
             </div>
@@ -362,15 +327,22 @@ watch(() => props.showBack, (val) => {
             </div>
           </div>
 
-          <button @click="toggleFlip" class="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium bg-white/90 text-gray-600 hover:bg-white hover:text-gray-700 transition cursor-pointer shadow-md border border-gray-200">
-            Show Back
-          </button>
+
+
+          <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100">
+            <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
+            <button @click="emit('generate', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer">Generate</button>
+            <button @click="emit('reprint', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition cursor-pointer">Reprint</button>
+            <button @click="emit('download', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 transition cursor-pointer">PDF</button>
+          </div>
         </div>
 
         <!-- ── MODERN ── -->
         <div v-if="layout === 'modern'"
-          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow"
-          :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
+          :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
+          :style="{ background: '#fff' }"
+          :data-student-card="student?.id"
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-4 py-2.5">
             <div class="flex items-center gap-3">
@@ -391,10 +363,13 @@ watch(() => props.showBack, (val) => {
             <div @click="handlePhotoClick"
               class="rounded-2xl overflow-hidden border-[3px] border-white shadow bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
-              <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-300 to-blue-500">
+                <span class="font-bold text-white drop-shadow-sm" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
+              </div>
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center rounded-full">
+                <svg class="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
                 </svg>
               </div>
             </div>
@@ -433,16 +408,22 @@ watch(() => props.showBack, (val) => {
             </div>
           </div>
 
-          <button @click="toggleFlip" class="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium bg-white/90 text-gray-600 hover:bg-white hover:text-gray-700 transition cursor-pointer shadow-md border border-gray-200">
-            Show Back
-          </button>
+
+
+          <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100 bg-white">
+            <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
+            <button @click="emit('generate', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer">Generate</button>
+            <button @click="emit('reprint', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition cursor-pointer">Reprint</button>
+            <button @click="emit('download', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 transition cursor-pointer">PDF</button>
+          </div>
         </div>
 
         <!-- ── PREMIUM ── -->
         <div v-if="layout === 'premium'"
-          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden shadow"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
+          :class="generated ? 'border-amber-300 shadow-md' : 'border-gray-200/60 dark:border-gray-600/60 shadow'"
           :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
-          :class="generated ? 'border-amber-300' : 'border-gray-200/60 dark:border-gray-600/60'"
+          :data-student-card="student?.id"
         >
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-4 pt-2.5 pb-2">
@@ -465,10 +446,13 @@ watch(() => props.showBack, (val) => {
               <div @click="handlePhotoClick"
                 class="rounded-2xl overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer group relative"
                 :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-                <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
-                <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 text-amber-400">
-                  <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-600 to-amber-800">
+                  <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
+                </div>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center rounded-full">
+                  <svg class="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
                   </svg>
                 </div>
               </div>
@@ -586,10 +570,9 @@ watch(() => props.showBack, (val) => {
             </div>
           </div>
 
-          <button @click="toggleFlip" class="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-medium bg-white/90 text-gray-600 hover:bg-white hover:text-gray-700 transition cursor-pointer shadow-md border border-gray-200">
-            Show Back
-          </button>
-        </div>
+          <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
+
+
 
         <!-- ── CORPORATE-BLUE ── -->
         <div v-if="layout === 'corporate-blue'"
@@ -823,12 +806,14 @@ watch(() => props.showBack, (val) => {
       </div>
 
       <!-- ══ BACK ══ -->
-      <div class="card-face absolute inset-0">
+      <div v-else class="card-face w-full h-full">
 
         <!-- ── BACK: CLASSIC ── -->
         <div v-if="layout === 'classic'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
+          :style="{ background: '#fff' }"
+          :data-student-card-back="student?.id"
         >
           <div class="bg-[#1e3a5f] px-3.5 py-2.5">
             <div class="flex items-center gap-2">
@@ -869,10 +854,8 @@ watch(() => props.showBack, (val) => {
                 <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
               </div>
             </div>
-            <p class="text-center text-gray-400 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-600 transition cursor-pointer border border-gray-200">
-              Show Front
-            </button>
+            <div class="flex-1"></div>
+            <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
           </div>
         </div>
 
@@ -880,6 +863,8 @@ watch(() => props.showBack, (val) => {
         <div v-if="layout === 'modern'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
+          :style="{ background: '#fff' }"
+          :data-student-card-back="student?.id"
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-3">
             <div class="flex items-center gap-2">
@@ -920,10 +905,8 @@ watch(() => props.showBack, (val) => {
                 <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
               </div>
             </div>
-            <p class="text-center text-gray-400 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-600 transition cursor-pointer border border-gray-200">
-              Show Front
-            </button>
+            <div class="flex-1"></div>
+            <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
           </div>
         </div>
 
@@ -932,6 +915,7 @@ watch(() => props.showBack, (val) => {
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300' : 'border-gray-200/60 dark:border-gray-600/60'"
           :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
+          :data-student-card-back="student?.id"
         >
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-3.5 pt-2.5 pb-2">
@@ -974,10 +958,9 @@ watch(() => props.showBack, (val) => {
                 <p class="text-[10px] font-bold text-amber-200">{{ computedExpiredDate }}</p>
               </div>
             </div>
-            <p class="text-center text-amber-400/30 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-medium bg-white/10 text-amber-300/70 hover:bg-white/20 hover:text-amber-300 transition cursor-pointer border border-amber-400/15">
-              Show Front
-            </button>
+            <div class="flex-1"></div>
+            <p class="text-center text-amber-400/20 text-[6px] font-medium">Property of PNC Cambodia</p>
+
           </div>
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
         </div>
@@ -1224,20 +1207,8 @@ watch(() => props.showBack, (val) => {
 .card-wrap {
   display: inline-block;
 }
-.card-inner {
-  transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-inner.flipped {
-  transform: rotateY(180deg);
-}
 .card-face {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   border-radius: 0.75rem;
   overflow: hidden;
-}
-.card-face:last-child {
-  transform: rotateY(180deg);
 }
 </style>

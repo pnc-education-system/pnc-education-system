@@ -7,6 +7,7 @@ import { cardsApi, type CardStudent } from '@/services/api/cards'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 import StudentCard from '@/components/cards/StudentCard.vue'
+import { generateCardPDF } from '@/utils/pdfGenerator'
 
 import {
   Search,
@@ -106,6 +107,9 @@ const isGenerating = ref(false)
 const isBatchGenerating = ref(false)
 const isReprinting = ref(false)
 const generationProgress = ref(0)
+
+// ── Dynamic card for generation ──
+const generatingStudentId = ref<number | null>(null)
 
 // ── Card side toggle ──
 const showCardBack = ref(false)
@@ -235,9 +239,32 @@ function toggleStudent(id: number) {
 // ── Card Generation ──
 async function handleGenerate(studentId: number) {
   isGenerating.value = true
+  generatingStudentId.value = studentId
+  // Wait for Vue to render the hidden card for this student
+  await nextTick()
+  // Small delay for DOM to settle and images to load
+  await new Promise(r => setTimeout(r, 150))
+
   try {
-    // The backend generate method already creates the card record
-    const result = await cardsApi.generate(studentId)
+    // Find the card element for this student
+    const cardElement = document.querySelector(`[data-student-card="${studentId}"]`) as HTMLElement
+    console.log('Card element found:', cardElement, 'for student ID:', studentId)
+
+    if (!cardElement) {
+      showErrorToast('Card element not found. Please try again.', 'Generation Failed')
+      return
+    }
+
+    // Generate PDF from the card element
+    console.log('Generating PDF from card element...')
+    const pdfBlob = await generateCardPDF(cardElement, students.value.find((s) => s.id === studentId)?.student_id_no || String(studentId))
+    console.log('PDF generated, size:', pdfBlob.size, 'type:', pdfBlob.type)
+
+    // Send PDF to backend
+    console.log('Sending PDF to backend...')
+    const result = await cardsApi.generate(studentId, pdfBlob)
+    console.log('Backend response:', result)
+
     if (result.status === 'success') {
       generatedCards.value.add(studentId)
       // Update the student with the QR token from the response
@@ -249,10 +276,12 @@ async function handleGenerate(studentId: number) {
     } else {
       showErrorToast(result.error || 'Failed to generate card.', 'Generation Failed')
     }
-  } catch {
+  } catch (error) {
+    console.error('Card generation error:', error)
     showErrorToast('Failed to generate card. Please try again.', 'Generation Failed')
   } finally {
     isGenerating.value = false
+    generatingStudentId.value = null
   }
 }
 
@@ -343,11 +372,13 @@ async function handleBatchReprint() {
 async function handleDownload(studentId: number) {
   try {
     const blob = await cardsApi.downloadPdf(studentId)
+    console.log('Download blob size:', blob.size, 'type:', blob.type)
     const student = students.value.find((s) => s.id === studentId)
     const filename = `ID_Card_${student?.student_id_no || studentId}.pdf`
     downloadBlob(blob, filename)
     showSuccessToast('Card PDF downloaded.', 'Download Complete')
-  } catch {
+  } catch (error) {
+    console.error('Download error:', error)
     showErrorToast('Failed to download card PDF.', 'Download Failed')
   }
 }
@@ -410,10 +441,13 @@ function downloadBlob(blob: Blob, filename: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  a.style.display = 'none'
   document.body.appendChild(a)
   a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 100)
 }
 
 function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
@@ -831,6 +865,18 @@ onUnmounted(() => {
         </div>
       </div>
     </transition>
+
+    <!-- Hidden card element for generation (offscreen, not visible to user) -->
+    <div v-if="generatingStudentId" class="fixed" style="left: -9999px; top: 0; z-index: -1; opacity: 0.999;">
+      <StudentCard
+        :student="students.find(s => s.id === generatingStudentId) || null"
+        :layout="selectedLayout"
+        size="sm"
+        :schoolLogo="schoolLogoUrl"
+        @photo-upload="handlePhotoUpload"
+        @logo-upload="handleLogoUpload"
+      />
+    </div>
 
     <!-- Preview Modal -->
     <Teleport to="body">
