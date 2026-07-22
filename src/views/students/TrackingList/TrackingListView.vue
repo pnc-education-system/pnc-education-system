@@ -366,10 +366,6 @@ function navigateToRecords(student: Student) {
   })
 }
 
-function navigateToImport() {
-  router.push('/enrollment')
-}
-
 function openAddStudentModal() {
   showAddStudentModal.value = true
 }
