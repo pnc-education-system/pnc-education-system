@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { cardsApi, type CardStudent } from '@/services/api/cards'
+import { studentsApi } from '@/services/api/students'
 import { CheckCircle, GraduationCap, MapPin, Calendar, User, Loader2, AlertCircle } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -10,17 +11,22 @@ const student = ref<CardStudent | null>(null)
 const loading = ref(true)
 const error = ref('')
 
-// Try to fetch full student data from the API
+// Fetch verified student data from the public API by numeric ID
 async function fetchStudent() {
   loading.value = true
   error.value = ''
   try {
-    const data = await cardsApi.getByStudentIdNo(studentId.value)
-    student.value = data
-  } catch {
-    // If API fails, we still show the query params data
+    const numericId = Number(studentId.value)
+    if (isNaN(numericId)) {
+      throw new Error('Invalid student ID')
+    }
+    const data = await cardsApi.verifyById(numericId)
+    student.value = data as CardStudent
+  } catch (err: unknown) {
+    console.error('Failed to load student:', err)
     student.value = null
-    error.value = 'Could not load full details. Showing available information.'
+    const axiosErr = err as { response?: { status?: number; data?: { message?: string } } }
+    error.value = axiosErr.response?.data?.message || 'Could not load student details.'
   } finally {
     loading.value = false
   }

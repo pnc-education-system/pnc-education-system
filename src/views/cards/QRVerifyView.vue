@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Search, ScanLine, CheckCircle, ExternalLink, Copy, Info } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import { cardsApi } from '@/services/api/cards'
+
+const { t } = useI18n()
 
 const { showSuccessToast, showErrorToast } = useToast()
 
@@ -15,14 +19,43 @@ const verifyResult = ref<{
   timestamp: string
 } | null>(null)
 const searching = ref(false)
+const showMoreVerifications = ref(false)
 
-// Mock recent verifications
-const recentVerifications = ref([
-  { name: 'Sok Chan', studentId: 'STU-2025-0123', status: 'verified', date: '2026-07-19', time: '14:32' },
-  { name: 'Chea Rithy', studentId: 'STU-2025-0089', status: 'verified', date: '2026-07-19', time: '11:15' },
-  { name: 'Srey Neang', studentId: 'STU-2024-0456', status: 'failed', date: '2026-07-18', time: '09:47' },
-  { name: 'Vannak Phirum', studentId: 'STU-2025-0234', status: 'verified', date: '2026-07-18', time: '08:02' },
-])
+// Recent verifications loaded from session storage
+const recentVerifications = ref<Array<{
+  name: string
+  studentId: string
+  status: string
+  date: string
+  time: string
+}>>(loadRecentVerifications())
+
+const displayedVerifications = computed(() => {
+  return showMoreVerifications.value ? recentVerifications.value : recentVerifications.value.slice(0, 5)
+})
+
+function loadRecentVerifications() {
+  try {
+    const stored = sessionStorage.getItem('recentVerifications')
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function saveRecentVerification(item: { name: string; studentId: string; status: string }) {
+  const entry = {
+    ...item,
+    date: new Date().toLocaleDateString('en-CA'),
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+  }
+  recentVerifications.value = [entry, ...recentVerifications.value].slice(0, 20)
+  try {
+    sessionStorage.setItem('recentVerifications', JSON.stringify(recentVerifications.value))
+  } catch {
+    // ignore storage errors
+  }
+}
 
 const baseUrl = computed(() => window.location.origin)
 
@@ -34,25 +67,55 @@ const generatedVerifyLink = computed(() => {
 async function handleVerify() {
   const id = studentIdInput.value.trim()
   if (!id) {
-    showErrorToast('Please enter a Student ID.', 'Input Required')
+    showErrorToast(t('qr_verify.input_required'), 'Input Required')
     return
   }
 
   searching.value = true
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 800))
+  verifyResult.value = null
 
-  // Mock result
-  verifyResult.value = {
-    name: 'Sok Chan',
-    studentId: id,
-    status: 'enrolled',
-    batch: '2025 Intake Batch 1',
-    year: '2025',
-    timestamp: new Date().toISOString(),
+  try {
+    // Try numeric ID first, then fall back to student_id_no
+    let student
+    const numericId = Number(id)
+    if (!isNaN(numericId)) {
+      student = await cardsApi.verifyById(numericId)
+    } else {
+      student = await cardsApi.getByStudentIdNo(id)
+    }
+
+    verifyResult.value = {
+      name: student.full_name,
+      studentId: student.student_id_no,
+      status: student.enrollment_status?.toLowerCase() || 'unknown',
+      batch: student.selection_batch_name || '—',
+      year: String(student.intake_year || ''),
+      timestamp: new Date().toISOString(),
+    }
+
+    saveRecentVerification({
+      name: student.full_name,
+      studentId: student.student_id_no,
+      status: 'verified',
+    })
+
+    showSuccessToast(t('qr_verify.verified_success'), t('qr_verify.verified'))
+  } catch (error: unknown) {
+    console.error('Verification error:', error)
+    const axiosError = error as { response?: { status?: number; data?: { message?: string } } }
+    const msg = axiosError.response?.data?.message || t('qr_verify.student_not_found')
+    showErrorToast(msg, t('qr_verify.verification_failed'))
+
+    saveRecentVerification({
+      name: id,
+      studentId: id,
+      status: 'failed',
+    })
+
+    verifyResult.value = null
+  } finally {
+    searching.value = false
   }
-  searching.value = false
-  showSuccessToast('Student identity verified successfully.', 'Verified')
 }
 
 function copyLink() {
@@ -77,8 +140,8 @@ function getStatusStyle(status: string) {
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">QR Verify</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Verify student identities through QR codes and generate verification links.</p>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{{ t('qr_verify.title') }}</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('qr_verify.subtitle') }}</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -89,7 +152,7 @@ function getStatusStyle(status: string) {
           <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-2">
               <ScanLine :size="18" class="text-blue-500" />
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Verify Student Identity</h2>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('qr_verify.verify_student') }}</h2>
             </div>
           </div>
           <div class="p-5 space-y-4">
@@ -100,7 +163,7 @@ function getStatusStyle(status: string) {
                 <input
                   v-model="studentIdInput"
                   type="text"
-                  placeholder="Enter Student ID (e.g., STU-2025-0123)"
+                  :placeholder="t('qr_verify.placeholder')"
                   class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                   @keyup.enter="handleVerify"
                 />
@@ -111,7 +174,7 @@ function getStatusStyle(status: string) {
                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
                 <CheckCircle :size="16" />
-                {{ searching ? 'Verifying...' : 'Verify' }}
+                {{ searching ? t('qr_verify.verifying') : t('qr_verify.verify') }}
               </button>
             </div>
 
@@ -127,23 +190,23 @@ function getStatusStyle(status: string) {
               <div v-if="verifyResult" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl p-4 space-y-3">
                 <div class="flex items-center gap-2">
                   <CheckCircle :size="18" class="text-emerald-500" />
-                  <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Student Found</span>
+                  <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{{ t('qr_verify.student_found') }}</span>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Full Name</p>
+                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.full_name') }}</p>
                     <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.name }}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Student ID</p>
+                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.student_id') }}</p>
                     <p class="text-sm font-mono font-semibold text-gray-900 dark:text-white">{{ verifyResult.studentId }}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Batch</p>
+                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.batch') }}</p>
                     <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.batch }}</p>
                   </div>
                   <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</p>
+                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.status') }}</p>
                     <span
                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mt-0.5"
                       :class="getStatusStyle(verifyResult.status).bg + ' ' + getStatusStyle(verifyResult.status).text"
@@ -162,12 +225,12 @@ function getStatusStyle(status: string) {
           <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-2">
               <ExternalLink :size="18" class="text-purple-500" />
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Generate Verification Link</h2>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('qr_verify.generate_link') }}</h2>
             </div>
           </div>
           <div class="p-5 space-y-4">
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              Enter a Student ID to generate a shareable verification link. Students can scan the QR code on their card to verify their identity.
+              {{ t('qr_verify.generate_description') }}
             </p>
             <div v-if="generatedVerifyLink" class="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
               <code class="flex-1 text-xs font-mono text-gray-700 dark:text-gray-300 truncate">{{ generatedVerifyLink }}</code>
@@ -179,7 +242,7 @@ function getStatusStyle(status: string) {
                 <Copy :size="14" />
               </button>
             </div>
-            <p v-else class="text-xs text-gray-400 italic">Enter a Student ID above to generate a link.</p>
+            <p v-else class="text-xs text-gray-400 italic">{{ t('qr_verify.enter_id_hint') }}</p>
           </div>
         </div>
       </div>
@@ -190,12 +253,12 @@ function getStatusStyle(status: string) {
           <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center gap-2">
               <Info :size="16" class="text-gray-400" />
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Recent Verifications</h2>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('qr_verify.recent_verifications') }}</h2>
             </div>
           </div>
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
             <div
-              v-for="item in recentVerifications"
+              v-for="item in displayedVerifications"
               :key="item.studentId"
               class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors"
             >
@@ -216,29 +279,37 @@ function getStatusStyle(status: string) {
             </div>
           </div>
           <div v-if="recentVerifications.length === 0" class="px-5 py-8 text-center">
-            <p class="text-xs text-gray-400">No recent verifications.</p>
+            <p class="text-xs text-gray-400">{{ t('qr_verify.no_recent') }}</p>
+          </div>
+          <div v-if="recentVerifications.length > 5" class="px-5 py-3 text-center border-t border-gray-100 dark:border-gray-700">
+            <button
+              @click="showMoreVerifications = !showMoreVerifications"
+              class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            >
+              {{ showMoreVerifications ? t('qr_verify.show_less') : t('qr_verify.show_more') }}
+            </button>
           </div>
         </div>
 
         <!-- Info Card -->
         <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 rounded-xl border border-blue-200 dark:border-blue-500/20 p-4">
-          <h3 class="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-2">How QR Verify Works</h3>
+          <h3 class="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-2">{{ t('qr_verify.how_it_works') }}</h3>
           <ol class="space-y-2 text-xs text-blue-600/80 dark:text-blue-300/70">
             <li class="flex items-start gap-1.5">
               <span class="font-bold">1.</span>
-              <span>Each student ID card has a unique QR code printed on it.</span>
+              <span>{{ t('qr_verify.step1') }}</span>
             </li>
             <li class="flex items-start gap-1.5">
               <span class="font-bold">2.</span>
-              <span>Scan the QR code with any smartphone camera to open the verification page.</span>
+              <span>{{ t('qr_verify.step2') }}</span>
             </li>
             <li class="flex items-start gap-1.5">
               <span class="font-bold">3.</span>
-              <span>The page displays the student's identity details for visual verification.</span>
+              <span>{{ t('qr_verify.step3') }}</span>
             </li>
             <li class="flex items-start gap-1.5">
               <span class="font-bold">4.</span>
-              <span>You can also generate a verification link here to test or share manually.</span>
+              <span>{{ t('qr_verify.step4') }}</span>
             </li>
           </ol>
         </div>

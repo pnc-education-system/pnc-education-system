@@ -45,7 +45,7 @@ export const cardsApi = {
 
   /** Generate a single student ID card */
   async generate(studentId: number): Promise<CardGenerationResult> {
-    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`)
+    const { data } = await axiosInstance.post('/student-cards', { student_id: studentId })
     return data.data as CardGenerationResult
   },
 
@@ -85,15 +85,25 @@ export const cardsApi = {
     return data as Blob
   },
 
-  /** Get student details by student_id_no (public — used for QR verification) */
+  /** Get student details by student_id_no (public endpoint for verification) */
   async getByStudentIdNo(studentIdNo: string): Promise<CardStudent> {
-    const { data } = await axiosInstance.get(`/students/verify/${encodeURIComponent(studentIdNo)}`)
+    const { data } = await axiosInstance.get(
+      '/student-cards/student/' + encodeURIComponent(studentIdNo)
+    )
     return (data.data ?? data) as CardStudent
   },
 
   /** Verify QR token and return student profile */
   async verifyQrToken(qrToken: string): Promise<CardStudent> {
-    const { data } = await axiosInstance.get(`/cards/verify/${encodeURIComponent(qrToken)}`)
+    const { data } = await axiosInstance.get(
+      '/cards/verify/' + encodeURIComponent(qrToken)
+    )
+    return (data.data ?? data) as CardStudent
+  },
+
+  /** Get student details by numeric ID (public endpoint for verification page) */
+  async verifyById(studentId: number): Promise<CardStudent> {
+    const { data } = await axiosInstance.get(`/students/verify/${studentId}`)
     return (data.data ?? data) as CardStudent
   },
 }
