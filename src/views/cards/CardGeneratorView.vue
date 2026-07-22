@@ -48,8 +48,8 @@ const schoolLogoUrl = ref<string | null>(localStorage.getItem('card_school_logo'
 
 // ── Template Selection (persisted to localStorage) ──
 const savedLayout = localStorage.getItem('card_template_preference')
-const selectedLayout = ref<'classic' | 'modern' | 'premium'>(
-  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium') ? savedLayout : 'classic'
+const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'>(
+  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium' || savedLayout === 'corporate' || savedLayout === 'corporate-blue' || savedLayout === 'corporate-yellow' || savedLayout === 'official') ? savedLayout : 'classic'
 )
 
 watch(selectedLayout, (val) => {
@@ -75,6 +75,30 @@ const templates = [
     description: 'Elegant dark design with gold accents',
     popular: false,
   },
+  {
+    id: 'corporate' as const,
+    name: 'Corporate',
+    description: 'Professional design with curved accents',
+    popular: false,
+  },
+  {
+    id: 'corporate-blue' as const,
+    name: 'Corporate Blue',
+    description: 'Professional blue corporate style',
+    popular: false,
+  },
+  {
+    id: 'corporate-yellow' as const,
+    name: 'Corporate Yellow',
+    description: 'Professional yellow corporate style',
+    popular: false,
+  },
+  {
+    id: 'official' as const,
+    name: 'Official',
+    description: 'Blue & gold badge style with barcode',
+    popular: false,
+  },
 ] as const
 
 // ── Generation State ──
@@ -85,6 +109,7 @@ const generationProgress = ref(0)
 
 // ── Card side toggle ──
 const showCardBack = ref(false)
+const showPreviewCardBack = ref(false)
 
 // ── Toast ──
 const { showSuccessToast, showErrorToast } = useToast()
@@ -114,7 +139,7 @@ const selectedCount = computed(() => selectedStudentIds.value.size)
 
 // ── Demo Student for Live Preview ──
 const previewDemoStudent = computed<CardStudent | null>(() => {
-  if (students.value.length > 0) return students.value[0]
+  if (students.value.length > 0) return students.value[0] || null
   return null
 })
 
@@ -211,9 +236,15 @@ function toggleStudent(id: number) {
 async function handleGenerate(studentId: number) {
   isGenerating.value = true
   try {
+    // The backend generate method already creates the card record
     const result = await cardsApi.generate(studentId)
     if (result.status === 'success') {
       generatedCards.value.add(studentId)
+      // Update the student with the QR token from the response
+      const student = students.value.find((s) => s.id === studentId)
+      if (student && result.qr_data) {
+        student.qr_token = result.qr_data
+      }
       showSuccessToast(`Card generated for ${students.value.find((s) => s.id === studentId)?.full_name || 'student'}.`, 'Card Generated')
     } else {
       showErrorToast(result.error || 'Failed to generate card.', 'Generation Failed')
@@ -235,12 +266,19 @@ async function handleBatchGenerate() {
   generationProgress.value = 0
   try {
     const ids = Array.from(selectedStudentIds.value)
+    
+    // The backend batchGenerate method already creates card records
     const result = await cardsApi.batchGenerate(ids)
 
     let successCount = 0
     result.results.forEach((r) => {
       if (r.status === 'success') {
         generatedCards.value.add(r.student_id)
+        // Update the student with the QR token from the response
+        const student = students.value.find((s) => s.id === r.student_id)
+        if (student && r.qr_data) {
+          student.qr_token = r.qr_data
+        }
         successCount++
       }
     })
@@ -378,7 +416,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-function getStatusStyle(status: string) {
+function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
   const styles: Record<string, { bg: string; text: string; dot: string }> = {
     enrolled: { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
     pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316' },
@@ -386,7 +424,7 @@ function getStatusStyle(status: string) {
     rejected: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
     dropped: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
   }
-  return styles[status] || styles.pending
+  return (styles[status] || styles.pending) as { bg: string; text: string; dot: string }
 }
 
 function getInitials(name: string): string {
@@ -457,7 +495,7 @@ onUnmounted(() => {
         <!-- Current Template Badge -->
         <div class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
           <span class="w-2 h-2 rounded-full"
-            :class="selectedLayout === 'classic' ? 'bg-blue-500' : selectedLayout === 'modern' ? 'bg-indigo-500' : 'bg-amber-500'"
+            :class="selectedLayout === 'classic' ? 'bg-blue-500' : selectedLayout === 'modern' ? 'bg-indigo-500' : selectedLayout === 'premium' ? 'bg-amber-500' : selectedLayout === 'corporate' ? 'bg-green-500' : selectedLayout === 'corporate-blue' ? 'bg-blue-600' : selectedLayout === 'corporate-yellow' ? 'bg-yellow-500' : 'bg-[#1B3FA0]'"
           ></span>
           <span class="capitalize font-semibold">{{ selectedLayout }}</span>
           <span class="text-gray-300 dark:text-gray-600">|</span>
@@ -566,7 +604,7 @@ onUnmounted(() => {
                   ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
                   : 'bg-transparent border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
               >
-                <span class="w-1.5 h-1.5 rounded-full" :class="tpl.id === 'classic' ? 'bg-blue-500' : tpl.id === 'modern' ? 'bg-indigo-500' : 'bg-amber-500'"></span>
+                <span class="w-1.5 h-1.5 rounded-full" :class="tpl.id === 'classic' ? 'bg-blue-500' : tpl.id === 'modern' ? 'bg-indigo-500' : tpl.id === 'premium' ? 'bg-amber-500' : tpl.id === 'corporate' ? 'bg-green-500' : tpl.id === 'corporate-blue' ? 'bg-blue-600' : tpl.id === 'corporate-yellow' ? 'bg-yellow-500' : 'bg-[#1B3FA0]'"></span>
                 <span class="font-semibold">{{ tpl.name }}</span>
                 <span v-if="tpl.popular && selectedLayout !== tpl.id" class="text-[8px] text-indigo-400">★</span>
                 <span v-if="selectedLayout === tpl.id" class="text-blue-600 dark:text-blue-400">✓</span>
@@ -821,11 +859,25 @@ onUnmounted(() => {
 
           <div class="p-5 flex flex-col lg:flex-row gap-5">
             <div class="flex-shrink-0 flex flex-col items-center">
+              <!-- Front / Back Toggle -->
+              <div class="flex items-center gap-0.5 bg-gray-200/70 dark:bg-gray-700/50 rounded-lg p-0.5 mb-3">
+                <button
+                  @click="showPreviewCardBack = false"
+                  class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
+                  :class="!showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                >Front</button>
+                <button
+                  @click="showPreviewCardBack = true"
+                  class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
+                  :class="showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                >Back</button>
+              </div>
               <StudentCard
                 :student="previewStudent"
                 :layout="selectedLayout"
                 size="lg"
                 :generated="generatedCards.has(previewStudent.id)"
+                :showBack="showPreviewCardBack"
                 :schoolLogo="schoolLogoUrl"
                 @photo-upload="handlePhotoUpload"
                 @logo-upload="handleLogoUpload"

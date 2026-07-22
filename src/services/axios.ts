@@ -9,7 +9,14 @@ const axiosInstance = axios.create({
   },
 })
 
-const PUBLIC_ENDPOINTS = ['/auth/login', '/auth/password/reset', '/auth/password/reset/confirm', '/students/verify']
+const PUBLIC_ENDPOINTS = [
+  '/auth/login',
+  '/auth/password/reset',
+  '/auth/password/reset/confirm',
+  '/students/verify',
+  '/student-cards/verify',
+  '/student-cards/qr',
+]
 
 function isPublicEndpoint(url: string | undefined): boolean {
   if (!url) return false

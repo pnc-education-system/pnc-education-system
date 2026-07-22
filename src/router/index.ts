@@ -155,7 +155,7 @@ const routes: RouteRecordRaw[] = [
   },
 
   {
-    path: '/verify/:studentId',
+    path: '/verify/:token',
     name: 'StudentVerify',
     component: () => import('@/views/cards/StudentVerifyView.vue'),
     meta: { requiresAuth: false },

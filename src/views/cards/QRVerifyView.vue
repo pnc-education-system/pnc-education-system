@@ -1,28 +1,55 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Search, ScanLine, CheckCircle, ExternalLink, Copy, Info } from 'lucide-vue-next'
+import { Search, ScanLine, CheckCircle, ExternalLink, Copy, Info, XCircle } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import { cardsApi, type CardStudent } from '@/services/api/cards'
 
 const { showSuccessToast, showErrorToast } = useToast()
 
 const studentIdInput = ref('')
+const qrTokenInput = ref('')
 const verifyResult = ref<{
-  name: string
-  studentId: string
-  status: string
-  batch: string
-  year: string
-  timestamp: string
+  valid: boolean
+  student?: CardStudent
+  card?: any
+  message?: string
 } | null>(null)
 const searching = ref(false)
 
-// Mock recent verifications
-const recentVerifications = ref([
-  { name: 'Sok Chan', studentId: 'STU-2025-0123', status: 'verified', date: '2026-07-19', time: '14:32' },
-  { name: 'Chea Rithy', studentId: 'STU-2025-0089', status: 'verified', date: '2026-07-19', time: '11:15' },
-  { name: 'Srey Neang', studentId: 'STU-2024-0456', status: 'failed', date: '2026-07-18', time: '09:47' },
-  { name: 'Vannak Phirum', studentId: 'STU-2025-0234', status: 'verified', date: '2026-07-18', time: '08:02' },
-])
+// Recent verifications (stored in localStorage)
+const recentVerifications = ref<Array<{
+  name: string
+  studentId: string
+  status: string
+  date: string
+  time: string
+}>>(JSON.parse(localStorage.getItem('recent_verifications') || '[]'))
+
+function saveRecentVerification(student: CardStudent, valid: boolean) {
+  const now = new Date()
+  const dateStr: string = now.toISOString().split('T')[0] as string
+  const timeStr: string = now.toTimeString().split(' ')[0]?.slice(0, 5) as string || '00:00'
+  
+  const verification: {
+    name: string
+    studentId: string
+    status: string
+    date: string
+    time: string
+  } = {
+    name: student.full_name,
+    studentId: student.student_id_no,
+    status: valid ? 'verified' : 'failed',
+    date: dateStr,
+    time: timeStr,
+  }
+  
+  recentVerifications.value.unshift(verification)
+  if (recentVerifications.value.length > 10) {
+    recentVerifications.value = recentVerifications.value.slice(0, 10)
+  }
+  localStorage.setItem('recent_verifications', JSON.stringify(recentVerifications.value))
+}
 
 const baseUrl = computed(() => window.location.origin)
 
@@ -39,20 +66,80 @@ async function handleVerify() {
   }
 
   searching.value = true
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 800))
-
-  // Mock result
-  verifyResult.value = {
-    name: 'Sok Chan',
-    studentId: id,
-    status: 'enrolled',
-    batch: '2025 Intake Batch 1',
-    year: '2025',
-    timestamp: new Date().toISOString(),
+  try {
+    // Try to verify by QR token first (if it looks like a token)
+    if (id.includes('-') || id.length > 20) {
+      const result = await cardsApi.verify(id)
+      verifyResult.value = result
+      
+      if (result.valid && result.student) {
+        saveRecentVerification(result.student, true)
+        showSuccessToast('Student identity verified successfully.', 'Verified')
+      } else {
+        const fallbackStudent = { id: 0, student_id_no: id, full_name: 'Unknown', gender: 'N/A', enrollment_status: 'unknown' } as CardStudent
+        saveRecentVerification(fallbackStudent, false)
+        showErrorToast(result.message || 'Verification failed.', 'Verification Failed')
+      }
+    } else {
+      // Try to get student by student ID
+      const student = await cardsApi.getByStudentIdNo(id)
+      verifyResult.value = {
+        student,
+        valid: true,
+      }
+      saveRecentVerification(student, true)
+      showSuccessToast('Student identity verified successfully.', 'Verified')
+    }
+  } catch (err: unknown) {
+    const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiErr?.response?.data?.message || apiErr?.message || 'Student not found or verification failed.'
+    const fallbackStudent = { id: 0, student_id_no: id, full_name: 'Unknown', gender: 'N/A', enrollment_status: 'unknown' } as CardStudent
+    verifyResult.value = {
+      student: fallbackStudent,
+      valid: false,
+      message: errorMessage,
+    }
+    saveRecentVerification(fallbackStudent, false)
+    showErrorToast(errorMessage, 'Verification Failed')
+  } finally {
+    searching.value = false
   }
-  searching.value = false
-  showSuccessToast('Student identity verified successfully.', 'Verified')
+}
+
+async function handleVerifyByQrToken() {
+  const token = qrTokenInput.value.trim()
+  if (!token) {
+    showErrorToast('Please enter a QR Token.', 'Input Required')
+    return
+  }
+
+  searching.value = true
+  try {
+    const result = await cardsApi.verify(token)
+    verifyResult.value = result
+    
+    if (result.valid && result.student) {
+      saveRecentVerification(result.student, true)
+      showSuccessToast('QR code verified successfully.', 'Verified')
+    } else {
+      const fallbackStudent = { id: 0, student_id_no: token, full_name: 'Unknown', gender: 'N/A', enrollment_status: 'unknown' } as CardStudent
+      saveRecentVerification(fallbackStudent, false)
+      showErrorToast(result.message || 'QR verification failed.', 'Verification Failed')
+    }
+  } catch (err: unknown) {
+    const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiErr?.response?.data?.message || apiErr?.message || 'QR token not found or invalid.'
+    const fallbackStudent = { id: 0, student_id_no: token, full_name: 'Unknown', gender: 'N/A', enrollment_status: 'unknown' } as CardStudent
+    verifyResult.value = {
+      student: fallbackStudent,
+      valid: false,
+      message: errorMessage,
+    }
+    saveRecentVerification(fallbackStudent, false)
+    showErrorToast(errorMessage, 'Verification Failed')
+  } finally {
+    searching.value = false
+  }
 }
 
 function copyLink() {
@@ -68,8 +155,9 @@ function getStatusStyle(status: string) {
     pending: { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', label: 'Pending' },
     graduated: { bg: 'bg-purple-50 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', label: 'Graduated' },
     rejected: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Rejected' },
+    dropped: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Dropped' },
   }
-  return styles[status] || { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', label: status }
+  return styles[status.toLowerCase()] || { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', label: status }
 }
 </script>
 
@@ -124,34 +212,38 @@ function getStatusStyle(status: string) {
               leave-from-class="opacity-100 translate-y-0"
               leave-to-class="opacity-0 -translate-y-2"
             >
-              <div v-if="verifyResult" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl p-4 space-y-3">
+              <div v-if="verifyResult" :class="verifyResult.valid ? 'border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5' : 'border border-red-200 dark:border-red-500/30 bg-red-50/50 dark:bg-red-500/5'" class="rounded-xl p-4 space-y-3">
                 <div class="flex items-center gap-2">
-                  <CheckCircle :size="18" class="text-emerald-500" />
-                  <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Student Found</span>
+                  <CheckCircle v-if="verifyResult.valid" :size="18" class="text-emerald-500" />
+                  <XCircle v-else :size="18" class="text-red-500" />
+                  <span class="text-sm font-semibold" :class="verifyResult.valid ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'">
+                    {{ verifyResult.valid ? 'Student Found' : 'Verification Failed' }}
+                  </span>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div v-if="verifyResult.student" class="grid grid-cols-2 gap-3">
                   <div>
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Full Name</p>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.name }}</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.full_name }}</p>
                   </div>
                   <div>
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Student ID</p>
-                    <p class="text-sm font-mono font-semibold text-gray-900 dark:text-white">{{ verifyResult.studentId }}</p>
+                    <p class="text-sm font-mono font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.student_id_no }}</p>
                   </div>
                   <div>
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Batch</p>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.batch }}</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.selection_batch_name || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</p>
                     <span
                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mt-0.5"
-                      :class="getStatusStyle(verifyResult.status).bg + ' ' + getStatusStyle(verifyResult.status).text"
+                      :class="getStatusStyle(verifyResult.student.enrollment_status).bg + ' ' + getStatusStyle(verifyResult.student.enrollment_status).text"
                     >
-                      {{ getStatusStyle(verifyResult.status).label }}
+                      {{ getStatusStyle(verifyResult.student.enrollment_status).label }}
                     </span>
                   </div>
                 </div>
+                <p v-if="verifyResult.message" class="text-xs text-red-600 dark:text-red-400">{{ verifyResult.message }}</p>
               </div>
             </transition>
           </div>
