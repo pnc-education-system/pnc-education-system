@@ -84,9 +84,7 @@ export const cardsApi = {
     if (templateId) formData.append('template_id', String(templateId))
 
     const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': undefined as unknown as string },
     })
     return data.data as CardGenerationResult
   },
@@ -223,9 +221,7 @@ export const cardsApi = {
     })
 
     const { data } = await axiosInstance.post('/cards/batch-upload-photos', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': undefined as unknown as string },
     })
     return data.data
   },

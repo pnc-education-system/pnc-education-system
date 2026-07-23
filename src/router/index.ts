@@ -201,7 +201,7 @@ const router = createRouter({
   routes,
 })
 
-const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
+const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword', 'StudentVerify']
 router.beforeEach((to) => {
   const authStore = useAuthStore()
 
@@ -209,7 +209,9 @@ router.beforeEach((to) => {
     return { name: 'Login' }
   }
 
-  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string)) {
+  // Redirect authenticated users away from auth pages (login, forgot-password, etc.)
+  // but NOT from the public student verify page — that should work for everyone
+  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string) && to.name !== 'StudentVerify') {
     return { name: 'Dashboard' }
   }
 

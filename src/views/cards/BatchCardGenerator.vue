@@ -12,6 +12,9 @@ import { Check, X, ChevronDown, Download, Upload, Image as ImageIcon } from 'luc
 const { t } = useI18n()
 const { showSuccessToast, showErrorToast } = useToast()
 
+const allowedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
+const maxPhotoSizeBytes = 10 * 1024 * 1024 // 10 MB
+
 // State
 const selectedBatch = ref<number | null>(null)
 const selectedFilter = ref<'all' | 'enrolled' | 'with_photo'>('enrolled')
@@ -303,9 +306,22 @@ async function handleGenerate() {
       'Generation Complete'
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to generate batch cards:', error)
-    showErrorToast('Failed to generate batch cards. Check console for details.', 'Generation Failed')
+    
+    // Show specific validation error if available
+    if (error.response?.status === 422 && error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const errorMessages = Object.values(errors).flat()
+      showErrorToast(
+        `Validation failed: ${errorMessages.join(', ')}`,
+        'Batch Generation Failed'
+      )
+    } else if (error.response?.data?.message) {
+      showErrorToast(error.response.data.message, 'Batch Generation Failed')
+    } else {
+      showErrorToast('Failed to generate batch cards. Please try again.', 'Batch Generation Failed')
+    }
   } finally {
     isGenerating.value = false
     generationProgress.value = 0
@@ -329,6 +345,22 @@ function handlePhotoUpload(event: Event) {
   const files = Array.from(target.files || [])
 
   if (files.length === 0) return
+
+  // Validate each file before adding
+  const invalidFiles: string[] = []
+  for (const file of files) {
+    if (!allowedPhotoTypes.includes(file.type)) {
+      invalidFiles.push(`${file.name}: must be JPG, PNG, or WEBP`)
+    } else if (file.size > maxPhotoSizeBytes) {
+      invalidFiles.push(`${file.name}: must not be larger than 10MB`)
+    }
+  }
+
+  if (invalidFiles.length > 0) {
+    showErrorToast(invalidFiles.join('. '), 'Invalid Files')
+    target.value = ''
+    return
+  }
 
   // For simplicity, assign photos to students without photos in order
   const studentsWithoutPhotos = filteredStudents.value.filter(s => !s.photo_path)
@@ -486,7 +518,7 @@ onMounted(async () => {
           <input
             type="file"
             multiple
-            accept="image/jpeg,image/jpg,image/png"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
             @change="handlePhotoUpload"
             class="hidden"
             id="photo-upload-input"
@@ -500,7 +532,7 @@ onMounted(async () => {
               Click to select photos or drag and drop
             </span>
             <span class="text-xs text-gray-400">
-              JPEG, JPG, PNG up to 5MB each
+              JPEG, JPG, PNG, WEBP up to 10MB each
             </span>
           </label>
         </div>

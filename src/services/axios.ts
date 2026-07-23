@@ -14,8 +14,9 @@ const PUBLIC_ENDPOINTS = [
   '/auth/password/reset',
   '/auth/password/reset/confirm',
   '/students/verify',
-  '/student-cards/verify',
+  '/student-cards/student',
   '/student-cards/qr',
+  '/cards/verify',
 ]
 
 function isPublicEndpoint(url: string | undefined): boolean {
