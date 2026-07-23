@@ -2,6 +2,30 @@ import axiosInstance from '@/services/axios'
 import type { BackendStudent, StudentStatus, PaginatedData } from '@/types'
 
 export type EnrollmentStatusValue = 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped'
+export type StudentRecordCategory = 'general' | 'note' | 'incident' | 'achievement'
+
+export interface StudentRecord {
+  id: number
+  student_id: number
+  category: StudentRecordCategory
+  title: string
+  description: string
+  record_date: string
+  created_by: number | null
+  created_at: string
+  updated_at: string
+  creator?: {
+    id: number
+    name: string
+  } | null
+}
+
+export interface StudentRecordPayload {
+  category: StudentRecordCategory
+  title: string
+  description: string
+  record_date: string
+}
 
 export interface StudentFormPayload {
   student_id_no: string
@@ -22,14 +46,6 @@ export interface StudentFormPayload {
 export type CreateStudentPayload = StudentFormPayload
 export type UpdateStudentPayload = StudentFormPayload
 
-export interface StudentActivity {
-  id: string
-  type: 'status_change' | 'record_update' | 'evaluation'
-  title: string
-  description: string
-  performed_by: string
-  date: string
-}
 function isFormDataPayload(payload: unknown): payload is FormData {
   return payload instanceof FormData
 }
@@ -155,8 +171,23 @@ export const studentsApi = {
     })
     return data.data as { confirmed_count: number }
   },
-  async getHistory(id: number): Promise<StudentActivity[]> {
-    const { data } = await axiosInstance.get(`/students/${id}/history`)
-    return data.data as StudentActivity[]
+
+  async listRecords(studentId: number): Promise<StudentRecord[]> {
+    const { data } = await axiosInstance.get(`/students/${studentId}/records`)
+    return data.data as StudentRecord[]
+  },
+
+  async createRecord(studentId: number, payload: StudentRecordPayload): Promise<StudentRecord> {
+    const { data } = await axiosInstance.post(`/students/${studentId}/records`, payload)
+    return data.data as StudentRecord
+  },
+
+  async updateRecord(studentId: number, recordId: number, payload: StudentRecordPayload): Promise<StudentRecord> {
+    const { data } = await axiosInstance.put(`/students/${studentId}/records/${recordId}`, payload)
+    return data.data as StudentRecord
+  },
+
+  async deleteRecord(studentId: number, recordId: number): Promise<void> {
+    await axiosInstance.delete(`/students/${studentId}/records/${recordId}`)
   },
 }
