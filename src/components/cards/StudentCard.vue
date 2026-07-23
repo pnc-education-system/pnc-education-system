@@ -82,6 +82,16 @@ const displayStatus = computed(() => currentStudent.value?.enrollment_status || 
 const displayIntakeYear = computed(() => currentStudent.value?.intake_year ? String(currentStudent.value.intake_year) : 'N/A')
 const displayBatchName = computed(() => currentStudent.value?.selection_batch_name || currentStudent.value?.selection_batch?.name || 'N/A')
 
+const studentInitials = computed(() => {
+  const name = displayFullName.value
+  if (!name || name === 'N/A') return 'ST'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return name.substring(0, 2).toUpperCase()
+})
+
 // Compute school logo
 const schoolLogoUrl = computed(() => {
   if (localLogoUrl.value) return localLogoUrl.value
@@ -157,9 +167,9 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   dropped: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
 }
 
-function getStatusStyle(status: string) {
+function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
   const key = status?.toLowerCase() || 'pending'
-  return statusStyles[key] || statusStyles.pending
+  return statusStyles[key] || statusStyles.pending!
 }
 
 function capitalize(s: string) {

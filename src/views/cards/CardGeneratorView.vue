@@ -74,17 +74,19 @@ const schoolLogoUrl = ref<string | null>(localStorage.getItem('card_school_logo'
 const dbTemplates = ref<CardTemplate[]>([])
 const loadingTemplates = ref(false)
 const selectedTemplateId = ref<number | null>(null)
-const selectedLayout = ref<string>('classic')
+type CardLayoutKey = 'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'
+
+const selectedLayout = ref<CardLayoutKey>('classic')
 const cardStats = ref<CardStats | null>(null)
 
 // Determine the current layout key from the selected template
-const currentLayoutKey = computed(() => {
+const currentLayoutKey = computed<CardLayoutKey>(() => {
   if (selectedTemplateId.value) {
     const tpl = dbTemplates.value.find(t => t.id === selectedTemplateId.value)
-    if (tpl?.layout_key) return tpl.layout_key
+    if (tpl?.layout_key) return tpl.layout_key as CardLayoutKey
   }
   // fallback
-  const saved = localStorage.getItem('card_template_preference')
+  const saved = localStorage.getItem('card_template_preference') as CardLayoutKey | null
   return saved || 'classic'
 })
 
@@ -326,10 +328,11 @@ async function handleGenerate(studentId: number) {
     console.error('Card generation error:', error)
     // Try to extract meaningful error from axios error response
     const err = error as { response?: { data?: { error?: { message?: string } | string; message?: string } }; message?: string }
+    const errData = err?.response?.data
     const serverMsg =
-      err?.response?.data?.error?.message ||
-      (typeof err?.response?.data?.error === 'string' ? err?.response?.data?.error : null) ||
-      err?.response?.data?.message ||
+      (typeof errData?.error === 'object' && errData?.error !== null ? errData.error.message : null) ||
+      (typeof errData?.error === 'string' ? errData.error : null) ||
+      errData?.message ||
       err?.message
     const displayMsg = serverMsg || 'Failed to generate card. Please try again.'
     showErrorToast(displayMsg, 'Generation Failed')
@@ -350,8 +353,8 @@ async function handleBatchGenerate() {
   try {
     const ids = Array.from(selectedStudentIds.value)
 
-    // The backend batchGenerate method already creates card records
-    const result = await cardsApi.batchGenerate(ids)
+    // The backend batchGenerateByIds method creates card records for student IDs
+    const result = await cardsApi.batchGenerateByIds(ids)
 
     let successCount = 0
     result.results.forEach((r) => {

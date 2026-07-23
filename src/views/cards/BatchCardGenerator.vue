@@ -268,6 +268,7 @@ async function handleGenerate() {
 
     for (let i = 0; i < canvasImages.length; i++) {
       const canvas = canvasImages[i]
+      if (!canvas) continue
 
       // Calculate card image dimensions to fit cell while maintaining aspect ratio
       const cardAspect = canvas.width / canvas.height
