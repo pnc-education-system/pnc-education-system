@@ -111,7 +111,11 @@ export const studentsApi = {
   async update(id: number, payload: UpdateStudentPayload): Promise<BackendStudent> {
     if (hasPhotoPayload(payload)) {
       const formData = toFormData(payload)
-      const { data } = await axiosInstance.post(`/students/${id}`, formData)
+      const { data } = await axiosInstance.post(`/students/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
       return data.data as BackendStudent
     }
     const { data } = await axiosInstance.put(`/students/${id}`, payload)
@@ -186,7 +190,11 @@ export const studentsApi = {
   async uploadPhoto(id: number, photo: File): Promise<{ photo_url: string }> {
     const formData = new FormData()
     formData.append('photo', photo)
-    const { data } = await axiosInstance.post(`/students/${id}/photo`, formData)
+    const { data } = await axiosInstance.post(`/students/${id}/photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return data.data as { photo_url: string }
   },
 
