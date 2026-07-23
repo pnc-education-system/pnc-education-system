@@ -107,7 +107,7 @@ function formatTimelineDate(dateStr: string): string {
     <!-- Timeline List -->
     <div v-else class="relative pl-4 border-l border-gray-100 dark:border-gray-800 space-y-6 py-2 ml-4">
       <div
-        v-for="(item, index) in history"
+        v-for="(item) in history"
         :key="item.id"
         class="relative group"
       >

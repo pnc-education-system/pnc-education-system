@@ -1,60 +1,49 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { cardsApi, type CardStudent, type StudentCard } from '@/services/api/cards'
-import { CheckCircle, GraduationCap, MapPin, Calendar, User, Loader2, AlertCircle, Phone, Mail, School } from 'lucide-vue-next'
+import { cardsApi, type CardStudent } from '@/services/api/cards'
+import { CheckCircle, GraduationCap, MapPin, Calendar, User, Loader2, AlertCircle } from 'lucide-vue-next'
 
 const route = useRoute()
-const token = computed(() => (route.params.token as string) || '')
+const studentId = computed(() => (route.params.studentId as string) || '')
 const student = ref<CardStudent | null>(null)
-const card = ref<StudentCard | null>(null)
 const loading = ref(true)
 const error = ref('')
-const valid = ref(false)
-const photoError = ref(false)
 
-const errorHeader = computed(() => {
-  if (error.value === 'QR Code Expired') return 'QR Code Expired'
-  if (error.value === 'Student Not Found') return 'Student Not Found'
-  return 'Invalid QR Code'
-})
-
-const photoUrl = computed(() => {
-  if (!student.value?.photo_path) return ''
-  const path = student.value.photo_path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  if (path.startsWith('http://') || path.startsWith('https://')) return path
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
-})
-
-// Try to fetch full student data from the API using QR token
+// Fetch verified student data from the public API by numeric ID
 async function fetchStudent() {
   loading.value = true
   error.value = ''
-  photoError.value = false
   try {
-    const result = await cardsApi.verify(token.value)
-    valid.value = result.valid
-    if (result.valid && result.student) {
-      student.value = result.student
-      card.value = result.card
-    } else {
-      error.value = result.message || 'Invalid or expired QR token'
+    const numericId = Number(studentId.value)
+    if (isNaN(numericId)) {
+      throw new Error('Invalid student ID')
     }
+    const data = await cardsApi.verifyById(numericId)
+    student.value = data as CardStudent
   } catch (err: unknown) {
-    const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
-    error.value = apiErr?.response?.data?.message || apiErr?.message || 'Could not load student details'
-    valid.value = false
+    console.error('Failed to load student:', err)
+    student.value = null
+    const axiosErr = err as { response?: { status?: number; data?: { message?: string } } }
+    error.value = axiosErr.response?.data?.message || 'Could not load student details.'
   } finally {
     loading.value = false
   }
 }
 
+// Fallback data from URL query params
+const queryData = computed(() => ({
+  name: (route.query.name as string) || student.value?.full_name || 'Student',
+  gender: (route.query.gender as string) || student.value?.gender || '—',
+  batch: (route.query.batch as string) || student.value?.selection_batch_name || '—',
+  year: (route.query.year as string) || String(student.value?.intake_year || ''),
+  status: (route.query.status as string) || student.value?.enrollment_status || 'unknown',
+  dob: (route.query.dob as string) || student.value?.dob || '',
+  province: (route.query.province as string) || student.value?.province || '',
+}))
+
 const initials = computed(() => {
-  const name = student.value?.full_name
+  const name = queryData.value.name
   if (!name?.trim()) return 'ST'
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2)
 })
@@ -79,12 +68,7 @@ function getStatusStyle(status: string) {
 }
 
 onMounted(() => {
-  if (token.value) {
-    fetchStudent()
-  } else {
-    loading.value = false
-    error.value = 'No verification token provided'
-  }
+  fetchStudent()
 })
 </script>
 
@@ -108,7 +92,7 @@ onMounted(() => {
       </div>
 
       <!-- Student Card Display -->
-      <div v-if="!loading && valid && student" class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div v-if="!loading" class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <!-- Top gradient bar -->
         <div class="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600"></div>
 
@@ -123,7 +107,7 @@ onMounted(() => {
               <p class="text-[7px] font-semibold text-gray-400 tracking-widest uppercase">Cambodia</p>
             </div>
           </div>
-          <div class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold"
+          <div v-if="student" class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold"
             :style="{ backgroundColor: getStatusStyle(student.enrollment_status).bg, color: getStatusStyle(student.enrollment_status).text }">
             <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).dot }"></span>
             {{ getStatusStyle(student.enrollment_status).label }}
@@ -134,13 +118,12 @@ onMounted(() => {
           <!-- Photo + Name -->
           <div class="flex flex-col items-center mb-4 mt-1">
             <!-- Photo with frame -->
-            <div class="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center shadow-md ring-4 ring-white dark:ring-gray-700 mb-3 relative">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student.full_name" class="w-full h-full object-cover" @error="photoError = true" />
-              <span v-else class="text-3xl font-extrabold text-gray-400 drop-shadow-sm">{{ initials }}</span>
+            <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md ring-4 ring-white dark:ring-gray-700 mb-3">
+              <span class="text-3xl font-extrabold text-white drop-shadow-sm">{{ initials }}</span>
             </div>
-            <h2 class="text-xl font-bold text-center text-gray-900 dark:text-white">{{ student.full_name }}</h2>
+            <h2 class="text-xl font-bold text-center text-gray-900 dark:text-white">{{ queryData.name }}</h2>
             <div class="flex items-center gap-2 mt-1">
-              <span class="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400 tracking-wider">{{ student.student_id_no }}</span>
+              <span class="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400 tracking-wider">{{ studentId }}</span>
             </div>
           </div>
 
@@ -151,79 +134,61 @@ onMounted(() => {
                 <User :size="13" class="text-gray-400" />
                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Gender</p>
               </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.gender || '—' }}</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.gender || '—' }}</p>
             </div>
             <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
               <div class="flex items-center gap-1.5 mb-1">
                 <GraduationCap :size="13" class="text-gray-400" />
                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Batch</p>
               </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.selection_batch_name || '—' }}</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.batch }}</p>
             </div>
             <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
               <div class="flex items-center gap-1.5 mb-1">
                 <Calendar :size="13" class="text-gray-400" />
                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Intake Year</p>
               </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.intake_year || '—' }}</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.year || '—' }}</p>
             </div>
             <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
               <div class="flex items-center gap-1.5 mb-1">
                 <MapPin :size="13" class="text-gray-400" />
                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Province</p>
               </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.province || '—' }}</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.province || '—' }}</p>
             </div>
-            <div v-if="student.dob" class="col-span-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+            <div v-if="queryData.dob" class="col-span-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
               <div class="flex items-center gap-1.5 mb-1">
                 <Calendar :size="13" class="text-gray-400" />
                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Date of Birth</p>
               </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatDate(student.dob) }}</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatDate(queryData.dob) }}</p>
             </div>
           </div>
 
-          <!-- Contact & Education Details -->
+          <!-- Additional details from API -->
           <div v-if="student?.phone || student?.email || student?.high_school" class="border-t border-gray-100 dark:border-gray-700 pt-3 mb-3">
             <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Contact &amp; Education</p>
             <div class="space-y-2">
               <div v-if="student.phone" class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2">
-                  <Phone :size="12" class="text-gray-400" />
-                  <span class="text-gray-400">Phone</span>
-                </div>
+                <span class="text-gray-400">Phone</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{{ student.phone }}</span>
               </div>
               <div v-if="student.email" class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2">
-                  <Mail :size="12" class="text-gray-400" />
-                  <span class="text-gray-400">Email</span>
-                </div>
+                <span class="text-gray-400">Email</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{{ student.email }}</span>
               </div>
               <div v-if="student.high_school" class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2">
-                  <School :size="12" class="text-gray-400" />
-                  <span class="text-gray-400">High School</span>
-                </div>
+                <span class="text-gray-400">High School</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{{ student.high_school }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Card Information -->
-          <div v-if="card" class="border-t border-gray-100 dark:border-gray-700 pt-3 mb-3">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Card Information</p>
-            <div class="space-y-2">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-400">Issue Date</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ formatDate(card.issued_date) }}</span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-400">Expiry Date</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ formatDate(card.expired_date) }}</span>
-              </div>
-            </div>
+          <!-- Error banner -->
+          <div v-if="error" class="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20">
+            <AlertCircle :size="15" class="text-amber-500 flex-shrink-0 mt-0.5" />
+            <p class="text-xs text-amber-700 dark:text-amber-400">{{ error }}</p>
           </div>
 
           <!-- Footer -->
@@ -236,13 +201,13 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Error state -->
-      <div v-if="!loading && !valid" class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
+      <!-- Error state (no data at all) -->
+      <div v-if="!loading && !queryData.name && !student" class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
         <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
           <AlertCircle :size="28" class="text-red-500" />
         </div>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">{{ errorHeader }}</h2>
-        <p class="text-sm text-gray-400">{{ error || 'This student ID could not be found. The link may be invalid or the student record has been removed.' }}</p>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Invalid Card</h2>
+        <p class="text-sm text-gray-400">This student ID could not be found. The link may be invalid or the student record has been removed.</p>
       </div>
 
       <!-- Footer note -->

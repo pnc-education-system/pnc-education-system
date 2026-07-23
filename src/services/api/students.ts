@@ -20,6 +20,15 @@ export interface StudentRecord {
   } | null
 }
 
+export interface StudentActivity {
+  id: string
+  type: 'status_change' | 'record_update' | 'evaluation'
+  title: string
+  description: string
+  performed_by: string
+  date: string
+}
+
 export interface StudentRecordPayload {
   category: StudentRecordCategory
   title: string
@@ -46,11 +55,7 @@ export interface StudentFormPayload {
 export type CreateStudentPayload = StudentFormPayload
 export type UpdateStudentPayload = StudentFormPayload
 
-function isFormDataPayload(payload: unknown): payload is FormData {
-  return payload instanceof FormData
-}
-
-function hasPhotoPayload(payload: UpdateStudentPayload | Partial<BackendStudent>): payload is UpdateStudentPayload {
+function hasPhotoPayload(payload: UpdateStudentPayload): payload is UpdateStudentPayload {
   return 'photo' in payload && payload.photo instanceof File
 }
 
@@ -103,24 +108,12 @@ export const studentsApi = {
     return data.data as BackendStudent
   },
 
-  async update(id: number, payload: UpdateStudentPayload | Partial<BackendStudent> | FormData): Promise<BackendStudent> {
-    if (isFormDataPayload(payload)) {
-      payload.append('_method', 'PUT')
-      const { data } = await axiosInstance.post(`/students/${id}`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return data.data as BackendStudent
-    }
-
+  async update(id: number, payload: UpdateStudentPayload): Promise<BackendStudent> {
     if (hasPhotoPayload(payload)) {
       const formData = toFormData(payload)
-      formData.append('_method', 'PUT')
-      const { data } = await axiosInstance.post(`/students/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const { data } = await axiosInstance.post(`/students/${id}`, formData)
       return data.data as BackendStudent
     }
-
     const { data } = await axiosInstance.put(`/students/${id}`, payload)
     return data.data as BackendStudent
   },
@@ -171,7 +164,6 @@ export const studentsApi = {
     })
     return data.data as { confirmed_count: number }
   },
-
   async listRecords(studentId: number): Promise<StudentRecord[]> {
     const { data } = await axiosInstance.get(`/students/${studentId}/records`)
     return data.data as StudentRecord[]
@@ -189,5 +181,17 @@ export const studentsApi = {
 
   async deleteRecord(studentId: number, recordId: number): Promise<void> {
     await axiosInstance.delete(`/students/${studentId}/records/${recordId}`)
+  },
+
+  async uploadPhoto(id: number, photo: File): Promise<{ photo_url: string }> {
+    const formData = new FormData()
+    formData.append('photo', photo)
+    const { data } = await axiosInstance.post(`/students/${id}/photo`, formData)
+    return data.data as { photo_url: string }
+  },
+
+  async getHistory(id: number): Promise<StudentActivity[]> {
+    const { data } = await axiosInstance.get(`/students/${id}/history`)
+    return data.data as StudentActivity[]
   },
 }

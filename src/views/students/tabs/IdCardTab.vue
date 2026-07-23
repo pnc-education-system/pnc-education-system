@@ -370,9 +370,9 @@ function printCard() {
           <div class="boxes"><div class="box"></div><div class="box"></div></div>
         </div>
       </div>
-      <script>
+      <scr${'ipt'}>
         window.onload = function() { window.print(); window.close(); }
-      <\/script>
+      <${'/'}script>
     </body>
     </html>
   `)
