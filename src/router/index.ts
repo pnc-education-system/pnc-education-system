@@ -118,6 +118,12 @@ const routes: RouteRecordRaw[] = [
     redirect: '/admin/users',
   },
   {
+    path: '/records',
+    name: 'Records',
+    component: () => import('@/views/records/RecordsView.vue'),
+    meta: { requiresAuth: true, permission: 'records.view' },
+  },
+  {
     path: '/students/:id/edit',
     name: 'StudentEdit',
     component: () => import('@/views/students/StudentFormView.vue'),

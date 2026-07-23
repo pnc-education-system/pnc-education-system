@@ -16,6 +16,7 @@ import {
   Download,
   Eye,
   CheckCircle,
+  X,
   XCircle,
   ChevronLeft,
   ChevronRight,
@@ -43,6 +44,28 @@ const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 const showPreviewModal = ref(false)
 const previewStudent = ref<CardStudent | null>(null)
 const generatedCards = ref<Set<number>>(new Set())
+
+// ── Selected Student for Preview ──
+const selectedStudent = ref<CardStudent | null>(null)
+
+// ── Default Demo Student (shown when no student is selected) ──
+const defaultDemoStudent: CardStudent = {
+  id: 0,
+  student_id_no: 'PNC2027-050',
+  full_name: 'James Davis',
+  gender: 'Male',
+  photo_path: null,
+  dob: '2005-06-15',
+  province: 'Phnom Penh',
+  selection_batch_name: 'Batch 2027',
+  selection_batch_id: null,
+  enrollment_status: 'enrolled',
+  intake_year: 2025,
+  phone: '+855 12 345 678',
+  email: 'james.davis@example.com',
+  high_school: 'Sisowath High School',
+  qr_token: null,
+}
 
 // ── School Logo (persisted to localStorage) ──
 const schoolLogoUrl = ref<string | null>(localStorage.getItem('card_school_logo'))
@@ -155,11 +178,18 @@ const hasSelectedStudents = computed(() => selectedStudentIds.value.size > 0)
 
 const selectedCount = computed(() => selectedStudentIds.value.size)
 
-// ── Demo Student for Live Preview ──
-const previewDemoStudent = computed<CardStudent | null>(() => {
-  if (students.value.length > 0) return students.value[0] || null
-  return null
+// ── Live Preview Student (default demo or selected) ──
+const livePreviewStudent = computed<CardStudent>(() => {
+  return selectedStudent.value || defaultDemoStudent
 })
+
+function selectStudent(student: CardStudent) {
+  if (selectedStudent.value?.id === student.id) {
+    selectedStudent.value = null
+  } else {
+    selectedStudent.value = student
+  }
+}
 
 // ── Functions ──
 async function loadBatches() {
@@ -519,17 +549,34 @@ const pageNumbers = computed(() => {
   return pages
 })
 
+// ── Clear Selection ──
+function clearSelectedStudent() {
+  if (!selectedStudent.value) return
+  const name = selectedStudent.value.full_name
+  selectedStudent.value = null
+  showSuccessToast(`Cleared ${name} — back to default preview`, 'Selection Cleared')
+}
+
+// ── Keyboard Shortcuts ──
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    clearSelectedStudent()
+  }
+}
+
 onMounted(() => {
   loadBatches()
   loadStudents()
   fetchTemplates()
   fetchStats()
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (searchDebounce.value) {
     clearTimeout(searchDebounce.value)
   }
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -643,10 +690,10 @@ onUnmounted(() => {
         <!-- Preview Card -->
         <div class="flex-shrink-0 flex justify-center">
           <StudentCard
-            :student="previewDemoStudent"
+            :student="livePreviewStudent"
             :layout="currentLayoutKey"
             size="sm"
-            :generated="previewDemoStudent ? generatedCards.has(previewDemoStudent.id) : false"
+            :generated="selectedStudent ? generatedCards.has(selectedStudent.id) : false"
             :showBack="showCardBack"
             :schoolLogo="schoolLogoUrl"
             @photo-upload="handlePhotoUpload"
@@ -684,17 +731,29 @@ onUnmounted(() => {
           </div>
 
           <!-- Student Info -->
-          <template v-if="previewDemoStudent">
-            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Student</p>
-            <p class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ previewDemoStudent.full_name }}</p>
-            <p class="text-[10px] font-mono text-gray-400">{{ previewDemoStudent.student_id_no }}</p>
+          <template v-if="selectedStudent">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Student</p>
+                <p class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ livePreviewStudent.full_name }}</p>
+                <p class="text-[10px] font-mono text-gray-400 truncate">{{ livePreviewStudent.student_id_no }}</p>
+              </div>
+              <button
+                @click="clearSelectedStudent()"
+                class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-semibold text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-150 cursor-pointer border border-transparent hover:border-red-200 dark:hover:border-red-500/20 mt-0.5"
+                title="Clear selection, show default card"
+              >
+                <X :size="12" />
+                Clear
+              </button>
+            </div>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
-                :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).bg, color: getStatusStyle(previewDemoStudent.enrollment_status).text }">
-                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).dot }"></span>
-                {{ previewDemoStudent.enrollment_status.charAt(0).toUpperCase() + previewDemoStudent.enrollment_status.slice(1) }}
+                :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).bg, color: getStatusStyle(livePreviewStudent.enrollment_status).text }">
+                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).dot }"></span>
+                {{ livePreviewStudent.enrollment_status.charAt(0).toUpperCase() + livePreviewStudent.enrollment_status.slice(1) }}
               </span>
-              <span v-if="previewDemoStudent.selection_batch_name" class="text-[9px] text-gray-400">{{ previewDemoStudent.selection_batch_name }}</span>
+              <span v-if="livePreviewStudent.selection_batch_name" class="text-[9px] text-gray-400">{{ livePreviewStudent.selection_batch_name }}</span>
             </div>
           </template>
           <template v-else>
@@ -708,23 +767,23 @@ onUnmounted(() => {
 
           <!-- Action Buttons -->
           <div class="flex items-center gap-1 pt-1.5 mt-auto border-t border-gray-100 dark:border-gray-700/50">
-            <button v-if="previewDemoStudent" @click="openPreview(previewDemoStudent)"
+            <button v-if="selectedStudent" @click="openPreview(livePreviewStudent)"
               class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors cursor-pointer dark:text-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
               <Eye :size="11" />
               Details
             </button>
-            <button v-if="previewDemoStudent" @click="handleGenerate(previewDemoStudent.id)" :disabled="isGenerating"
+            <button v-if="selectedStudent" @click="handleGenerate(livePreviewStudent.id)" :disabled="isGenerating"
               class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors cursor-pointer dark:text-emerald-400 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
               <CreditCard :size="11" />
-              {{ generatedCards.has(previewDemoStudent.id) ? 'Regen' : 'Generate' }}
+              {{ generatedCards.has(livePreviewStudent.id) ? 'Regen' : 'Generate' }}
             </button>
-            <button v-if="previewDemoStudent" @click="handleDownload(previewDemoStudent.id)"
+            <button v-if="selectedStudent" @click="handleDownload(livePreviewStudent.id)"
               class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-gray-500 bg-gray-50 rounded hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-700">
               <Download :size="11" />
               PDF
             </button>
             <div class="flex-1"></div>
-            <span v-if="previewDemoStudent && generatedCards.has(previewDemoStudent.id)" class="inline-flex items-center gap-1 text-[8px] font-semibold text-emerald-600">
+            <span v-if="selectedStudent && generatedCards.has(selectedStudent.id)" class="inline-flex items-center gap-1 text-[8px] font-semibold text-emerald-600">
               <CheckCircle :size="10" />
               Generated
             </span>
@@ -789,7 +848,11 @@ onUnmounted(() => {
 
         <!-- Student Rows -->
         <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
-          <div v-for="(student, index) in students" :key="student.id" class="group px-3 md:px-3 py-2.5" :class="index % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.02]'">
+          <div v-for="(student, index) in students" :key="student.id" class="group px-3 md:px-3 py-2.5 cursor-pointer transition-all duration-150" :class="[
+              index % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.02]',
+              selectedStudent?.id === student.id ? 'ring-2 ring-blue-400 dark:ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'hover:bg-blue-50/30 dark:hover:bg-blue-900/10'
+            ]" @click="selectStudent(student)"
+          >
             <!-- Mobile -->
             <div class="md:hidden space-y-1.5">
               <div class="flex items-center justify-between">
@@ -843,8 +906,12 @@ onUnmounted(() => {
                   {{ student.enrollment_status.charAt(0).toUpperCase() + student.enrollment_status.slice(1) }}
                 </span>
               </div>
-              <div class="col-span-2">
-                <span v-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full"><CheckCircle :size="10" /> Generated</span>
+              <div class="col-span-2 flex items-center gap-1.5">
+                <span v-if="selectedStudent?.id === student.id" class="inline-flex items-center gap-1 text-[9px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/20 dark:text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-500/30">
+                  <Eye :size="10" />
+                  Previewing
+                </span>
+                <span v-else-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full"><CheckCircle :size="10" /> Generated</span>
                 <span v-else class="text-[9px] text-gray-300 dark:text-gray-600">Not generated</span>
               </div>
               <div class="col-span-2 flex items-center justify-end gap-0.5">
@@ -929,16 +996,16 @@ onUnmounted(() => {
           <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-xl">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm font-bold text-white">{{ getInitials(previewStudent.full_name) }}</span>
+                <span class="text-sm font-bold text-white">{{ getInitials(livePreviewStudent.full_name) }}</span>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ previewStudent.full_name }}</h3>
-                <p class="text-xs text-gray-400 font-mono">{{ previewStudent.student_id_no }}</p>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ livePreviewStudent.full_name }}</h3>
+                <p class="text-xs text-gray-400 font-mono">{{ livePreviewStudent.student_id_no }}</p>
               </div>
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                :style="{ backgroundColor: getStatusStyle(previewStudent.enrollment_status).bg, color: getStatusStyle(previewStudent.enrollment_status).text }">
-                <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(previewStudent.enrollment_status).dot }"></span>
-                {{ previewStudent.enrollment_status.charAt(0).toUpperCase() + previewStudent.enrollment_status.slice(1) }}
+                :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).bg, color: getStatusStyle(livePreviewStudent.enrollment_status).text }">
+                <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).dot }"></span>
+                {{ livePreviewStudent.enrollment_status.charAt(0).toUpperCase() + livePreviewStudent.enrollment_status.slice(1) }}
               </span>
             </div>
             <button @click="closePreview" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-700">
@@ -962,10 +1029,10 @@ onUnmounted(() => {
                 >Back</button>
               </div>
               <StudentCard
-                :student="previewStudent"
+                :student="livePreviewStudent"
                 :layout="currentLayoutKey"
                 size="lg"
-                :generated="generatedCards.has(previewStudent.id)"
+                :generated="generatedCards.has(livePreviewStudent.id)"
                 :showBack="showPreviewCardBack"
                 :schoolLogo="schoolLogoUrl"
                 @photo-upload="handlePhotoUpload"
@@ -978,48 +1045,48 @@ onUnmounted(() => {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Date of Birth</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.dob ? formatDate(previewStudent.dob) : '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.dob ? formatDate(livePreviewStudent.dob) : '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Gender</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.gender }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.gender }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Province</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.province || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.province || '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Batch</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.selection_batch_name || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.selection_batch_name || '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Intake Year</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.intake_year || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.intake_year || '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Enrolled Date</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.enrollment_status === 'enrolled' ? 'Enrolled' : '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.enrollment_status === 'enrolled' ? 'Enrolled' : '—' }}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 rounded-b-xl">
-            <span v-if="generatedCards.has(previewStudent.id)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">
+            <span v-if="generatedCards.has(livePreviewStudent.id)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">
               <CheckCircle :size="14" />
               Card Generated
             </span>
-            <button @click="handleGenerate(previewStudent.id)" :disabled="isGenerating"
+            <button @click="handleGenerate(livePreviewStudent.id)" :disabled="isGenerating"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
               <CreditCard :size="15" />
-              {{ generatedCards.has(previewStudent.id) ? 'Regenerate Card' : 'Generate Card' }}
+              {{ generatedCards.has(livePreviewStudent.id) ? 'Regenerate Card' : 'Generate Card' }}
             </button>
-            <button @click="handleReprint(previewStudent.id)" :disabled="isReprinting"
+            <button @click="handleReprint(livePreviewStudent.id)" :disabled="isReprinting"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer dark:text-amber-400 dark:bg-amber-500/10 dark:hover:bg-amber-500/20">
               <RotateCcw :size="15" />
               Reprint
             </button>
-            <button @click="handleDownload(previewStudent.id)"
+            <button @click="handleDownload(livePreviewStudent.id)"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-150 cursor-pointer">
               <Download :size="15" />
               Download PDF

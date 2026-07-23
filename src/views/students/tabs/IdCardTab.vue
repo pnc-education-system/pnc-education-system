@@ -232,6 +232,7 @@ function printCard() {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
 
+  const closeScript = '</' + 'script>'
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
@@ -352,7 +353,7 @@ function printCard() {
           <div class="badge">🛡 STUDENT</div>
         </div>
         <div class="mid-section">
-          <div class="avatar">${s.photoPath ? `<img src="${resolvePhotoUrl(s.photoPath)}" alt="${s.fullName}" />` : getInitials(s.fullName)}</div>
+          <div class="avatar">${s.photoPath ? '<img src="' + resolvePhotoUrl(s.photoPath) + '" alt="' + s.fullName + '" />' : getInitials(s.fullName)}</div>
           <div class="info">
             <h3>${s.fullName}</h3>
             <div class="id">${s.studentIdNo}</div>
@@ -372,7 +373,7 @@ function printCard() {
       </div>
       <script>
         window.onload = function() { window.print(); window.close(); }
-      <\/script>
+      ${closeScript}
     </body>
     </html>
   `)

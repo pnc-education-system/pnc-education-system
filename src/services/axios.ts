@@ -33,6 +33,13 @@ axiosInstance.interceptors.request.use(
     if (authStore.token) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
+
+    // When sending FormData, let the browser set the correct Content-Type (multipart/form-data with boundary)
+    // This prevents axios from forcing 'application/json' which would break file uploads
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
     return config
   },
   (error) => {
@@ -91,6 +98,9 @@ axiosInstance.interceptors.response.use(
       processQueue(error, null)
       authStore.logout()
       isRefreshing = false
+
+      // Redirect to login page
+      window.location.href = '/login'
     }
 
     return Promise.reject(error)

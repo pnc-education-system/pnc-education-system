@@ -9,7 +9,7 @@ export interface PDFOptions {
 }
 
 export async function generatePDFFromElement(options: PDFOptions): Promise<Blob> {
-  const { element, filename, scale = 2, useCORS = true } = options
+  const { element, filename: _filename, scale = 2, useCORS = true } = options
 
   try {
     // Capture the element as canvas
@@ -35,7 +35,7 @@ export async function generatePDFFromElement(options: PDFOptions): Promise<Blob>
     const imgWidth = 210 // A4 width in mm
     const pageHeight = 297 // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width
-    const heightLeft = pageHeight
+    const _heightLeft = pageHeight
 
     // Add image to PDF (centered)
     const x = (imgWidth - (canvas.width * imgWidth) / canvas.width) / 2
