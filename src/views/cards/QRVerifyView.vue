@@ -186,17 +186,18 @@ function getStatusStyle(status: string) {
               leave-from-class="opacity-100 translate-y-0"
               leave-to-class="opacity-0 -translate-y-2"
             >
-              <!-- Error/Not Found Message -->
-              <div v-if="verifyResult?.valid === false" class="border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 rounded-xl p-4">
-                <div class="flex items-center gap-2">
-                  <CheckCircle :size="18" class="text-gray-400" />
-                  <span class="text-sm font-semibold text-gray-600 dark:text-gray-400">{{ t('qr_verify.verification_failed') }}</span>
+              <div v-if="verifyResult">
+                <!-- Error/Not Found Message -->
+                <div v-if="verifyResult.valid === false" class="border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 rounded-xl p-4">
+                  <div class="flex items-center gap-2">
+                    <CheckCircle :size="18" class="text-gray-400" />
+                    <span class="text-sm font-semibold text-gray-600 dark:text-gray-400">{{ t('qr_verify.verification_failed') }}</span>
+                  </div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ verifyResult.message }}</p>
                 </div>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ verifyResult.message }}</p>
-              </div>
 
-              <!-- Success Result -->
-              <div v-if="verifyResult?.valid && verifyResult.student" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl overflow-hidden">
+                <!-- Success Result -->
+                <div v-if="verifyResult.valid && verifyResult.student" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl overflow-hidden">
                 <!-- Verified header -->
                 <div class="flex items-center gap-2 px-4 pt-4 pb-2">
                   <CheckCircle :size="18" class="text-emerald-500" />
@@ -277,6 +278,7 @@ function getStatusStyle(status: string) {
 
                 <div v-if="verifyResult.message" class="px-4 pb-3">
                   <p class="text-xs text-red-600 dark:text-red-400">{{ verifyResult.message }}</p>
+                </div>
                 </div>
               </div>
             </transition>

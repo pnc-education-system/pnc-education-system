@@ -19,7 +19,7 @@ const student = ref<Student>({
   batch: "Batch 2027",
   year: "2025",
   status: "Pending",
-  school: "Passerelles Numériques Cambodia",
+  school: "Passerellesnumeriques Cambodia",
   logo: defaultSchoolLogo,
   emergencyContact: "+855 12 345 678",
   website: "https://pnc.edu.kh",

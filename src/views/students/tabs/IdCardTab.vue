@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Student } from '@/types'
 import { Download, Printer, Share2, Shield, Check } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 const props = defineProps<{ student: Student }>()
 const downloadSuccess = ref(false)
@@ -476,21 +479,21 @@ async function shareCard() {
           <Download v-if="!downloadSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
           <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
         </div>
-        <span class="text-xs font-semibold" :class="downloadSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ downloadSuccess ? 'Downloaded!' : 'Download' }}</span>
+        <span class="text-xs font-semibold" :class="downloadSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ downloadSuccess ? t('id_card_tab.downloaded') : t('id_card_tab.download') }}</span>
       </button>
       <button @click="printCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
         <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': printSuccess }">
           <Printer v-if="!printSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
           <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
         </div>
-        <span class="text-xs font-semibold" :class="printSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ printSuccess ? 'Printing...' : 'Print' }}</span>
+        <span class="text-xs font-semibold" :class="printSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ printSuccess ? t('id_card_tab.printing') : t('id_card_tab.print') }}</span>
       </button>
       <button @click="shareCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
         <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': shareSuccess }">
           <Share2 v-if="!shareSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
           <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
         </div>
-        <span class="text-xs font-semibold" :class="shareSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ shareSuccess ? 'Shared!' : 'Share' }}</span>
+        <span class="text-xs font-semibold" :class="shareSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ shareSuccess ? t('id_card_tab.shared') : t('id_card_tab.share') }}</span>
       </button>
     </div>
   </div>

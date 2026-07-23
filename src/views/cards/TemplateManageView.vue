@@ -2,10 +2,12 @@
 defineOptions({ name: 'TemplateManageView' })
 
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { cardsApi, type CardTemplate } from '@/services/api/cards'
 import { Plus, Pencil, Trash2, Check, X, CreditCard, Loader2, AlertCircle } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const { showSuccessToast, showErrorToast } = useToast()
 
 // ── State ──
@@ -56,7 +58,7 @@ async function loadTemplates() {
       })
     } catch { /* silent */ }
   } catch {
-    showErrorToast('Failed to load templates.', 'Error')
+    showErrorToast(t('template_mgmt.toast_load_failed'), t('users.toast_error'))
   } finally {
     loading.value = false
   }
@@ -96,7 +98,7 @@ async function handleSave() {
   formError.value = ''
 
   if (!formName.value.trim()) {
-    formError.value = 'Template name is required.'
+    formError.value = t('template_mgmt.name_required')
     return
   }
 
@@ -104,7 +106,7 @@ async function handleSave() {
   try {
     JSON.parse(formLayoutJson.value)
   } catch {
-    formError.value = 'Layout JSON must be valid JSON.'
+    formError.value = t('template_mgmt.json_invalid')
     return
   }
 
@@ -117,7 +119,7 @@ async function handleSave() {
         layout_json: formLayoutJson.value,
         is_default: formIsDefault.value,
       })
-      showSuccessToast('Template updated successfully.', 'Updated')
+      showSuccessToast(t('template_mgmt.toast_updated'), t('template_mgmt.toast_updated_title'))
     } else {
       await cardsApi.createTemplate({
         name: formName.value.trim(),
@@ -125,13 +127,13 @@ async function handleSave() {
         layout_json: formLayoutJson.value,
         is_default: formIsDefault.value,
       })
-      showSuccessToast('Template created successfully.', 'Created')
+      showSuccessToast(t('template_mgmt.toast_created'), t('template_mgmt.toast_created_title'))
     }
     closeForm()
     await loadTemplates()
   } catch (err: unknown) {
     const e = err as { response?: { data?: { message?: string } } }
-    formError.value = e?.response?.data?.message || 'Failed to save template.'
+    formError.value = e?.response?.data?.message || t('template_mgmt.save_error')
   } finally {
     saving.value = false
   }
@@ -139,12 +141,12 @@ async function handleSave() {
 
 // ── Delete ──
 async function handleDelete(id: number) {
-  if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) return
+  if (!confirm(t('template_mgmt.delete_confirm'))) return
 
   deletingId.value = id
   try {
     await cardsApi.deleteTemplate(id)
-    showSuccessToast('Template deleted successfully.', 'Deleted')
+    showSuccessToast(t('template_mgmt.toast_deleted'), t('template_mgmt.toast_deleted_title'))
     await loadTemplates()
   } catch (err: unknown) {
     const e = err as { response?: { data?: { message?: string } } }
@@ -170,14 +172,14 @@ onMounted(loadTemplates)
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Card Templates</h1>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ t('template_mgmt.title') }}</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Create, edit, and manage card design templates
+          {{ t('template_mgmt.subtitle') }}
           <span
             v-if="templates.length > 0"
             class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
           >
-            {{ templates.length }} templates
+            {{ t('template_mgmt.templates_count', { count: templates.length }) }}
           </span>
         </p>
       </div>
@@ -186,7 +188,7 @@ onMounted(loadTemplates)
         class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-150 cursor-pointer"
       >
         <Plus :size="15" />
-        New Template
+        {{ t('template_mgmt.new_template') }}
       </button>
     </div>
 
@@ -194,7 +196,7 @@ onMounted(loadTemplates)
     <div v-if="loading" class="flex items-center justify-center py-16">
       <div class="flex flex-col items-center gap-2">
         <Loader2 :size="28" class="text-blue-500 animate-spin" />
-        <p class="text-sm text-gray-400">Loading templates...</p>
+        <p class="text-sm text-gray-400">{{ t('template_mgmt.loading') }}</p>
       </div>
     </div>
 
@@ -202,11 +204,11 @@ onMounted(loadTemplates)
     <div v-else-if="templates.length === 0" class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-12 text-center">
       <div class="flex flex-col items-center gap-2">
         <CreditCard :size="40" class="text-gray-300 dark:text-gray-600" />
-        <p class="text-sm font-medium text-gray-500">No templates found</p>
-        <p class="text-xs text-gray-400">Run the database seeder or create a new template.</p>
+        <p class="text-sm font-medium text-gray-500">{{ t('template_mgmt.no_templates') }}</p>
+        <p class="text-xs text-gray-400">{{ t('template_mgmt.no_templates_hint') }}</p>
         <button @click="openCreateForm" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer">
           <Plus :size="13" />
-          Create Template
+          {{ t('template_mgmt.create_template') }}
         </button>
       </div>
     </div>
@@ -232,13 +234,13 @@ onMounted(loadTemplates)
                 <span
                   v-if="tpl.is_default"
                   class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-                >Default</span>
+                >{{ t('template_mgmt.default_badge') }}</span>
               </div>
               <p class="text-[11px] font-mono text-gray-400 mt-0.5">
                 layout_key: <span class="font-semibold text-gray-500">{{ tpl.layout_key || '—' }}</span>
               </p>
               <p class="text-[10px] text-gray-400 mt-1 leading-relaxed">
-                Cards using this template:
+                {{ t('template_mgmt.cards_count') }}
                 <span class="font-semibold text-gray-600 dark:text-gray-300">{{ cardsCountMap[tpl.id] ?? 0 }}</span>
               </p>
             </div>
@@ -249,7 +251,7 @@ onMounted(loadTemplates)
             <button
               @click="openEditForm(tpl)"
               class="p-1.5 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 cursor-pointer dark:hover:bg-blue-500/10"
-              title="Edit template"
+              :title="t('template_mgmt.edit_template')"
             >
               <Pencil :size="14" />
             </button>
@@ -258,7 +260,7 @@ onMounted(loadTemplates)
               @click="handleDelete(tpl.id)"
               :disabled="deletingId === tpl.id"
               class="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer dark:hover:bg-red-500/10 disabled:opacity-50"
-              title="Delete template"
+              :title="t('template_mgmt.delete_template')"
             >
               <Loader2 v-if="deletingId === tpl.id" :size="14" class="animate-spin" />
               <Trash2 v-else :size="14" />
@@ -280,7 +282,7 @@ onMounted(loadTemplates)
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-xl">
             <h3 class="text-base font-bold text-gray-900 dark:text-white">
-              {{ editingId ? 'Edit Template' : 'New Template' }}
+              {{ editingId ? t('template_mgmt.edit_title') : t('template_mgmt.new_title') }}
             </h3>
             <button @click="closeForm" class="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-700">
               <X :size="18" />
@@ -296,7 +298,7 @@ onMounted(loadTemplates)
 
             <!-- Name -->
             <div>
-              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</label>
+              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t('template_mgmt.form_name') }}</label>
               <input
                 v-model="formName"
                 type="text"
@@ -308,8 +310,8 @@ onMounted(loadTemplates)
             <!-- Layout Key -->
             <div>
               <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Layout Key
-                <span class="font-normal normal-case text-gray-400">(optional - maps to frontend layout)</span>
+                {{ t('template_mgmt.form_layout_key') }}
+                <span class="font-normal normal-case text-gray-400">{{ t('template_mgmt.form_layout_key_hint') }}</span>
               </label>
               <input
                 v-model="formLayoutKey"
@@ -322,8 +324,8 @@ onMounted(loadTemplates)
             <!-- Layout JSON -->
             <div>
               <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Layout JSON
-                <span class="font-normal normal-case text-gray-400">(element positions)</span>
+                {{ t('template_mgmt.form_layout_json') }}
+                <span class="font-normal normal-case text-gray-400">{{ t('template_mgmt.form_layout_json_hint') }}</span>
               </label>
               <textarea
                 v-model="formLayoutJson"
@@ -339,7 +341,7 @@ onMounted(loadTemplates)
                 type="checkbox"
                 class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Set as default template</span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('template_mgmt.form_is_default') }}</span>
             </label>
           </div>
 
@@ -347,7 +349,7 @@ onMounted(loadTemplates)
             <button
               @click="closeForm"
               class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
-            >Cancel</button>
+> {{ t('template_mgmt.cancel') }}</button>
             <button
               @click="handleSave"
               :disabled="saving"
@@ -355,7 +357,7 @@ onMounted(loadTemplates)
             >
               <Loader2 v-if="saving" :size="14" class="animate-spin" />
               <Check v-else :size="14" />
-              {{ editingId ? 'Update' : 'Create' }}
+              {{ editingId ? t('template_mgmt.update') : t('template_mgmt.create') }}
             </button>
           </div>
         </div>

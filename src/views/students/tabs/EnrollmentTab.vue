@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Student } from '@/types'
 import { Calendar, CheckCircle, XCircle, AlertCircle, Loader } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 defineProps<{ student: Student }>()
 
 const statusHistory = [
-  { status: 'Registered', date: '2025-03-15', note: 'Student registered in the system', icon: Loader, color: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10 ring-blue-500/20' },
-  { status: 'Documents Verified', date: '2025-03-20', note: 'All documents have been verified', icon: CheckCircle, color: 'text-green-600 bg-green-50 dark:bg-green-500/10 ring-green-500/20' },
-  { status: 'Entrance Exam', date: '2025-04-02', note: 'Passed entrance examination', icon: AlertCircle, color: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 ring-amber-500/20' },
-  { status: 'Interview', date: '2025-04-10', note: 'Interview completed successfully', icon: CheckCircle, color: 'text-green-600 bg-green-50 dark:bg-green-500/10 ring-green-500/20' },
-  { status: 'Enrolled', date: '2025-06-01', note: 'Officially enrolled at PNC', icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 ring-emerald-500/20' },
+  { status: t('enrollment_tab.registered'), date: '2025-03-15', note: t('enrollment_tab.registered_note'), icon: Loader, color: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10 ring-blue-500/20' },
+  { status: t('enrollment_tab.documents_verified'), date: '2025-03-20', note: t('enrollment_tab.documents_note'), icon: CheckCircle, color: 'text-green-600 bg-green-50 dark:bg-green-500/10 ring-green-500/20' },
+  { status: t('enrollment_tab.entrance_exam'), date: '2025-04-02', note: t('enrollment_tab.exam_note'), icon: AlertCircle, color: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 ring-amber-500/20' },
+  { status: t('enrollment_tab.interview'), date: '2025-04-10', note: t('enrollment_tab.interview_note'), icon: CheckCircle, color: 'text-green-600 bg-green-50 dark:bg-green-500/10 ring-green-500/20' },
+  { status: t('enrollment_tab.enrolled'), date: '2025-06-01', note: t('enrollment_tab.enrolled_note'), icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 ring-emerald-500/20' },
 ]
 
 function formatDate(dateStr: string): string {
@@ -48,8 +51,8 @@ function formatDate(dateStr: string): string {
       <div class="w-16 h-16 mx-auto rounded-2xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center mb-4">
         <Loader :size="32" class="text-gray-300 dark:text-gray-600" />
       </div>
-      <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No enrollment history</p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Enrollment status updates will appear here.</p>
+      <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">{{ t('enrollment_tab.no_history') }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ t('enrollment_tab.no_history_hint') }}</p>
     </div>
   </div>
 </template>

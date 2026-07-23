@@ -68,27 +68,25 @@ async function handleBatchPrint() {
   if (selectedStudents.value.size === 0) {
     showErrorToast(t('cards.selection_required'), t('cards.selection_required_title'))
     return
-  }
-  showSuccessToast(
-    `Queued ${selectedStudents.value.size} card(s) for batch printing.`,
-    'Batch Print Initiated'
-  )
+  }    showSuccessToast(
+      t('batch_card.toast_print', { count: selectedStudents.value.size }),
+      t('batch_card.toast_print_title')
+    )
 }
 
 async function handleExportCsv() {
   if (selectedStudents.value.size === 0) {
     showErrorToast(t('cards.selection_required'), t('cards.selection_required_title'))
     return
-  }
-  showSuccessToast(
-    `Exporting ${selectedStudents.value.size} card record(s).`,
-    'Export Started'
-  )
+  }    showSuccessToast(
+      t('batch_card.toast_export', { count: selectedStudents.value.size }),
+      t('batch_card.toast_export_title')
+    )
 }
 
 async function handleRefresh() {
   await studentsStore.fetchAll()
-  showSuccessToast('Student data refreshed.', 'Refreshed')
+  showSuccessToast(t('batch_card.toast_refreshed'), t('batch_card.toast_refreshed_title'))
 }
 
 function viewStudentCards(studentId: string) {
@@ -107,8 +105,8 @@ onMounted(async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Batch Card</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Print or export multiple student ID cards at once.</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{{ t('batch_card.title') }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('batch_card.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <button
@@ -119,7 +117,7 @@ onMounted(async () => {
             <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
-          Refresh
+          {{ t('batch_card.refresh') }}
         </button>
         <button
           @click="handleBatchPrint"
@@ -130,7 +128,7 @@ onMounted(async () => {
             : 'bg-gray-200 dark:bg-gray-700 text-gray-400'"
         >
           <Printer :size="16" />
-          Batch Print ({{ selectedStudents.size }})
+          {{ t('batch_card.batch_print', { count: selectedStudents.size }) }}
         </button>
         <button
           @click="handleExportCsv"
@@ -141,7 +139,7 @@ onMounted(async () => {
             : 'bg-gray-200 dark:bg-gray-700 text-gray-400'"
         >
           <Download :size="16" />
-          Export
+          {{ t('batch_card.export') }}
         </button>
       </div>
     </div>
@@ -149,19 +147,19 @@ onMounted(async () => {
     <!-- Stats -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Students</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">{{ t('batch_card.total_students') }}</p>
         <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ students.length }}</p>
       </div>
       <div class="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Eligible for Cards</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">{{ t('batch_card.eligible_for_cards') }}</p>
         <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ eligibleCount }}</p>
       </div>
       <div class="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Selected</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">{{ t('batch_card.selected') }}</p>
         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ selectedStudents.size }}</p>
       </div>
       <div class="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Batches</p>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">{{ t('batch_card.batches') }}</p>
         <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{{ batches.length }}</p>
       </div>
     </div>
@@ -173,7 +171,7 @@ onMounted(async () => {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search by name or student ID..."
+          :placeholder="t('batch_card.search_placeholder')"
           class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
         />
       </div>
@@ -181,7 +179,7 @@ onMounted(async () => {
         v-model="selectedBatch"
         class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all appearance-none cursor-pointer min-w-[180px]"
       >
-        <option value="">All Batches</option>
+        <option value="">{{ t('batch_card.all_batches') }}</option>
         <option v-for="batch in batches" :key="batch" :value="batch">{{ batch }}</option>
       </select>
     </div>
@@ -199,17 +197,17 @@ onMounted(async () => {
             class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
           />
         </div>
-        <span>Student</span>
-        <span>Student ID</span>
-        <span>Batch</span>
-        <span>Status</span>
-        <span class="text-center">Action</span>
+        <span>{{ t('batch_card.table_student') }}</span>
+        <span>{{ t('batch_card.table_student_id') }}</span>
+        <span>{{ t('batch_card.table_batch') }}</span>
+        <span>{{ t('batch_card.table_status') }}</span>
+        <span class="text-center">{{ t('batch_card.table_action') }}</span>
       </div>
 
       <!-- Table Body -->
       <div v-if="filteredStudents.length === 0" class="px-5 py-12 text-center">
-        <p class="text-sm font-medium text-gray-400">No students found</p>
-        <p class="text-xs text-gray-400 mt-1">Try adjusting your search or filter criteria.</p>
+        <p class="text-sm font-medium text-gray-400">{{ t('batch_card.no_students') }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ t('batch_card.no_students_hint') }}</p>
       </div>
 
       <div
@@ -260,7 +258,7 @@ onMounted(async () => {
             @click="viewStudentCards(student.id as string)"
             class="text-xs font-medium text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
           >
-            View
+            {{ t('batch_card.view') }}
           </button>
         </div>
       </div>

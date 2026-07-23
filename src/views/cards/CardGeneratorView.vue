@@ -2,7 +2,10 @@
 defineOptions({ name: 'CardGeneratorPage' })
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
+
+const { t } = useI18n()
 import { cardsApi, type CardStudent, type CardTemplate, type CardStats } from '@/services/api/cards'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
@@ -231,7 +234,7 @@ async function loadStudents(page = 1) {
   } catch (err: unknown) {
     const apiErr = err as { response?: { status?: number } }
     if (apiErr?.response?.status !== 403) {
-      showErrorToast('Failed to load students.', 'Error')
+      showErrorToast(t('card_gen.loading_students'), t('users.toast_error'))
     }
     students.value = []
   } finally {
@@ -318,9 +321,9 @@ async function handleGenerate(studentId: number) {
       if (student && result.qr_data) {
         student.qr_token = result.qr_data
       }
-      showSuccessToast(`Card generated for ${students.value.find((s) => s.id === studentId)?.full_name || 'student'}.`, 'Card Generated')
+      showSuccessToast(t('card_gen.gen_card_for', { name: students.value.find((s) => s.id === studentId)?.full_name || 'student' }), t('card_gen.card_generated'))
     } else {
-      showErrorToast(result.error || 'Failed to generate card.', 'Generation Failed')
+      showErrorToast(result.error || t('cards.toast_generate_failed'), t('cards.toast_generate_failed_title'))
     }
   } catch (error: unknown) {
     console.error('Card generation error:', error)
@@ -331,8 +334,8 @@ async function handleGenerate(studentId: number) {
       (typeof err?.response?.data?.error === 'string' ? err?.response?.data?.error : null) ||
       err?.response?.data?.message ||
       err?.message
-    const displayMsg = serverMsg || 'Failed to generate card. Please try again.'
-    showErrorToast(displayMsg, 'Generation Failed')
+    const displayMsg = serverMsg || t('cards.toast_generate_failed')
+    showErrorToast(displayMsg, t('cards.toast_generate_failed_title'))
   } finally {
     isGenerating.value = false
     generatingStudentId.value = null
@@ -341,7 +344,7 @@ async function handleGenerate(studentId: number) {
 
 async function handleBatchGenerate() {
   if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
+    showErrorToast(t('card_gen.select_required'), t('cards.selection_required_title'))
     return
   }
 
@@ -367,16 +370,16 @@ async function handleBatchGenerate() {
     })
 
     showSuccessToast(
-      `Successfully generated ${successCount} of ${ids.length} cards.`,
-      'Batch Generation Complete',
+      t('card_gen.batch_gen_complete', { success: successCount, total: ids.length }),
+      t('cards.toast_batch_generated_title'),
     )
 
     selectedStudentIds.value.clear()
     generationProgress.value = 100
   } catch (err: unknown) {
     const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
-    const errorMessage = apiErr?.response?.data?.message || apiErr?.message || 'Failed to generate cards.'
-    showErrorToast(errorMessage, 'Batch Generation Failed')
+    const errorMessage = apiErr?.response?.data?.message || apiErr?.message || t('cards.toast_generate_failed')
+    showErrorToast(errorMessage, t('cards.toast_generate_failed_title'))
   } finally {
     isBatchGenerating.value = false
     generationProgress.value = 0
@@ -388,12 +391,12 @@ async function handleReprint(studentId: number) {
   try {
     const result = await cardsApi.reprint([studentId])
     if (result.results[0]?.status === 'success') {
-      showSuccessToast('Card queued for reprint.', 'Reprint Initiated')
+      showSuccessToast(t('cards.toast_reprint_initiated'), t('cards.toast_reprint_title'))
     } else {
-      showErrorToast(result.results[0]?.error || 'Failed to reprint card.', 'Reprint Failed')
+      showErrorToast(result.results[0]?.error || t('cards.toast_generate_failed'), 'Reprint Failed')
     }
   } catch {
-    showErrorToast('Failed to reprint card.', 'Reprint Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Reprint Failed')
   } finally {
     isReprinting.value = false
   }
@@ -401,7 +404,7 @@ async function handleReprint(studentId: number) {
 
 async function handleBatchReprint() {
   if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
+    showErrorToast(t('card_gen.select_required'), t('cards.selection_required_title'))
     return
   }
 
@@ -412,12 +415,12 @@ async function handleBatchReprint() {
 
     const successCount = result.results.filter((r) => r.status === 'success').length
     showSuccessToast(
-      `Queued ${successCount} of ${ids.length} cards for reprint.`,
-      'Batch Reprint Initiated',
+      t('card_gen.batch_reprint', { success: successCount, total: ids.length }),
+      t('cards.toast_batch_reprint_title'),
     )
     selectedStudentIds.value.clear()
   } catch {
-    showErrorToast('Failed to reprint cards.', 'Batch Reprint Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Batch Reprint Failed')
   } finally {
     isReprinting.value = false
   }
@@ -430,16 +433,16 @@ async function handleDownload(studentId: number) {
     const student = students.value.find((s) => s.id === studentId)
     const filename = `ID_Card_${student?.student_id_no || studentId}.pdf`
     downloadBlob(blob, filename)
-    showSuccessToast('Card PDF downloaded.', 'Download Complete')
+    showSuccessToast(t('card_gen.download_complete'), t('cards.toast_downloaded_title'))
   } catch (error) {
     console.error('Download error:', error)
-    showErrorToast('Failed to download card PDF.', 'Download Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Download Failed')
   }
 }
 
 async function handleBatchDownload() {
   if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
+    showErrorToast(t('card_gen.select_required'), t('cards.selection_required_title'))
     return
   }
 
@@ -447,10 +450,10 @@ async function handleBatchDownload() {
     const ids = Array.from(selectedStudentIds.value)
     const blob = await cardsApi.batchDownloadPdf(ids)
     downloadBlob(blob, `ID_Cards_Batch_${Date.now()}.pdf`)
-    showSuccessToast('Batch PDF downloaded successfully.', 'Download Complete')
+    showSuccessToast(t('card_gen.download_complete'), t('cards.toast_downloaded_title'))
     selectedStudentIds.value.clear()
   } catch {
-    showErrorToast('Failed to download batch PDF.', 'Download Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Download Failed')
   }
 }
 
@@ -466,7 +469,7 @@ function closePreview() {
 }
 
 function handlePhotoUpload() {
-  showSuccessToast('Photo added to card preview.', 'Photo Updated')
+  showSuccessToast(t('card_gen.photo_updated'), 'Photo Updated')
 }
 
 function handleLogoUpload(file: File) {
@@ -475,7 +478,7 @@ function handleLogoUpload(file: File) {
     const dataUrl = e.target?.result as string
     schoolLogoUrl.value = dataUrl
     localStorage.setItem('card_school_logo', dataUrl)
-    showSuccessToast('School logo uploaded successfully.', 'Logo Updated')
+    showSuccessToast(t('card_gen.logo_updated'), 'Logo Updated')
   }
   reader.readAsDataURL(file)
 }
@@ -554,7 +557,7 @@ function clearSelectedStudent() {
   if (!selectedStudent.value) return
   const name = selectedStudent.value.full_name
   selectedStudent.value = null
-  showSuccessToast(`Cleared ${name} — back to default preview`, 'Selection Cleared')
+  showSuccessToast(t('card_gen.select_hint'), 'Selection Cleared')
 }
 
 // ── Keyboard Shortcuts ──
@@ -586,15 +589,15 @@ onUnmounted(() => {
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-          ID Card Generator
+          {{ t('card_gen.title') }}
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Generate, preview, and print student ID cards
+          {{ t('card_gen.subtitle') }}
           <span
             v-if="totalStudents > 0"
             class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
           >
-            {{ totalStudents }} students
+            {{ t('card_gen.students_count', { count: totalStudents }) }}
           </span>
         </p>
       </div>
@@ -604,7 +607,7 @@ onUnmounted(() => {
           <span class="w-2 h-2 rounded-full" :class="templateDotColor(currentLayoutKey)"></span>
           <span class="capitalize font-semibold">{{ currentLayoutKey }}</span>
           <span class="text-gray-300 dark:text-gray-600">|</span>
-          <span class="text-gray-400">Template</span>
+          <span class="text-gray-400">{{ t('card_gen.template') }}</span>
         </div>
 
         <!-- Batch Actions -->
@@ -640,15 +643,15 @@ onUnmounted(() => {
     <!-- Stats Summary -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Students</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.total_students') }}</p>
         <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ totalStudents }}</p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Selected</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.selected') }}</p>
         <p class="text-lg font-bold text-emerald-600 mt-0.5">{{ selectedCount }}</p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Generated</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.generated') }}</p>
         <p class="text-lg font-bold text-blue-600 mt-0.5">
           {{ generatedCards.size }}
           <span v-if="cardStats && cardStats.total_generated > generatedCards.size" class="text-[9px] font-normal text-gray-400 ml-1">
@@ -657,10 +660,10 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Templates</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.templates') }}</p>
         <p class="text-lg font-bold mt-0.5" :class="dbTemplates.length > 0 ? 'text-emerald-600' : 'text-gray-400'">
           {{ dbTemplates.length }}
-          <span class="text-[9px] font-normal text-gray-400 ml-1">available</span>
+          <span class="text-[9px] font-normal text-gray-400 ml-1">{{ t('card_gen.available') }}</span>
         </p>
       </div>
     </div>
@@ -669,7 +672,7 @@ onUnmounted(() => {
     <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-700">
         <CreditCard :size="14" class="text-gray-400" />
-        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Card Designer</h3>
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t('card_gen.card_designer') }}</h3>
         <div class="flex-1"></div>
         <!-- Front / Back Toggle -->
         <div class="flex items-center gap-0.5 bg-gray-200/70 dark:bg-gray-700/50 rounded-lg p-0.5 mr-2">
@@ -677,12 +680,12 @@ onUnmounted(() => {
             @click="showCardBack = false"
             class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
             :class="!showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-          >Front</button>
+          >{{ t('card_gen.front') }}</button>
           <button
             @click="showCardBack = true"
             class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
             :class="showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-          >Back</button>
+          >{{ t('card_gen.back') }}</button>
         </div>          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 capitalize">{{ currentLayoutKey }}</span>
       </div>
 
@@ -1021,12 +1024,12 @@ onUnmounted(() => {
                   @click="showPreviewCardBack = false"
                   class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
                   :class="!showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-                >Front</button>
+                >{{ t('card_gen.front') }}</button>
                 <button
                   @click="showPreviewCardBack = true"
                   class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
                   :class="showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-                >Back</button>
+                >{{ t('card_gen.back') }}</button>
               </div>
               <StudentCard
                 :student="livePreviewStudent"

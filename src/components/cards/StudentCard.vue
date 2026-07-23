@@ -264,7 +264,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
               <div v-if="generated" class="shrink-0 px-2.5 py-1 rounded-full text-[7px] font-semibold bg-white/20 text-white border border-white/30">
@@ -352,7 +352,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/77 leading-tight">Cambodia</p>
               </div>
             </div>
@@ -434,7 +434,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-amber-100/90 leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-amber-100/90 leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-amber-400/70 leading-tight">Cambodia</p>
               </div>
             </div>
@@ -513,7 +513,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
             </div>
@@ -591,7 +591,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
             </div>
@@ -666,7 +666,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
             </div>
@@ -740,7 +740,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
             </div>
@@ -811,7 +811,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -821,7 +821,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-[#1e3a5f] dark:text-[#38bdf8] font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
@@ -862,7 +862,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight drop-shadow-sm">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight drop-shadow-sm">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -872,7 +872,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-[#2563eb] dark:text-[#60a5fa] font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
@@ -914,7 +914,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-amber-100/90 leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-amber-100/90 leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-amber-400/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -925,7 +925,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-amber-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-white/5 p-2 rounded-lg border border-amber-400/15 text-[10px] leading-relaxed text-gray-200">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
@@ -969,7 +969,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -979,7 +979,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-green-600 dark:text-green-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
@@ -1021,7 +1021,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -1031,7 +1031,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-blue-600 dark:text-blue-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
@@ -1073,7 +1073,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -1083,7 +1083,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-yellow-600 dark:text-yellow-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
@@ -1124,7 +1124,7 @@ watch(() => props.showBack, (val) => {
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
@@ -1135,7 +1135,7 @@ watch(() => props.showBack, (val) => {
             <div class="flex flex-col gap-1 text-left">
               <span class="text-[#1B3FA0] font-bold text-[8px] uppercase tracking-wider">About Us</span>
               <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-                <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
               </p>
             </div>
 
