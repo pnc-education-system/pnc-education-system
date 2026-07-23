@@ -6,8 +6,7 @@ import { useRouter } from 'vue-router'
 import { useEnrollmentsStore } from '@/stores/enrollments'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
-import { useI18n } from 'vue-i18n'
-import type { Enrollment, EnrollmentStatus } from '@/types'
+import type { EnrollmentStatus } from '@/types'
 
 import {
   Plus,
@@ -18,7 +17,6 @@ import {
   XCircle,
   Clock,
   FileText,
-  RefreshCw,
   Edit,
   Trash2,
   CheckCircle2,
@@ -30,7 +28,6 @@ const router = useRouter()
 const store = useEnrollmentsStore()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
-const { t } = useI18n()
 
 onMounted(() => {
   store.fetchAll()

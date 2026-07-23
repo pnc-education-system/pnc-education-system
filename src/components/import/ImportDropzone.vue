@@ -3,7 +3,7 @@ import { Upload, FileUp } from 'lucide-vue-next'
 
 defineOptions({ name: 'ImportDropzone' })
 
-const props = defineProps<{
+defineProps<{
   isDragOver: boolean
   uploadError: string | null
   hasFile: boolean

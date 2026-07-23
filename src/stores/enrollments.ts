@@ -41,8 +41,9 @@ export const useEnrollmentsStore = defineStore('enrollments', () => {
         ...(params?.search ? { search: params.search } : {}),
       })
       enrollments.value = paginated.data.map(mapBackendEnrollment)
-    } catch (err: any) {
-      const status = err?.response?.status
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number } }
+      const status = apiErr?.response?.status
       if (status === 403) {
         enrollments.value = []
         error.value = null
