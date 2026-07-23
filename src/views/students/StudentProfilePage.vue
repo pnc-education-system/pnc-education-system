@@ -36,6 +36,7 @@ const photoInput = ref<HTMLInputElement | null>(null)
 const photoPreviewUrl = ref<string | null>(null)
 const isUploadingPhoto = ref(false)
 const allowedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
+const maxPhotoSizeBytes = 10 * 1024 * 1024 // 10 MB
 
 const displayPhotoUrl = computed(() => {
   if (photoPreviewUrl.value) return photoPreviewUrl.value
@@ -206,6 +207,12 @@ function handlePhotoChange(event: Event) {
     return
   }
 
+  if (file.size > maxPhotoSizeBytes) {
+    showErrorToast('Photo must not be larger than 10MB.', 'Photo Too Large')
+    input.value = ''
+    return
+  }
+
   clearPhotoPreview()
   photoPreviewUrl.value = URL.createObjectURL(file)
   uploadPhoto(file)
@@ -222,9 +229,7 @@ async function uploadPhoto(file: File) {
   if (!student.value) return
   isUploadingPhoto.value = true
   try {
-    const formData = new FormData()
-    formData.append('photo', file)
-    const updated = await studentsApi.update(Number(student.value.id), formData)
+    const updated = await studentsApi.uploadPhoto(Number(student.value.id), file)
     student.value.photoPath = updated.photo_path ?? undefined
     clearPhotoPreview()
     // Refresh the student in the store

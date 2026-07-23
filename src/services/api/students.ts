@@ -44,42 +44,6 @@ export interface StudentFormPayload {
 }
 
 export type CreateStudentPayload = StudentFormPayload
-export type UpdateStudentPayload = StudentFormPayload
-
-function isFormDataPayload(payload: unknown): payload is FormData {
-  return payload instanceof FormData
-}
-
-function hasPhotoPayload(payload: UpdateStudentPayload | Partial<BackendStudent>): payload is UpdateStudentPayload {
-  return 'photo' in payload && payload.photo instanceof File
-}
-
-function appendNullable(formData: FormData, key: string, value: string | number | null | undefined) {
-  formData.append(key, value === null || value === undefined ? '' : String(value))
-}
-
-function toFormData(payload: UpdateStudentPayload): FormData {
-  const formData = new FormData()
-
-  appendNullable(formData, 'student_id_no', payload.student_id_no)
-  appendNullable(formData, 'full_name', payload.full_name)
-  appendNullable(formData, 'gender', payload.gender)
-  appendNullable(formData, 'dob', payload.dob)
-  appendNullable(formData, 'phone', payload.phone)
-  appendNullable(formData, 'email', payload.email)
-  appendNullable(formData, 'province', payload.province)
-  appendNullable(formData, 'high_school', payload.high_school)
-  appendNullable(formData, 'selection_batch_id', payload.selection_batch_id)
-  appendNullable(formData, 'enrollment_status', payload.enrollment_status)
-  appendNullable(formData, 'intake_year', payload.intake_year)
-  appendNullable(formData, 'enrolled_at', payload.enrolled_at)
-
-  if (payload.photo) {
-    formData.append('photo', payload.photo)
-  }
-
-  return formData
-}
 
 export const studentsApi = {
   async list(page = 1, params?: Record<string, string | number>): Promise<PaginatedData<BackendStudent>> {
@@ -103,24 +67,12 @@ export const studentsApi = {
     return data.data as BackendStudent
   },
 
-  async update(id: number, payload: UpdateStudentPayload | Partial<BackendStudent> | FormData): Promise<BackendStudent> {
-    if (isFormDataPayload(payload)) {
-      payload.append('_method', 'PUT')
-      const { data } = await axiosInstance.post(`/students/${id}`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return data.data as BackendStudent
+  async update(id: number, payload: StudentFormPayload | Partial<BackendStudent>): Promise<BackendStudent> {
+    // Remove photo from payload if present — photo is uploaded separately via uploadPhoto()
+    if (payload && 'photo' in payload) {
+      const { photo, ...rest } = payload as any
+      payload = rest
     }
-
-    if (hasPhotoPayload(payload)) {
-      const formData = toFormData(payload)
-      formData.append('_method', 'PUT')
-      const { data } = await axiosInstance.post(`/students/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return data.data as BackendStudent
-    }
-
     const { data } = await axiosInstance.put(`/students/${id}`, payload)
     return data.data as BackendStudent
   },
@@ -189,5 +141,19 @@ export const studentsApi = {
 
   async deleteRecord(studentId: number, recordId: number): Promise<void> {
     await axiosInstance.delete(`/students/${studentId}/records/${recordId}`)
+  },
+
+  async uploadPhoto(id: number, file: File): Promise<{ photo_path: string; photo_url: string }> {
+    const formData = new FormData()
+    formData.append('photo', file)
+    const { data } = await axiosInstance.post(`/students/${id}/photo`, formData, {
+      // Explicitly remove Content-Type to let the browser set it correctly with boundary for multipart
+      headers: { 'Content-Type': undefined as unknown as string },
+    })
+    const photoUrl = data.data.photo_url as string
+    // Extract the relative path from the URL (e.g. /storage/students/photos/xxx.jpg)
+    const urlObj = new URL(photoUrl)
+    const photoPath = urlObj.pathname.replace(/^\/storage\//, '')
+    return { photo_path: photoPath, photo_url: photoUrl }
   },
 }

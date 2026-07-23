@@ -65,6 +65,7 @@ const photoPreviewUrl = ref<string | null>(null)
 const photoInput = ref<HTMLInputElement | null>(null)
 
 const allowedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
+const maxPhotoSizeBytes = 10 * 1024 * 1024 // 10 MB
 const allowedStatuses = ['Pending', 'Enrolled', 'Rejected', 'Graduated', 'Dropped'] as const
 type EnrollmentStatusOption = (typeof allowedStatuses)[number]
 
@@ -155,21 +156,51 @@ async function handleSubmit() {
       enrollment_status: form.value.enrollment_status,
       intake_year: form.value.intake_year || null,
       enrolled_at: form.value.enrolled_at || null,
-      photo: selectedPhoto.value,
     }
 
     if (isEditing.value && editingId.value) {
+      // Step 1: Update student details via JSON (no photo in payload)
       await studentsApi.update(Number(editingId.value), payload)
+
+      // Step 2: Upload photo separately via dedicated endpoint if one was selected
+      if (selectedPhoto.value) {
+        await studentsApi.uploadPhoto(Number(editingId.value), selectedPhoto.value)
+      }
+
       showSuccessToast('Student updated successfully.', toastUpdatedTitle.value)
     } else {
-      await studentsApi.create(payload)
+      // Step 1: Create student via JSON (no photo)
+      const created = await studentsApi.create(payload)
+
+      // Step 2: Upload photo separately via dedicated endpoint if one was selected
+      if (selectedPhoto.value) {
+        await studentsApi.uploadPhoto(created.id, selectedPhoto.value)
+      }
+
       showSuccessToast(toastCreated.value, toastCreatedTitle.value)
     }
     router.push(getTrackingRoute())
   } catch (error: unknown) {
-    console.error('Error creating student:', error)
-    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
-    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'An error occurred while saving'
+    console.error('Error saving student:', error)
+    // Extract detailed validation errors from the API response
+    const apiError = error as { response?: { data?: { error?: { message?: string; errors?: Record<string, string[]> } } }; message?: string }
+    
+    // Try to get the most specific error message
+    let errorMessage = 'An error occurred while saving'
+    
+    const responseData = apiError?.response?.data
+    if (responseData?.error?.errors) {
+      // Show first field error (e.g. "The intake year field is required.")
+      const fieldErrors = Object.values(responseData.error.errors).flat()
+      if (fieldErrors.length > 0) {
+        errorMessage = fieldErrors[0]!
+      }
+    } else if (responseData?.error?.message) {
+      errorMessage = responseData.error.message
+    } else if (apiError?.message) {
+      errorMessage = apiError.message
+    }
+    
     showErrorToast(errorMessage, toastValidationTitle.value)
   } finally {
     isSaving.value = false
@@ -192,6 +223,12 @@ function handlePhotoChange(event: Event) {
 
   if (!allowedPhotoTypes.includes(file.type)) {
     showErrorToast('Student photo must be a JPG, PNG, or WEBP file.', toastValidationTitle.value)
+    input.value = ''
+    return
+  }
+
+  if (file.size > maxPhotoSizeBytes) {
+    showErrorToast('Student photo must not be larger than 10MB.', toastValidationTitle.value)
     input.value = ''
     return
   }
