@@ -10,13 +10,12 @@ const { t } = useI18n()
 const { showSuccessToast, showErrorToast } = useToast()
 
 const studentIdInput = ref('')
+const qrTokenInput = ref('')
 const verifyResult = ref<{
-  name: string
-  studentId: string
-  status: string
-  batch: string
-  year: string
-  timestamp: string
+  valid: boolean
+  student?: CardStudent
+  card?: any
+  message?: string
 } | null>(null)
 const searching = ref(false)
 const showMoreVerifications = ref(false)
@@ -131,8 +130,9 @@ function getStatusStyle(status: string) {
     pending: { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', label: 'Pending' },
     graduated: { bg: 'bg-purple-50 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', label: 'Graduated' },
     rejected: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Rejected' },
+    dropped: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Dropped' },
   }
-  return styles[status] || { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', label: status }
+  return styles[status.toLowerCase()] || { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', label: status }
 }
 </script>
 
@@ -187,12 +187,12 @@ function getStatusStyle(status: string) {
               leave-from-class="opacity-100 translate-y-0"
               leave-to-class="opacity-0 -translate-y-2"
             >
-              <div v-if="verifyResult" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl p-4 space-y-3">
+              <div v-if="verifyResult" :class="verifyResult.valid ? 'border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5' : 'border border-red-200 dark:border-red-500/30 bg-red-50/50 dark:bg-red-500/5'" class="rounded-xl p-4 space-y-3">
                 <div class="flex items-center gap-2">
                   <CheckCircle :size="18" class="text-emerald-500" />
                   <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{{ t('qr_verify.student_found') }}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <div v-if="verifyResult.student" class="grid grid-cols-2 gap-3">
                   <div>
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.full_name') }}</p>
                     <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.name }}</p>
@@ -209,12 +209,13 @@ function getStatusStyle(status: string) {
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.status') }}</p>
                     <span
                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mt-0.5"
-                      :class="getStatusStyle(verifyResult.status).bg + ' ' + getStatusStyle(verifyResult.status).text"
+                      :class="getStatusStyle(verifyResult.student.enrollment_status).bg + ' ' + getStatusStyle(verifyResult.student.enrollment_status).text"
                     >
-                      {{ getStatusStyle(verifyResult.status).label }}
+                      {{ getStatusStyle(verifyResult.student.enrollment_status).label }}
                     </span>
                   </div>
                 </div>
+                <p v-if="verifyResult.message" class="text-xs text-red-600 dark:text-red-400">{{ verifyResult.message }}</p>
               </div>
             </transition>
           </div>

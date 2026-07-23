@@ -9,11 +9,30 @@ export interface CardStudent {
   dob?: string | null
   province?: string | null
   selection_batch_name?: string | null
+  selection_batch_id?: number | null
   enrollment_status: string
   intake_year?: number | null
   phone?: string | null
   email?: string | null
   high_school?: string | null
+  qr_token?: string | null
+}
+
+export interface CardTemplate {
+  id: number
+  name: string
+  layout_key: string | null
+  layout_json: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CardStats {
+  total_generated: number
+  total_templates: number
+  total_students: number
+  by_template: Array<{ id: number; name: string; count: number }>
 }
 
 export interface CardGenerationResult {
@@ -22,6 +41,21 @@ export interface CardGenerationResult {
   qr_data?: string
   status: 'success' | 'failed'
   error?: string
+}
+
+export interface BatchCardRequest {
+  selection_batch_id: number
+  template_id: number
+}
+
+export interface BatchCardResponse {
+  status: string
+  message: string
+  data: {
+    job_id: string
+    selection_batch_id: number
+    template_id: number
+  }
 }
 
 export const cardsApi = {
@@ -44,13 +78,21 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number): Promise<CardGenerationResult> {
-    const { data } = await axiosInstance.post('/student-cards', { student_id: studentId })
+  async generate(studentId: number, pdfBlob: Blob, templateId?: number): Promise<CardGenerationResult> {
+    const formData = new FormData()
+    formData.append('pdf', pdfBlob, `student-card-${studentId}.pdf`)
+    if (templateId) formData.append('template_id', String(templateId))
+
+    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return data.data as CardGenerationResult
   },
 
   /** Batch generate ID cards for multiple students */
-  async batchGenerate(studentIds: number[]): Promise<{ results: CardGenerationResult[] }> {
+  async batchGenerateByIds(studentIds: number[]): Promise<{ results: CardGenerationResult[] }> {
     const { data } = await axiosInstance.post('/cards/batch-generate', { student_ids: studentIds })
     return data.data as { results: CardGenerationResult[] }
   },
@@ -73,13 +115,11 @@ export const cardsApi = {
       responseType: 'blob',
     })
     return data as Blob
-  },
-
-  /** Download batch PDF */
-  async batchDownloadPdf(studentIds: number[]): Promise<Blob> {
+  },  /** Download batch PDF */
+  async batchDownloadPdf(studentIds: number[], layout?: string): Promise<Blob> {
     const { data } = await axiosInstance.post(
       '/cards/batch-download',
-      { student_ids: studentIds },
+      { student_ids: studentIds, layout },
       { responseType: 'blob' },
     )
     return data as Blob
@@ -105,5 +145,88 @@ export const cardsApi = {
   async verifyById(studentId: number): Promise<CardStudent> {
     const { data } = await axiosInstance.get(`/students/verify/${studentId}`)
     return (data.data ?? data) as CardStudent
+  },
+
+  /** Generate batch cards for a selection batch */
+  async batchGenerate(request: BatchCardRequest): Promise<BatchCardResponse> {
+    console.log('batchGenerate called with:', request)
+    const { data } = await axiosInstance.post('/cards/batch', request)
+    console.log('batchGenerate response:', data)
+    return data as BatchCardResponse
+  },
+
+  /** Get available card templates */
+  async getTemplates(): Promise<CardTemplate[]> {
+    const { data } = await axiosInstance.get('/cards/templates')
+    return data.data as CardTemplate[]
+  },
+
+  /** Get a single card template by ID */
+  async getTemplate(id: number): Promise<CardTemplate> {
+    const { data } = await axiosInstance.get(`/cards/templates/${id}`)
+    return data.data as CardTemplate
+  },
+
+  /** Create a new card template */
+  async createTemplate(payload: {
+    name: string
+    layout_key?: string
+    layout_json: string
+    is_default?: boolean
+  }): Promise<CardTemplate> {
+    const { data } = await axiosInstance.post('/cards/templates', payload)
+    return data.data as CardTemplate
+  },
+
+  /** Update a card template */
+  async updateTemplate(id: number, payload: {
+    name?: string
+    layout_key?: string
+    layout_json?: string
+    is_default?: boolean
+  }): Promise<CardTemplate> {
+    const { data } = await axiosInstance.put(`/cards/templates/${id}`, payload)
+    return data.data as CardTemplate
+  },
+
+  /** Delete a card template */
+  async deleteTemplate(id: number): Promise<void> {
+    await axiosInstance.delete(`/cards/templates/${id}`)
+  },
+
+  /** Get card generation stats */
+  async getStats(): Promise<CardStats> {
+    const { data } = await axiosInstance.get('/cards/stats')
+    return data.data as CardStats
+  },
+
+  /** Get students by batch for card generation */
+  async getStudentsByBatch(batchId: number, filter?: 'all' | 'enrolled' | 'with_photo'): Promise<CardStudent[]> {
+    const params: { batch_id: number; filter?: string } = { batch_id: batchId }
+    if (filter) params.filter = filter
+    const { data } = await axiosInstance.get('/cards/students-by-batch', { params })
+    return data.data as CardStudent[]
+  },
+
+  /** Batch upload student photos */
+  async batchUploadPhotos(photos: Array<{ student_id: number; file: File }>): Promise<{
+    uploaded: Array<{ student_id: number; photo_path: string; url: string }>
+    failed: Array<{ student_id: number; error: string }>
+    total: number
+    success_count: number
+    failed_count: number
+  }> {
+    const formData = new FormData()
+    photos.forEach((photo, index) => {
+      formData.append(`photos[${index}][student_id]`, photo.student_id.toString())
+      formData.append(`photos[${index}][file]`, photo.file)
+    })
+
+    const { data } = await axiosInstance.post('/cards/batch-upload-photos', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return data.data
   },
 }
