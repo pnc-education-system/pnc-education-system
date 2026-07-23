@@ -3,10 +3,11 @@ defineOptions({ name: 'CardGeneratorPage' })
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useToast } from '@/composables/useToast'
-import { cardsApi, type CardStudent } from '@/services/api/cards'
+import { cardsApi, type CardStudent, type CardTemplate, type CardStats } from '@/services/api/cards'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 import StudentCard from '@/components/cards/StudentCard.vue'
+import { generateCardPDF } from '@/utils/pdfGenerator'
 
 import {
   Search,
@@ -46,66 +47,83 @@ const generatedCards = ref<Set<number>>(new Set())
 // ── School Logo (persisted to localStorage) ──
 const schoolLogoUrl = ref<string | null>(localStorage.getItem('card_school_logo'))
 
-// ── Template Selection (persisted to localStorage) ──
-const savedLayout = localStorage.getItem('card_template_preference')
-const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'>(
-  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium' || savedLayout === 'corporate' || savedLayout === 'corporate-blue' || savedLayout === 'corporate-yellow' || savedLayout === 'official') ? savedLayout : 'classic'
-)
+// ── Template Selection (fetched from backend) ──
+const dbTemplates = ref<CardTemplate[]>([])
+const loadingTemplates = ref(false)
+const selectedTemplateId = ref<number | null>(null)
+const selectedLayout = ref<string>('classic')
+const cardStats = ref<CardStats | null>(null)
 
-watch(selectedLayout, (val) => {
-  localStorage.setItem('card_template_preference', val)
+// Determine the current layout key from the selected template
+const currentLayoutKey = computed(() => {
+  if (selectedTemplateId.value) {
+    const tpl = dbTemplates.value.find(t => t.id === selectedTemplateId.value)
+    if (tpl?.layout_key) return tpl.layout_key
+  }
+  // fallback
+  const saved = localStorage.getItem('card_template_preference')
+  return saved || 'classic'
 })
 
-const templates = [
-  {
-    id: 'classic' as const,
-    name: 'Classic',
-    description: 'Traditional ID card with clean layout',
-    popular: false,
-  },
-  {
-    id: 'modern' as const,
-    name: 'Modern',
-    description: 'Contemporary design with gradient header',
-    popular: true,
-  },
-  {
-    id: 'premium' as const,
-    name: 'Premium',
-    description: 'Elegant dark design with gold accents',
-    popular: false,
-  },
-  {
-    id: 'corporate' as const,
-    name: 'Corporate',
-    description: 'Professional design with curved accents',
-    popular: false,
-  },
-  {
-    id: 'corporate-blue' as const,
-    name: 'Corporate Blue',
-    description: 'Professional blue corporate style',
-    popular: false,
-  },
-  {
-    id: 'corporate-yellow' as const,
-    name: 'Corporate Yellow',
-    description: 'Professional yellow corporate style',
-    popular: false,
-  },
-  {
-    id: 'official' as const,
-    name: 'Official',
-    description: 'Blue & gold badge style with barcode',
-    popular: false,
-  },
-] as const
+watch(selectedTemplateId, (id) => {
+  const tpl = dbTemplates.value.find(t => t.id === id)
+  if (tpl?.layout_key) {
+    selectedLayout.value = tpl.layout_key
+    localStorage.setItem('card_template_preference', tpl.layout_key)
+  }
+})
+
+// Map template IDs to color classes for the UI
+const templateDotColor = (layoutKey: string | null): string => {
+  const colors: Record<string, string> = {
+    classic: 'bg-blue-500',
+    modern: 'bg-indigo-500',
+    premium: 'bg-amber-500',
+    corporate: 'bg-green-500',
+    'corporate-blue': 'bg-blue-600',
+    'corporate-yellow': 'bg-yellow-500',
+    official: 'bg-[#1B3FA0]',
+  }
+  return colors[layoutKey || ''] || 'bg-gray-500'
+}
+
+async function fetchTemplates() {
+  loadingTemplates.value = true
+  try {
+    const tpls = await cardsApi.getTemplates()
+    dbTemplates.value = tpls
+    // Restore previously selected template, or use default
+    const saved = localStorage.getItem('card_template_preference')
+    if (saved) {
+      const match = tpls.find(t => t.layout_key === saved)
+      if (match) selectedTemplateId.value = match.id
+      else selectedTemplateId.value = tpls.find(t => t.is_default)?.id || tpls[0]?.id || null
+    } else {
+      selectedTemplateId.value = tpls.find(t => t.is_default)?.id || tpls[0]?.id || null
+    }
+  } catch {
+    dbTemplates.value = []
+  } finally {
+    loadingTemplates.value = false
+  }
+}
+
+async function fetchStats() {
+  try {
+    cardStats.value = await cardsApi.getStats()
+  } catch {
+    // silent
+  }
+}
 
 // ── Generation State ──
 const isGenerating = ref(false)
 const isBatchGenerating = ref(false)
 const isReprinting = ref(false)
 const generationProgress = ref(0)
+
+// ── Dynamic card for generation ──
+const generatingStudentId = ref<number | null>(null)
 
 // ── Card side toggle ──
 const showCardBack = ref(false)
@@ -235,9 +253,34 @@ function toggleStudent(id: number) {
 // ── Card Generation ──
 async function handleGenerate(studentId: number) {
   isGenerating.value = true
+  generatingStudentId.value = studentId
+  // Wait for Vue to render the hidden card for this student
+  await nextTick()
+  // Wait for DOM to settle, images and QR code to load
+  await new Promise(r => setTimeout(r, 500))
+
   try {
-    // The backend generate method already creates the card record
-    const result = await cardsApi.generate(studentId)
+    // Find the card element inside the dedicated gen-target wrapper
+    // Using the wrapper avoids conflicts with the preview card
+    const wrapper = document.querySelector(`[data-card-gen-target="${studentId}"]`) as HTMLElement
+    const cardElement = wrapper?.querySelector('[data-student-card]') as HTMLElement
+    console.log('Card wrapper found:', !!wrapper, 'Card element found:', !!cardElement, 'for student ID:', studentId)
+
+    if (!cardElement) {
+      showErrorToast('Card element not found. Please try again.', 'Generation Failed')
+      return
+    }
+
+    // Generate PDF from the card element
+    console.log('Generating PDF from card element...')
+    const pdfBlob = await generateCardPDF(cardElement, students.value.find((s) => s.id === studentId)?.student_id_no || String(studentId))
+    console.log('PDF generated, size:', pdfBlob.size, 'type:', pdfBlob.type)
+
+    // Send PDF to backend with selected template
+    console.log('Sending PDF to backend...')
+    const result = await cardsApi.generate(studentId, pdfBlob, selectedTemplateId.value ?? undefined)
+    console.log('Backend response:', result)
+
     if (result.status === 'success') {
       generatedCards.value.add(studentId)
       // Update the student with the QR token from the response
@@ -249,10 +292,20 @@ async function handleGenerate(studentId: number) {
     } else {
       showErrorToast(result.error || 'Failed to generate card.', 'Generation Failed')
     }
-  } catch {
-    showErrorToast('Failed to generate card. Please try again.', 'Generation Failed')
+  } catch (error: unknown) {
+    console.error('Card generation error:', error)
+    // Try to extract meaningful error from axios error response
+    const err = error as { response?: { data?: { error?: { message?: string } | string; message?: string } }; message?: string }
+    const serverMsg =
+      err?.response?.data?.error?.message ||
+      (typeof err?.response?.data?.error === 'string' ? err?.response?.data?.error : null) ||
+      err?.response?.data?.message ||
+      err?.message
+    const displayMsg = serverMsg || 'Failed to generate card. Please try again.'
+    showErrorToast(displayMsg, 'Generation Failed')
   } finally {
     isGenerating.value = false
+    generatingStudentId.value = null
   }
 }
 
@@ -266,7 +319,7 @@ async function handleBatchGenerate() {
   generationProgress.value = 0
   try {
     const ids = Array.from(selectedStudentIds.value)
-    
+
     // The backend batchGenerate method already creates card records
     const result = await cardsApi.batchGenerate(ids)
 
@@ -343,11 +396,13 @@ async function handleBatchReprint() {
 async function handleDownload(studentId: number) {
   try {
     const blob = await cardsApi.downloadPdf(studentId)
+    console.log('Download blob size:', blob.size, 'type:', blob.type)
     const student = students.value.find((s) => s.id === studentId)
     const filename = `ID_Card_${student?.student_id_no || studentId}.pdf`
     downloadBlob(blob, filename)
     showSuccessToast('Card PDF downloaded.', 'Download Complete')
-  } catch {
+  } catch (error) {
+    console.error('Download error:', error)
     showErrorToast('Failed to download card PDF.', 'Download Failed')
   }
 }
@@ -410,10 +465,13 @@ function downloadBlob(blob: Blob, filename: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  a.style.display = 'none'
   document.body.appendChild(a)
   a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  setTimeout(() => {
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, 100)
 }
 
 function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
@@ -464,6 +522,8 @@ const pageNumbers = computed(() => {
 onMounted(() => {
   loadBatches()
   loadStudents()
+  fetchTemplates()
+  fetchStats()
 })
 
 onUnmounted(() => {
@@ -494,10 +554,8 @@ onUnmounted(() => {
       <div class="flex items-center gap-2 sm:gap-3">
         <!-- Current Template Badge -->
         <div class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
-          <span class="w-2 h-2 rounded-full"
-            :class="selectedLayout === 'classic' ? 'bg-blue-500' : selectedLayout === 'modern' ? 'bg-indigo-500' : selectedLayout === 'premium' ? 'bg-amber-500' : selectedLayout === 'corporate' ? 'bg-green-500' : selectedLayout === 'corporate-blue' ? 'bg-blue-600' : selectedLayout === 'corporate-yellow' ? 'bg-yellow-500' : 'bg-[#1B3FA0]'"
-          ></span>
-          <span class="capitalize font-semibold">{{ selectedLayout }}</span>
+          <span class="w-2 h-2 rounded-full" :class="templateDotColor(currentLayoutKey)"></span>
+          <span class="capitalize font-semibold">{{ currentLayoutKey }}</span>
           <span class="text-gray-300 dark:text-gray-600">|</span>
           <span class="text-gray-400">Template</span>
         </div>
@@ -535,7 +593,7 @@ onUnmounted(() => {
     <!-- Stats Summary -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Students</p>
         <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ totalStudents }}</p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
@@ -544,11 +602,19 @@ onUnmounted(() => {
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
         <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Generated</p>
-        <p class="text-lg font-bold text-blue-600 mt-0.5">{{ generatedCards.size }}</p>
+        <p class="text-lg font-bold text-blue-600 mt-0.5">
+          {{ generatedCards.size }}
+          <span v-if="cardStats && cardStats.total_generated > generatedCards.size" class="text-[9px] font-normal text-gray-400 ml-1">
+            ({{ cardStats.total_generated }} total)
+          </span>
+        </p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Print</p>
-        <p class="text-lg font-bold mt-0.5" :class="generatedCards.size > 0 ? 'text-emerald-600' : 'text-gray-400'">{{ generatedCards.size > 0 ? 'Ready' : '—' }}</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Templates</p>
+        <p class="text-lg font-bold mt-0.5" :class="dbTemplates.length > 0 ? 'text-emerald-600' : 'text-gray-400'">
+          {{ dbTemplates.length }}
+          <span class="text-[9px] font-normal text-gray-400 ml-1">available</span>
+        </p>
       </div>
     </div>
 
@@ -570,8 +636,7 @@ onUnmounted(() => {
             class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
             :class="showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
           >Back</button>
-        </div>
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 capitalize">{{ selectedLayout }}</span>
+        </div>          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 capitalize">{{ currentLayoutKey }}</span>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 p-3">
@@ -579,7 +644,7 @@ onUnmounted(() => {
         <div class="flex-shrink-0 flex justify-center">
           <StudentCard
             :student="previewDemoStudent"
-            :layout="selectedLayout"
+            :layout="currentLayoutKey"
             size="sm"
             :generated="previewDemoStudent ? generatedCards.has(previewDemoStudent.id) : false"
             :showBack="showCardBack"
@@ -591,23 +656,29 @@ onUnmounted(() => {
 
         <!-- Right side -->
         <div class="flex-1 flex flex-col gap-2 min-w-0">
-          <!-- Template Tabs -->
+          <!-- Template Tabs (fetched from backend) -->
           <div>
-            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Template</p>
-            <div class="flex flex-wrap gap-1">
+            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+              Template
+              <span v-if="loadingTemplates" class="text-gray-300 font-normal">loading...</span>
+            </p>
+            <div v-if="dbTemplates.length === 0 && !loadingTemplates" class="text-[10px] text-gray-400 py-1">
+              No templates found. Run database seeder first.
+            </div>
+            <div v-else class="flex flex-wrap gap-1">
               <button
-                v-for="tpl in templates"
+                v-for="tpl in dbTemplates"
                 :key="tpl.id"
-                @click="selectedLayout = tpl.id"
+                @click="selectedTemplateId = tpl.id"
                 class="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 cursor-pointer border"
-                :class="selectedLayout === tpl.id
+                :class="selectedTemplateId === tpl.id
                   ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
                   : 'bg-transparent border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
               >
-                <span class="w-1.5 h-1.5 rounded-full" :class="tpl.id === 'classic' ? 'bg-blue-500' : tpl.id === 'modern' ? 'bg-indigo-500' : tpl.id === 'premium' ? 'bg-amber-500' : tpl.id === 'corporate' ? 'bg-green-500' : tpl.id === 'corporate-blue' ? 'bg-blue-600' : tpl.id === 'corporate-yellow' ? 'bg-yellow-500' : 'bg-[#1B3FA0]'"></span>
+                <span class="w-1.5 h-1.5 rounded-full" :class="templateDotColor(tpl.layout_key)"></span>
                 <span class="font-semibold">{{ tpl.name }}</span>
-                <span v-if="tpl.popular && selectedLayout !== tpl.id" class="text-[8px] text-indigo-400">★</span>
-                <span v-if="selectedLayout === tpl.id" class="text-blue-600 dark:text-blue-400">✓</span>
+                <span v-if="tpl.is_default && selectedTemplateId !== tpl.id" class="text-[8px] text-blue-400">★</span>
+                <span v-if="selectedTemplateId === tpl.id" class="text-blue-600 dark:text-blue-400">✓</span>
               </button>
             </div>
           </div>
@@ -832,6 +903,24 @@ onUnmounted(() => {
       </div>
     </transition>
 
+    <!-- Hidden card element for generation (offscreen, not visible to user) -->
+    <div
+      v-if="generatingStudentId"
+      :data-card-gen-target="generatingStudentId"
+      class="fixed"
+      style="left: -9999px; top: 0;"
+    >
+      <StudentCard
+        :key="generatingStudentId"
+        :student="students.find(s => s.id === generatingStudentId) || null"
+        :layout="currentLayoutKey"
+        size="sm"
+        :schoolLogo="schoolLogoUrl"
+        @photo-upload="handlePhotoUpload"
+        @logo-upload="handleLogoUpload"
+      />
+    </div>
+
     <!-- Preview Modal -->
     <Teleport to="body">
       <div v-if="showPreviewModal && previewStudent" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -874,7 +963,7 @@ onUnmounted(() => {
               </div>
               <StudentCard
                 :student="previewStudent"
-                :layout="selectedLayout"
+                :layout="currentLayoutKey"
                 size="lg"
                 :generated="generatedCards.has(previewStudent.id)"
                 :showBack="showPreviewCardBack"

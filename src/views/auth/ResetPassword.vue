@@ -11,7 +11,7 @@ const route = useRoute()
 
 const form = ref<PasswordResetConfirm>({
   email: '',
-  reset_token: '',
+  token: '',
   password: '',
   password_confirmation: '',
 })
@@ -25,7 +25,7 @@ const successMessage = ref('')
 
 onMounted(() => {
   form.value.email = (route.query.email as string) || ''
-  form.value.reset_token = (route.query.reset_token as string) || (route.query.token as string) || ''
+  form.value.token = (route.query.token as string) || (route.query.reset_token as string) || ''
 })
 
 async function handleSubmit() {
@@ -86,7 +86,7 @@ function goToLogin() {
           <span>{{ errorMessage }}</span>
         </div>
         <input type="hidden" v-model="form.email" />
-        <input type="hidden" v-model="form.reset_token" />
+        <input type="hidden" v-model="form.token" />
         <div>
           <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-gray-300">{{ t('reset_password.new_password_label') }}</label>
           <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-700 px-3.5 py-2.5 transition-all duration-200 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-400/20">
