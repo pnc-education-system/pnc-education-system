@@ -317,6 +317,13 @@ function navigateToImport() {
   router.push('/enrollment')
 }
 
+function navigateToRecords(student: Student) {
+  router.push({
+    name: 'Records',
+    query: { student_id: student.id },
+  })
+}
+
 function openDetailModal(student: Student) {
   detailStudentObj.value = student
   showDetailModal.value = true

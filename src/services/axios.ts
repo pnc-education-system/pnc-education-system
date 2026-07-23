@@ -9,7 +9,7 @@ const axiosInstance = axios.create({
   },
 })
 
-const PUBLIC_ENDPOINTS = ['/auth/login', '/auth/password/reset', '/auth/password/reset/confirm', '/students/verify']
+const PUBLIC_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/password/reset', '/auth/password/reset/confirm', '/students/verify']
 
 function isPublicEndpoint(url: string | undefined): boolean {
   if (!url) return false
@@ -26,6 +26,13 @@ axiosInstance.interceptors.request.use(
     if (authStore.token) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
+
+    // When sending FormData, let the browser set the correct Content-Type (multipart/form-data with boundary)
+    // This prevents axios from forcing 'application/json' which would break file uploads
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
     return config
   },
   (error) => {

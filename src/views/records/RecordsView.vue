@@ -25,6 +25,9 @@ import {
   Clock,
   User,
   Loader2,
+  Download,
+  Eye,
+  FileDown,
 } from 'lucide-vue-next'
 
 defineOptions({ name: 'RecordsPage' })
@@ -62,6 +65,12 @@ const editingRecord = ref<StudentRecord | null>(null)
 const showAttachmentUpload = ref(false)
 const uploadingForRecordId = ref<number | null>(null)
 const expandedRecords = ref<Set<number>>(new Set())
+
+// ── File Preview State ──
+const showFilePreview = ref(false)
+const previewAttachment = ref<StudentAttachment | null>(null)
+const showImageError = ref(false)
+const imageLoaded = ref(false)
 
 // ── Form ──
 const recordForm = ref({
@@ -106,7 +115,7 @@ const timelineItems = computed<TimelineItem[]>(() => {
       record,
     })
     // Add attachments nested under their record
-    for (const attachment of record.attachments) {
+    for (const attachment of record.attachments ?? []) {
       items.push({
         id: `attachment-${attachment.id}`,
         type: 'attachment',
@@ -168,7 +177,61 @@ function formatFileSize(bytes: number): string {
 function getFileIcon(mimeType: string) {
   if (mimeType.startsWith('image/')) return Image
   if (mimeType.includes('pdf')) return FileType
+  if (mimeType.includes('word')) return FileText
+  if (mimeType.includes('sheet') || mimeType.includes('excel')) return FileText
   return File
+}
+
+function isPreviewableImage(mimeType: string): boolean {
+  return ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(mimeType)
+}
+
+function isPreviewablePdf(mimeType: string): boolean {
+  return mimeType === 'application/pdf'
+}
+
+function isOfficeDocument(mimeType: string): boolean {
+  return [
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  ].includes(mimeType)
+}
+
+function getGoogleViewerUrl(fileUrl: string): string {
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
+}
+
+function getFilePreviewUrl(attachment: StudentAttachment): string {
+  const url = getAttachmentUrl(attachment)
+  if (isOfficeDocument(attachment.mime_type)) {
+    return getGoogleViewerUrl(url)
+  }
+  return url
+}
+
+function openFilePreview(attachment: StudentAttachment) {
+  previewAttachment.value = attachment
+  showFilePreview.value = true
+  showImageError.value = false
+  imageLoaded.value = false
+}
+
+function handleImageLoad() {
+  imageLoaded.value = true
+}
+
+function handleImageError() {
+  showImageError.value = true
+  imageLoaded.value = true
+}
+
+function closeFilePreview() {
+  showFilePreview.value = false
+  previewAttachment.value = null
 }
 
 function getAttachmentUrl(attachment: StudentAttachment): string {
@@ -181,7 +244,12 @@ function getAttachmentUrl(attachment: StudentAttachment): string {
 }
 
 function getRecordTypeStyle(type: string) {
-  return recordTypeColors[type] || recordTypeColors.general
+  return recordTypeColors[type] ?? {
+    bg: '#F0FDF4',
+    text: '#16A34A',
+    dot: '#22C55E',
+    label: 'General',
+  }
 }
 
 function toggleRecordExpand(recordId: number) {
@@ -194,10 +262,35 @@ function toggleRecordExpand(recordId: number) {
   expandedRecords.value = set
 }
 
-// ── Load Students ──
-function loadStudents() {
-  setDemoStudents()
-}
+function getApiErrorMessage(error: any, fallback: string): string {
+  const data = error?.response?.data
+  if (data) {
+    if (data.message && typeof data.message === 'string') return data.message
+    const errors = data.errors
+    if (errors && typeof errors === 'object') {
+      const firstKey = Object.keys(errors)[0]
+      if (firstKey) {
+        const msgs = errors[firstKey]
+        const msg = Array.isArray(msgs) ? msgs[0] : msgs
+        if (msg) return `${firstKey}: ${msg}`
+      }
+    }
+  }
+  return error?.message || fallback
+}    // ── Load Students ──
+    async function loadStudents() {
+        try {
+            const result = await studentsApi.list(1, { per_page: 100 })
+            students.value = result.data
+            console.log('[RecordsView] Students loaded:', students.value.length, 'students. Selected student ID:', selectedStudentId.value)
+            if (!selectedStudentId.value && students.value.length > 0 && students.value[0]) {
+                selectedStudentId.value = students.value[0].id
+            }
+        } catch (error) {
+            console.error('[RecordsView] Failed to load students:', error)
+            setDemoStudents()
+        }
+    }
 
 function setDemoStudents() {
   if (students.value.length > 0) return
@@ -239,8 +332,7 @@ function setDemoStudents() {
   }
 }
 
-// Set to true when backend records/attachments API endpoints are implemented
-const RECORDS_API_ENABLED = false
+const RECORDS_API_ENABLED = import.meta.env.VITE_RECORDS_API_ENABLED !== 'false'
 
 // Local ID counter for locally-created records and attachments
 let nextLocalId = 1000
@@ -348,7 +440,10 @@ async function loadRecords() {
     ])
 
     if (recordsResult.status === 'fulfilled') {
-      records.value = recordsResult.value
+      records.value = recordsResult.value.map(record => ({
+        ...record,
+        attachments: record.attachments ?? [],
+      }))
     } else {
       const err = recordsResult.reason
       if (err?.response?.status !== 404) {
@@ -365,6 +460,8 @@ async function loadRecords() {
         console.error('Failed to load attachments:', err)
       }
     }
+  } catch (error) {
+    console.error('Failed to load student records:', error)
   } finally {
     isLoading.value = false
   }
@@ -427,9 +524,10 @@ async function submitRecordForm() {
       // ── Local mode (no backend) ──
       if (editingRecord.value) {
         const idx = records.value.findIndex((r: StudentRecord) => r.id === editingRecord.value!.id)
-        if (idx !== -1) {
+        const currentRecord = records.value[idx]
+        if (currentRecord) {
           records.value[idx] = {
-            ...records.value[idx],
+            ...currentRecord,
             title: recordForm.value.title.trim(),
             description: recordForm.value.description.trim(),
             record_type: recordForm.value.record_type,
@@ -464,28 +562,31 @@ async function submitRecordForm() {
         title: recordForm.value.title.trim(),
         description: recordForm.value.description.trim(),
         record_type: recordForm.value.record_type,
+        recorded_at: currentRecord.recorded_at || now,
       }
       const updated = await recordsApi.update(selectedStudentId.value, currentRecord.id, payload)
       const index = records.value.findIndex((r: StudentRecord) => r.id === currentRecord.id)
       if (index !== -1) {
-        records.value[index] = updated
+        records.value[index] = { ...updated, attachments: updated.attachments ?? [] }
       }
       showSuccessToast(t('records.toast_updated'), t('records.toast_updated_title'))
     } else {
       const payload: CreateStudentRecordPayload = {
-        student_id: selectedStudentId.value,
+        student_id: Number(selectedStudentId.value),
         title: recordForm.value.title.trim(),
         description: recordForm.value.description.trim(),
         record_type: recordForm.value.record_type,
+        recorded_by: authStore.user?.id ?? 1,
+        recorded_at: now,
       }
       const created = await recordsApi.create(selectedStudentId.value, payload)
-      records.value.unshift(created)
+      records.value.unshift({ ...created, attachments: created.attachments ?? [] })
       showSuccessToast(t('records.toast_created'), t('records.toast_created_title'))
     }
     closeRecordForm()
     loadRecords()
   } catch (error: any) {
-    const message = error?.response?.data?.message || error?.message || t('records.toast_save_error')
+    const message = getApiErrorMessage(error, t('records.toast_save_error'))
     showErrorToast(message, t('records.toast_error'))
   } finally {
     isSaving.value = false
@@ -536,7 +637,7 @@ async function deleteRecord(record: StudentRecord) {
     showSuccessToast(t('records.toast_deleted'), t('records.toast_deleted_title'))
     loadRecords()
   } catch (error: any) {
-    const message = error?.response?.data?.message || error?.message || 'Failed to delete record.'
+    const message = getApiErrorMessage(error, 'Failed to delete record.')
     showErrorToast(message, t('records.toast_error'))
   }
 }
@@ -616,19 +717,36 @@ async function submitAttachmentUpload() {
       showSuccessToast(t('records.toast_attachment_uploaded'), t('records.toast_attachment_uploaded_title'))
       closeAttachmentUpload()
       return
-    }
+    }        // ── API mode ──
+        const uploaded = await recordsApi.uploadAttachment(selectedStudentId.value, {
+            student_id: selectedStudentId.value,
+            record_id: uploadingForRecordId.value,
+            file: attachmentFile.value,
+        })
 
-    // ── API mode ──
-    await recordsApi.uploadAttachment(selectedStudentId.value, {
-      student_id: selectedStudentId.value,
-      record_id: uploadingForRecordId.value,
-      file: attachmentFile.value,
-    })
-    showSuccessToast(t('records.toast_attachment_uploaded'), t('records.toast_attachment_uploaded_title'))
-    closeAttachmentUpload()
-    loadRecords()
+        console.log('[RecordsView] Upload response:', JSON.stringify(uploaded, null, 2))
+        console.log('[RecordsView] uploaded.record_id:', uploaded.record_id)
+
+        if (uploaded.record_id) {
+            const record = records.value.find((r: StudentRecord) => r.id === uploaded.record_id)
+            if (record) {
+                record.attachments = [...(record.attachments ?? []), uploaded]
+            }
+        } else {
+            attachments.value.unshift(uploaded)
+            console.log('[RecordsView] After unshift, attachments length:', attachments.value.length)
+        }
+        showSuccessToast(t('records.toast_attachment_uploaded'), t('records.toast_attachment_uploaded_title'))
+        closeAttachmentUpload()
+        await loadRecords()
+
+        // Log state after loadRecords
+        console.log('[RecordsView] After loadRecords — attachments count:', attachments.value.length)
+        console.log('[RecordsView] After loadRecords — timeline items:', timelineItems.value.length)
+        console.log('[RecordsView] After loadRecords — hasRecords:', hasRecords.value)
   } catch (error: any) {
-    const message = error?.response?.data?.message || error?.message || 'Failed to upload attachment.'
+    // Show the actual error message from the backend (e.g. file too large, unsupported type)
+    const message = error instanceof Error ? error.message : getApiErrorMessage(error, 'Failed to upload attachment.')
     showErrorToast(message, t('records.toast_error'))
   } finally {
     isUploading.value = false
@@ -651,7 +769,7 @@ async function deleteAttachment(attachment: StudentAttachment) {
     showSuccessToast(t('records.toast_attachment_deleted'), t('records.toast_attachment_deleted_title'))
     loadRecords()
   } catch (error: any) {
-    const message = error?.response?.data?.message || error?.message || 'Failed to delete attachment.'
+    const message = getApiErrorMessage(error, 'Failed to delete attachment.')
     showErrorToast(message, t('records.toast_error'))
   }
 }
@@ -660,8 +778,8 @@ function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
-onMounted(() => {
-  loadStudents()
+onMounted(async () => {
+  await loadStudents()
   if (selectedStudentId.value) {
     loadRecords()
   }
@@ -812,31 +930,31 @@ onMounted(() => {
                 <div
                   v-if="item.type === 'record' && item.record"
                   class="bg-white dark:bg-[#131B2E] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700"
-                  :class="{ 'shadow-md': expandedRecords.has(item.record.id) }"
+                  :class="{ 'shadow-md': expandedRecords.has(item.record!.id) }"
                 >
                   <div
-                    @click="toggleRecordExpand(item.record.id)"
+                    @click="toggleRecordExpand(item.record!.id)"
                     class="px-5 py-4 flex items-center justify-between cursor-pointer"
                   >
                     <div class="flex items-center gap-3 min-w-0">
                       <div
                         class="w-2 h-2 rounded-full flex-shrink-0"
-                        :style="{ backgroundColor: getRecordTypeStyle(item.record.record_type).dot }"
+                        :style="{ backgroundColor: getRecordTypeStyle(item.record!.record_type).dot }"
                       ></div>
                       <div class="min-w-0">
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ item.record.title }}</p>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ item.record!.title }}</p>
                         <div class="flex items-center gap-2 mt-0.5">
                           <span
                             class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
                             :style="{
-                              backgroundColor: getRecordTypeStyle(item.record.record_type).bg,
-                              color: getRecordTypeStyle(item.record.record_type).text
+                              backgroundColor: getRecordTypeStyle(item.record!.record_type).bg,
+                              color: getRecordTypeStyle(item.record!.record_type).text
                             }"
                           >
-                            {{ getRecordTypeStyle(item.record.record_type).label }}
+                            {{ getRecordTypeStyle(item.record!.record_type).label }}
                           </span>
                           <span class="text-[11px] text-gray-400 dark:text-gray-500">
-                            {{ formatDate(item.record.recorded_at || item.record.created_at) }}
+                            {{ formatDate(item.record!.recorded_at || item.record!.created_at) }}
                           </span>
                         </div>
                       </div>
@@ -844,7 +962,7 @@ onMounted(() => {
                     <div class="flex items-center gap-2 flex-shrink-0 ml-3">
                       <button
                         v-if="canManage"
-                        @click.stop="openEditRecord(item.record)"
+                        @click.stop="openEditRecord(item.record!)"
                         class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
                         title="Edit record"
                       >
@@ -852,20 +970,20 @@ onMounted(() => {
                       </button>
                       <button
                         v-if="canManage"
-                        @click.stop="deleteRecord(item.record)"
+                        @click.stop="deleteRecord(item.record!)"
                         class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
                         title="Delete record"
                       >
                         <Trash2 :size="14" />
                       </button>
                       <button
-                        @click.stop="toggleRecordExpand(item.record.id)"
+                        @click.stop="toggleRecordExpand(item.record!.id)"
                         class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-800"
                       >
                         <ChevronDown
                           :size="16"
                           class="transition-transform duration-200"
-                          :class="{ 'rotate-180': expandedRecords.has(item.record.id) }"
+                          :class="{ 'rotate-180': expandedRecords.has(item.record!.id) }"
                         />
                       </button>
                     </div>
@@ -879,43 +997,53 @@ onMounted(() => {
                     leave-from-class="opacity-100 max-h-[1000px]"
                     leave-to-class="opacity-0 max-h-0"
                   >
-                    <div v-if="expandedRecords.has(item.record.id)" class="border-t border-gray-100 dark:border-gray-800">
+                    <div v-if="expandedRecords.has(item.record!.id)" class="border-t border-gray-100 dark:border-gray-800">
                       <div class="px-5 py-4 space-y-4">
-                        <div v-if="item.record.description" class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                          {{ item.record.description }}
+                        <div v-if="item.record!.description" class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                          {{ item.record!.description }}
                         </div>
 
-                        <div v-if="item.record.attachments && item.record.attachments.length > 0">
+                        <div v-if="item.record!.attachments && item.record!.attachments.length > 0">
                           <div class="flex items-center gap-2 mb-2">
                             <Paperclip :size="14" class="text-gray-400" />
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
-                              Attachments ({{ item.record.attachments.length }})
+                              Attachments ({{ item.record!.attachments.length }})
                             </span>
                           </div>
                           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div
-                              v-for="att in item.record.attachments"
+                              v-for="att in item.record!.attachments"
                               :key="att.id"
-                              class="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-100 dark:border-gray-800 group"
+                              @click="openFilePreview(att)"
+                              class="flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-100 dark:border-gray-800 group cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-200 dark:hover:border-blue-500/30 transition-all duration-200"
                             >
-                              <component :is="getFileIcon(att.mime_type)" :size="18" class="text-gray-400 flex-shrink-0" />
+                              <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700/50 flex items-center justify-center shadow-sm flex-shrink-0">
+                                <component :is="getFileIcon(att.mime_type)" :size="16" class="text-blue-500" />
+                              </div>
                               <div class="min-w-0 flex-1">
                                 <p class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ att.file_name }}</p>
-                                <p class="text-[10px] text-gray-400">{{ formatFileSize(att.file_size) }}</p>
+                                <p class="text-[10px] text-gray-400 mt-0.5">{{ formatFileSize(att.file_size) }}</p>
                               </div>
-                              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
+                                <button
+                                  @click="openFilePreview(att)"
+                                  class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-500/20 dark:hover:text-blue-400 transition-all"
+                                  title="Preview file"
+                                >
+                                  <Eye :size="14" />
+                                </button>
                                 <a
                                   :href="getAttachmentUrl(att)"
                                   target="_blank"
-                                  class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
-                                  title="Open file"
+                                  class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/50 dark:hover:text-gray-300 transition-all"
+                                  title="Open in new tab"
                                 >
                                   <ExternalLink :size="14" />
                                 </a>
                                 <button
                                   v-if="canManage"
                                   @click="deleteAttachment(att)"
-                                  class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                                  class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-all"
                                   title="Delete attachment"
                                 >
                                   <Trash2 :size="14" />
@@ -941,31 +1069,41 @@ onMounted(() => {
                 <!-- Attachment Card (orphan) -->
                 <div
                   v-if="item.type === 'attachment' && item.attachment && !item.record"
-                  class="bg-white dark:bg-[#131B2E] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden px-5 py-4"
+                  @click="openFilePreview(item.attachment)"
+                  class="bg-white dark:bg-[#131B2E] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 hover:border-blue-200 dark:hover:border-blue-500/30 transition-all duration-200 group"
                 >
                   <div class="flex items-center gap-3">
-                    <component :is="getFileIcon(item.attachment.mime_type)" :size="20" class="text-amber-500 flex-shrink-0" />
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shadow-sm flex-shrink-0">
+                      <component :is="getFileIcon(item.attachment.mime_type)" :size="18" class="text-amber-500" />
+                    </div>
                     <div class="min-w-0 flex-1">
-                      <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ item.attachment.file_name }}</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{{ item.attachment.file_name }}</p>
                       <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[11px] text-gray-400">{{ formatFileSize(item.attachment.file_size) }}</span>
                         <span class="text-[11px] text-gray-300 dark:text-gray-600">·</span>
                         <span class="text-[11px] text-gray-400">{{ formatDate(item.attachment.uploaded_at || item.attachment.created_at) }}</span>
                       </div>
                     </div>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
+                      <button
+                        @click="openFilePreview(item.attachment!)"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:text-blue-400 transition-all"
+                        title="Preview file"
+                      >
+                        <Eye :size="15" />
+                      </button>
                       <a
                         :href="getAttachmentUrl(item.attachment)"
                         target="_blank"
-                        class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
-                        title="Open file"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/50 dark:hover:text-gray-300 transition-all"
+                        title="Open in new tab"
                       >
                         <ExternalLink :size="14" />
                       </a>
                       <button
                         v-if="canManage"
                         @click="deleteAttachment(item.attachment)"
-                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-all"
                         title="Delete attachment"
                       >
                         <Trash2 :size="14" />
@@ -1141,6 +1279,200 @@ onMounted(() => {
               <Loader2 v-if="isUploading" :size="14" class="animate-spin" />
               {{ isUploading ? t('records.uploading') : t('records.upload_attachment') }}
             </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- File Preview Modal -->
+    <Teleport to="body">
+      <div v-if="showFilePreview && previewAttachment" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="closeFilePreview"></div>
+        <div
+          class="relative bg-white dark:bg-[#0F1729] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+          @click.stop
+        >
+          <!-- Preview Header -->
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+              <div
+                class="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0"
+                :class="isPreviewableImage(previewAttachment.mime_type)
+                  ? 'bg-pink-50 dark:bg-pink-500/10'
+                  : isPreviewablePdf(previewAttachment.mime_type)
+                    ? 'bg-red-50 dark:bg-red-500/10'
+                    : 'bg-blue-50 dark:bg-blue-500/10'"
+              >
+                <component
+                  :is="getFileIcon(previewAttachment.mime_type)"
+                  :size="20"
+                  :class="isPreviewableImage(previewAttachment.mime_type)
+                    ? 'text-pink-500'
+                    : isPreviewablePdf(previewAttachment.mime_type)
+                      ? 'text-red-500'
+                      : 'text-blue-500'"
+                />
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {{ previewAttachment.file_name }}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {{ formatFileSize(previewAttachment.file_size) }}
+                  ·
+                  {{ isPreviewableImage(previewAttachment.mime_type) ? 'Image' : isPreviewablePdf(previewAttachment.mime_type) ? 'PDF Document' : 'File' }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a
+                :href="getAttachmentUrl(previewAttachment)"
+                target="_blank"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              >
+                <ExternalLink :size="13" />
+                Open
+              </a>
+              <button
+                @click="closeFilePreview"
+                class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-all cursor-pointer"
+              >
+                <X :size="20" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Preview Body (scrollable) -->
+          <div class="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900/50 flex items-start justify-center p-4">
+            <!-- Image Preview -->
+            <div v-if="isPreviewableImage(previewAttachment.mime_type)" class="w-full flex justify-center">
+              <!-- Loading skeleton -->
+              <div
+                v-if="!imageLoaded"
+                class="w-full max-h-[70vh] min-h-[300px] rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse flex items-center justify-center"
+              >
+                <Loader2 :size="32" class="text-gray-400 animate-spin" />
+              </div>
+
+              <!-- Error fallback -->
+              <div
+                v-if="showImageError"
+                class="w-full max-h-[70vh] min-h-[300px] rounded-xl bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-3"
+              >
+                <div class="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                  <FileDown :size="28" class="text-red-400" />
+                </div>
+                <div class="text-center">
+                  <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Image failed to load</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">The image may have been moved or deleted.</p>
+                </div>
+                <a
+                  :href="getAttachmentUrl(previewAttachment)"
+                  target="_blank"
+                  class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all"
+                >
+                  <Download :size="14" />
+                  Download File
+                </a>
+              </div>
+
+              <!-- Actual image (hidden while loading or errored) -->
+              <img
+                v-show="imageLoaded && !showImageError"
+                :src="getAttachmentUrl(previewAttachment)"
+                :alt="previewAttachment.file_name"
+                class="max-w-full max-h-[70vh] rounded-xl shadow-lg object-contain bg-white dark:bg-gray-800"
+                @load="handleImageLoad"
+                @error="handleImageError"
+              />
+            </div>
+
+            <!-- PDF Preview -->
+            <div v-else-if="isPreviewablePdf(previewAttachment.mime_type)" class="w-full flex justify-center">
+              <iframe
+                :src="getAttachmentUrl(previewAttachment)"
+                class="w-full h-[70vh] rounded-xl shadow-lg bg-white"
+                title="PDF Preview"
+              ></iframe>
+            </div>
+
+            <!-- Office Document Preview (via Google Docs Viewer, when not localhost) -->
+            <div v-else-if="isOfficeDocument(previewAttachment.mime_type)" class="w-full flex justify-center relative">
+              <template v-if="!getAttachmentUrl(previewAttachment).includes('127.0.0.1') && !getAttachmentUrl(previewAttachment).includes('localhost')">
+                <iframe
+                  :src="getFilePreviewUrl(previewAttachment)"
+                  class="w-full h-[70vh] rounded-xl shadow-lg bg-white"
+                  title="Document Preview"
+                ></iframe>
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-sm text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <ExternalLink :size="12" />
+                  Powered by Google Docs Viewer
+                </div>
+              </template>
+              <!-- Localhost: open directly in new tab for native viewing -->
+              <div v-else class="flex flex-col items-center justify-center py-16 gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                  <ExternalLink :size="32" class="text-amber-500" />
+                </div>
+                <div class="text-center max-w-sm">
+                  <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Open document to view</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Click below to open this document. Your browser or system will handle the file.
+                  </p>
+                </div>
+                <a
+                  :href="getAttachmentUrl(previewAttachment)"
+                  target="_blank"
+                  class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 rounded-xl hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20"
+                >
+                  <ExternalLink :size="16" />
+                  Open Document
+                </a>
+              </div>
+            </div>
+
+            <!-- Fallback for non-previewable files -->
+            <div v-else class="flex flex-col items-center justify-center py-16 gap-4">
+              <div class="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                <FileDown :size="32" class="text-blue-500" />
+              </div>
+              <div class="text-center max-w-sm">
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Preview not available</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  This file type cannot be previewed in the browser. Download or open it to view the content.
+                </p>
+              </div>
+              <a
+                :href="getAttachmentUrl(previewAttachment)"
+                target="_blank"
+                class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-500 rounded-xl hover:bg-blue-600 transition-all shadow-md shadow-blue-500/20"
+              >
+                <Download :size="16" />
+                Download File
+              </a>
+            </div>
+          </div>
+
+          <!-- Preview Footer -->
+          <div class="flex items-center justify-between px-6 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 flex-shrink-0">
+            <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span class="flex items-center gap-1.5">
+                <File :size="12" />
+                {{ previewAttachment.mime_type }}
+              </span>
+              <span class="flex items-center gap-1.5">
+                <Calendar :size="12" />
+                Uploaded {{ formatDate(previewAttachment.uploaded_at || previewAttachment.created_at) }}
+              </span>
+            </div>
+            <a
+              :href="getAttachmentUrl(previewAttachment)"
+              :download="previewAttachment.file_name"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all"
+            >
+              <Download :size="13" />
+              Download
+            </a>
           </div>
         </div>
       </div>
