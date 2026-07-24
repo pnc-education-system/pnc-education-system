@@ -20,6 +20,15 @@ export interface StudentRecord {
   } | null
 }
 
+export interface StudentActivity {
+  id: string
+  type: 'status_change' | 'record_update' | 'evaluation'
+  title: string
+  description: string
+  performed_by: string
+  date: string
+}
+
 export interface StudentRecordPayload {
   category: StudentRecordCategory
   title: string
@@ -109,8 +118,8 @@ export const studentsApi = {
       'inactive': 'Pending', // Map inactive to pending for now
     }
     const backendStatus = statusMap[status] || 'Pending'
-    const { data } = await axiosInstance.post('/students/bulk-status', { 
-      student_ids: ids, 
+    const { data } = await axiosInstance.post('/students/bulk-status', {
+      student_ids: ids,
       status: backendStatus,
       note
     })
@@ -118,12 +127,11 @@ export const studentsApi = {
   },
 
   async bulkConfirm(ids: number[]): Promise<{ confirmed_count: number }> {
-    const { data } = await axiosInstance.post('/students/bulk-confirm', { 
+    const { data } = await axiosInstance.post('/students/bulk-confirm', {
       student_ids: ids
     })
     return data.data as { confirmed_count: number }
   },
-
   async listRecords(studentId: number): Promise<StudentRecord[]> {
     const { data } = await axiosInstance.get(`/students/${studentId}/records`)
     return data.data as StudentRecord[]
@@ -143,17 +151,19 @@ export const studentsApi = {
     await axiosInstance.delete(`/students/${studentId}/records/${recordId}`)
   },
 
-  async uploadPhoto(id: number, file: File): Promise<{ photo_path: string; photo_url: string }> {
+  async uploadPhoto(id: number, photo: File): Promise<{ photo_url: string }> {
     const formData = new FormData()
-    formData.append('photo', file)
+    formData.append('photo', photo)
     const { data } = await axiosInstance.post(`/students/${id}/photo`, formData, {
-      // Explicitly remove Content-Type to let the browser set it correctly with boundary for multipart
-      headers: { 'Content-Type': undefined as unknown as string },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     })
-    const photoUrl = data.data.photo_url as string
-    // Extract the relative path from the URL (e.g. /storage/students/photos/xxx.jpg)
-    const urlObj = new URL(photoUrl)
-    const photoPath = urlObj.pathname.replace(/^\/storage\//, '')
-    return { photo_path: photoPath, photo_url: photoUrl }
+    return data.data as { photo_url: string }
+  },
+
+  async getHistory(id: number): Promise<StudentActivity[]> {
+    const { data } = await axiosInstance.get(`/students/${id}/history`)
+    return data.data as StudentActivity[]
   },
 }

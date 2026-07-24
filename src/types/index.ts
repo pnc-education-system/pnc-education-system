@@ -94,7 +94,7 @@ export interface ProfileResponse {
 
 export interface PasswordResetConfirm {
   email: string
-  token: string
+  reset_token: string
   password: string
   password_confirmation: string
 }

@@ -127,8 +127,19 @@ async function fetchStudent() {
   }
 }
 
+// Fallback data from URL query params
+const queryData = computed(() => ({
+  name: (route.query.name as string) || student.value?.full_name || 'Student',
+  gender: (route.query.gender as string) || student.value?.gender || '—',
+  batch: (route.query.batch as string) || student.value?.selection_batch_name || '—',
+  year: (route.query.year as string) || String(student.value?.intake_year || ''),
+  status: (route.query.status as string) || student.value?.enrollment_status || 'unknown',
+  dob: (route.query.dob as string) || student.value?.dob || '',
+  province: (route.query.province as string) || student.value?.province || '',
+}))
+
 const initials = computed(() => {
-  const name = student.value?.full_name
+  const name = queryData.value.name
   if (!name?.trim()) return 'ST'
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2)
 })

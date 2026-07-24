@@ -1,23 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { useStudentDetailStore } from '@/stores/student'
 import type { CardStudent } from '@/services/api/cards'
 import QRCode from 'qrcode'
 import defaultSchoolLogo from '@/assets/images/PN_logo_clear.png'
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-vue-next'
+import { Loader2 } from 'lucide-vue-next'
 
-// Define the component options
-defineOptions({ name: 'StudentCard' })
-
-// Props definitions, making student optional to support direct self-fetching
 const props = withDefaults(
   defineProps<{
-    student?: CardStudent | null
+    student: CardStudent | null
     size?: 'sm' | 'md' | 'lg'
     showActions?: boolean
     generated?: boolean
-    layout?: 'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'
+    layout?: 'classic' | 'modern' | 'premium'
     managerName?: string
     issueDate?: string
     expiredDate?: string
@@ -25,7 +19,6 @@ const props = withDefaults(
     schoolLogo?: string | null
   }>(),
   {
-    student: null,
     size: 'md',
     showActions: false,
     generated: false,
@@ -36,7 +29,6 @@ const props = withDefaults(
   },
 )
 
-// Emitted events
 const emit = defineEmits<{
   generate: [studentId: number]
   preview: [studentId: number]
@@ -46,11 +38,6 @@ const emit = defineEmits<{
   'logo-upload': [file: File]
 }>()
 
-// Route and Pinia store configuration
-const route = useRoute()
-const studentStore = useStudentDetailStore()
-
-// State variables for QR code, errors, photo inputs, and local mock uploads
 const qrDataUrl = ref<string>('')
 const photoError = ref(false)
 const logoError = ref(false)
@@ -60,36 +47,12 @@ const localPhotoUrl = ref<string | null>(null)
 const localLogoUrl = ref<string | null>(null)
 const isFlipped = ref(props.showBack)
 
-// Computed student details: fall back to store if props is not supplied
-const currentStudent = computed(() => {
-  return props.student || (studentStore.student as any)
-})
-
-// Loading & error status from store (only active if self-fetching)
-const isLoading = computed(() => {
-  return !props.student && studentStore.loading
-})
-
-const errorMessage = computed(() => {
-  return !props.student ? studentStore.error : null
-})
-
-// Formatting helpers and default values for ID Card fields (requirement 16: "N/A" fallback)
-const displayFullName = computed(() => currentStudent.value?.full_name || 'N/A')
-const displayStudentId = computed(() => currentStudent.value?.student_id_no || 'N/A')
-const displayGender = computed(() => currentStudent.value?.gender || 'N/A')
-const displayStatus = computed(() => currentStudent.value?.enrollment_status || 'N/A')
-const displayIntakeYear = computed(() => currentStudent.value?.intake_year ? String(currentStudent.value.intake_year) : 'N/A')
-const displayBatchName = computed(() => currentStudent.value?.selection_batch_name || currentStudent.value?.selection_batch?.name || 'N/A')
-
-// Compute school logo
 const schoolLogoUrl = computed(() => {
   if (localLogoUrl.value) return localLogoUrl.value
   if (props.schoolLogo) return props.schoolLogo
   return defaultSchoolLogo
 })
 
-// Card sizing definitions
 const sizePx = computed(() => {
   switch (props.size) {
     case 'sm': return { width: 240, height: 360 }
@@ -99,56 +62,60 @@ const sizePx = computed(() => {
   }
 })
 
-// Photo sizing definitions
 const photoSize = computed(() => {
   switch (props.size) {
-    case 'sm': return 80
-    case 'lg': return 120
+    case 'sm': return 60
+    case 'lg': return 95
     case 'md':
-    default: return 100
+    default: return 76
   }
 })
 
-// Photo URL computation with backend URL prepended
+const studentInitials = computed(() => {
+  if (!props.student?.full_name?.trim()) return 'ST'
+  const parts = props.student.full_name.trim().split(/\s+/)
+  return parts.map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'ST'
+})
+
 const photoUrl = computed(() => {
   if (localPhotoUrl.value) return localPhotoUrl.value
   if (!props.student?.photo_path) return null
   if (/^https?:\/\//i.test(props.student.photo_path)) return props.student.photo_path
-  // Use relative URL so Vite proxy handles it (same origin, no CORS issues)
-  // In production, /storage/ works if frontend/backend are on the same domain
+  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+  const apiOrigin = new URL(apiBase).origin
   const path = props.student.photo_path
-  if (path.startsWith('/storage/')) return path
-  if (path.startsWith('storage/')) return `/${path}`
-  return `/storage/${path.replace(/^\/+/, '')}`
+  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
+  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
+  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
 })
 
-// QR Code contents generated using qr_token (requirement 6)
 const qrContent = computed(() => {
-  if (!currentStudent.value) return ''
-  // Use frontend URL from environment variable for QR code so phone can access the verification page
-  const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin
-
-  // Use unique qr_token if available
-  if (currentStudent.value.qr_token) {
-    return `${frontendUrl}/verify/${currentStudent.value.qr_token}`
-  }
-  // Fallback to student ID if no QR token
-  return `${frontendUrl}/verify/${encodeURIComponent(displayStudentId.value)}`
+  if (!props.student) return ''
+  const origin = window.location.origin
+  const params = new URLSearchParams({
+    name: props.student.full_name,
+    gender: props.student.gender || '',
+    batch: props.student.selection_batch_name || '',
+    year: String(props.student.intake_year || ''),
+    status: props.student.enrollment_status,
+  })
+  if (props.student.dob) params.set('dob', props.student.dob)
+  if (props.student.province) params.set('province', props.student.province)
+  return `${origin}/verify/${encodeURIComponent(props.student.student_id_no)}?${params.toString()}`
 })
 
 const computedIssueDate = computed(() => {
   if (props.issueDate) return props.issueDate
-  if (currentStudent.value?.intake_year) return `October 1, ${currentStudent.value.intake_year}`
+  if (props.student?.intake_year) return `October 1, ${props.student.intake_year}`
   return '—'
 })
 
 const computedExpiredDate = computed(() => {
   if (props.expiredDate) return props.expiredDate
-  if (currentStudent.value?.intake_year) return `October 1, ${currentStudent.value.intake_year + 2}`
+  if (props.student?.intake_year) return `October 1, ${props.student.intake_year + 2}`
   return '—'
 })
 
-// Enrollment status display colors mapping
 const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
   enrolled: { bg: '#ECFDF5', text: '#059669', dot: '#10B981' },
   pending: { bg: '#FFFBEB', text: '#D97706', dot: '#F59E0B' },
@@ -157,47 +124,45 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   dropped: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
 }
 
-function getStatusStyle(status: string) {
-  const key = status?.toLowerCase() || 'pending'
-  return statusStyles[key] || statusStyles.pending
+function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
+  return statusStyles[status] || statusStyles.pending
 }
 
-function capitalize(s: string) {
+function capitalize(s: string | null | undefined) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
 }
 
-// Generate the QR code using the qr_token or fallback verify link
+function studentStatus(): string {
+  return props.student?.enrollment_status ?? ''
+}
+
+function studentIdNo(): string {
+  return props.student?.student_id_no ?? ''
+}
+
 async function generateQR() {
   if (!qrContent.value) return
   try {
     qrDataUrl.value = await QRCode.toDataURL(qrContent.value, {
-      width: 100,
-      margin: 1,
+      width: 100, margin: 1,
       color: { dark: '#1e293b', light: '#ffffff' },
     })
-  } catch (err) {
-    console.error('QR Generation failed:', err)
-  }
+  } catch { /* silent */ }
 }
 
-// Actions click triggers
-function handlePhotoClick() {
-  photoInput.value?.click()
-}
+function handlePhotoClick() { photoInput.value?.click() }
 
 function handlePhotoChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file || !currentStudent.value) return
+  if (!file || !props.student) return
   if (localPhotoUrl.value) URL.revokeObjectURL(localPhotoUrl.value)
   localPhotoUrl.value = URL.createObjectURL(file)
   photoError.value = false
-  emit('photo-upload', currentStudent.value.id, file)
+  emit('photo-upload', props.student.id, file)
 }
 
-function handleLogoClick() {
-  logoInput.value?.click()
-}
+function handleLogoClick() { logoInput.value?.click() }
 
 function handleLogoChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -209,6 +174,8 @@ function handleLogoChange(event: Event) {
   emit('logo-upload', file)
 }
 
+function toggleFlip() { isFlipped.value = !isFlipped.value }
+
 onMounted(() => { generateQR() })
 
 onUnmounted(() => {
@@ -216,15 +183,15 @@ onUnmounted(() => {
   if (localLogoUrl.value) URL.revokeObjectURL(localLogoUrl.value)
 })
 
-// Watchers for data updates
-watch(() => currentStudent.value, () => {
+watch(() => props.student, () => {
   photoError.value = false
   if (localPhotoUrl.value) {
     URL.revokeObjectURL(localPhotoUrl.value)
     localPhotoUrl.value = null
   }
+  isFlipped.value = props.showBack
   generateQR()
-}, { deep: true })
+})
 
 watch(() => props.schoolLogo, () => {
   if (props.schoolLogo) {
@@ -232,53 +199,57 @@ watch(() => props.schoolLogo, () => {
   }
 })
 
-watch(() => props.showBack, (val) => {
-  isFlipped.value = val
-})
-
-
+watch(() => props.showBack, (val) => { isFlipped.value = val })
 </script>
 
 <template>
   <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoChange" />
   <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden" @change="handleLogoChange" />
 
-  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px' }">
-    <div class="card-inner relative w-full h-full">
+  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px', perspective: '1000px' }">
+    <div
+      class="card-inner relative w-full h-full"
+      :class="{ flipped: isFlipped }"
+      :style="{ transformStyle: 'preserve-3d', transition: 'transform 0.5s ease' }"
+    >
       <!-- ══ FRONT ══ -->
-      <div v-if="!isFlipped" class="card-face w-full h-full">
+      <div class="card-face absolute inset-0">
 
         <!-- ── CLASSIC ── -->
         <div v-if="layout === 'classic'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
-          :style="{ background: '#fff' }"
-          :data-student-card="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <!-- Header bar -->
-          <div class="bg-[#1e3a5f] px-4 py-2.5">
-            <div class="flex items-center gap-3">
+          <div class="bg-[#1e3a5f] px-3.5 py-2">
+            <div class="flex items-center gap-2.5">
               <div @click="handleLogoClick"
-                class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer group relative">
-                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
-                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+                class="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
                 <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
-              <div v-if="generated" class="shrink-0 px-2.5 py-1 rounded-full text-[7px] font-semibold bg-white/20 text-white border border-white/30">
-                Generated
+              <div v-if="generated" class="shrink-0 px-2 py-0.5 rounded-full text-[7px] font-semibold bg-emerald-400/15 text-emerald-300 border border-emerald-400/25">
+                <svg class="w-2 h-2 inline mr-0.5 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Generated
               </div>
             </div>
           </div>
 
-          <div class="flex-1 flex flex-col items-center px-4 pt-4 pb-3 gap-1.5 justify-center">
-            <!-- Photo (requirement 15: avatar fallback) -->
+          <div class="flex-1 flex flex-col items-center px-3.5 pt-3 pb-2.5 gap-1">
+            <!-- Photo -->
             <div @click="handlePhotoClick"
-              class="rounded-2xl overflow-hidden border-2 border-gray-200 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
+              class="rounded-full overflow-hidden border-2 border-gray-100 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
                 <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
               </div>
@@ -290,44 +261,47 @@ watch(() => props.showBack, (val) => {
             </div>
 
             <!-- Name -->
-            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
-              {{ displayFullName }}
+            <p class="font-bold text-gray-800 text-center truncate w-full px-1" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ student?.full_name || 'Student Name' }}
             </p>
 
             <!-- ID -->
-            <p class="font-mono font-semibold text-blue-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
-              {{ displayStudentId }}
+            <p class="font-mono font-semibold text-blue-500 text-center tracking-wide" :class="size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-sm' : 'text-xs'">
+              {{ studentIdNo() || 'ST-0000' }}
             </p>
 
             <!-- Status & Batch -->
-            <div class="flex items-center gap-1.5 flex-wrap justify-center">
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-semibold"
-                :style="{ backgroundColor: getStatusStyle(displayStatus).bg, color: getStatusStyle(displayStatus).text }">
-                <span class="w-1 h-1 rounded-full inline-block mr-1" :style="{ backgroundColor: getStatusStyle(displayStatus).dot }"></span>
-                {{ capitalize(displayStatus) }}
+            <div class="flex items-center gap-1.5 flex-wrap justify-center mt-0.5">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-semibold"
+                :style="{ backgroundColor: getStatusStyle(studentStatus()).bg, color: getStatusStyle(studentStatus()).text }">
+                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(studentStatus()).dot }"></span>
+                {{ capitalize(studentStatus()) }}
               </span>
-              <span v-if="displayBatchName !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">{{ displayBatchName }}</span>
-              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">Intake: {{ displayIntakeYear }}</span>
+              <span v-if="student?.selection_batch_name" class="text-[8px] text-gray-400 font-medium">{{ student.selection_batch_name }}</span>
+              <span v-if="student?.intake_year" class="text-[8px] text-gray-300">· {{ student.intake_year }}</span>
             </div>
 
-            <div class="flex-1 min-h-[4px]"></div>
+            <div class="flex-1 min-h-[2px]"></div>
 
-            <!-- QR Code (requirement 6) -->
-            <div class="flex items-center justify-between w-full px-1">
-              <div class="flex-1 min-w-0 pr-2">
-                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
-                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full px-0.5 mt-auto">
+              <div class="flex-1 min-w-0 pr-1">
+                <p class="text-[7px] text-gray-400 font-semibold">Scan to verify</p>
+                <p class="text-[7px] text-gray-300 font-mono truncate">{{ student?.student_id_no || '' }}</p>
               </div>
-              <div class="bg-white rounded-lg p-1 border border-gray-200 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+              <div class="bg-white rounded p-0.5 border border-gray-100/60 shrink-0" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px', height: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
-                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
-                </div>
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded"><svg class="w-3 h-3 text-gray-300 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg></div>
               </div>
             </div>
+
+            <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-
+          <!-- Flip -->
+          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-gray-100/60 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer border border-gray-200/40">
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
+          </button>
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -341,15 +315,20 @@ watch(() => props.showBack, (val) => {
         <div v-if="layout === 'modern'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
-          :style="{ background: '#fff' }"
-          :data-student-card="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
-          <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-4 py-2.5">
-            <div class="flex items-center gap-3">
+          <!-- Top gradient band -->
+          <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-7">
+            <div class="flex items-center gap-2.5">
               <div @click="handleLogoClick"
-                class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
-                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
-                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+                class="w-7 h-7 rounded-md bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
@@ -358,12 +337,12 @@ watch(() => props.showBack, (val) => {
             </div>
           </div>
 
-          <div class="flex-1 flex flex-col items-center px-4 pt-4 pb-3 gap-1.5 justify-center">
+          <div class="flex-1 flex flex-col items-center px-3.5 pb-2.5 gap-1 -mt-5">
             <!-- Photo -->
             <div @click="handlePhotoClick"
-              class="rounded-2xl overflow-hidden border-[3px] border-white shadow bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
+              class="rounded-full overflow-hidden border-[3px] border-white shadow bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-300 to-blue-500">
                 <span class="font-bold text-white drop-shadow-sm" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
               </div>
@@ -375,40 +354,42 @@ watch(() => props.showBack, (val) => {
             </div>
 
             <!-- Name -->
-            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
-              {{ displayFullName }}
+            <p class="font-bold text-gray-800 text-center truncate w-full px-1" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ student?.full_name || 'Student Name' }}
             </p>
 
             <!-- ID -->
-            <p class="font-mono font-semibold text-blue-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
-              {{ displayStudentId }}
+            <p class="font-mono font-semibold text-blue-500 text-center tracking-wide" :class="size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-sm' : 'text-xs'">
+              {{ student?.student_id_no || 'ST-0000' }}
             </p>
 
             <!-- Pills -->
-            <div class="flex items-center gap-1.5 flex-wrap justify-center">
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-blue-50 text-blue-600 border border-blue-200">{{ displayBatchName }}</span>
-              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-200">Year: {{ displayIntakeYear }}</span>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-gray-50 text-gray-500 border border-gray-200">{{ displayGender }}</span>
+            <div class="flex items-center gap-1.5 flex-wrap justify-center mt-0.5">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-semibold bg-blue-50 text-blue-600">{{ student?.selection_batch_name || '—' }}</span>
+              <span v-if="student?.intake_year" class="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-semibold bg-indigo-50 text-indigo-600">{{ student.intake_year }}</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-semibold bg-gray-50 text-gray-500">{{ student?.gender || '—' }}</span>
             </div>
 
-            <div class="flex-1 min-h-[4px]"></div>
+            <div class="flex-1 min-h-[2px]"></div>
 
             <!-- QR -->
-            <div class="flex items-center justify-between w-full px-1">
-              <div class="flex-1 min-w-0 pr-2">
-                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
-                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
+            <div class="flex items-center justify-between w-full px-0.5 mt-auto">
+              <div class="flex-1 min-w-0 pr-1">
+                <p class="text-[7px] text-gray-400 font-semibold">Scan to verify</p>
+                <p class="text-[7px] text-gray-300 font-mono truncate">{{ student?.student_id_no || '' }}</p>
               </div>
-              <div class="bg-white rounded-lg p-1 border border-gray-200 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+              <div class="bg-white rounded p-0.5 border border-gray-100/60 shrink-0" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px', height: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
-                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
-                </div>
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded"><svg class="w-3 h-3 text-gray-300 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg></div>
               </div>
             </div>
+
+            <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-
+          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-white/70 text-gray-400 hover:bg-white hover:text-gray-500 transition cursor-pointer border border-gray-200/60 backdrop-blur-sm shadow-xs">
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
+          </button>
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100 bg-white">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -422,16 +403,23 @@ watch(() => props.showBack, (val) => {
         <div v-if="layout === 'premium'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300 shadow-md' : 'border-gray-200/60 dark:border-gray-600/60 shadow'"
-          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
-          :data-student-card="student?.id"
+          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
         >
+          <!-- Gold line -->
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
-          <div class="px-4 pt-2.5 pb-2">
-            <div class="flex items-center gap-3">
+
+          <!-- Header -->
+          <div class="px-3.5 pt-2 pb-1">
+            <div class="flex items-center gap-2.5">
               <div @click="handleLogoClick"
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer">
-                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
-                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+                class="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 shadow-sm overflow-hidden cursor-pointer group relative">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white tracking-wide">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-[11px] font-bold text-amber-100/90 leading-tight truncate">Passerellesnumeriques Cambodia</p>
@@ -440,13 +428,16 @@ watch(() => props.showBack, (val) => {
             </div>
           </div>
 
-          <div class="flex-1 flex flex-col items-center px-4 pt-4 pb-3 gap-1.5 justify-center">
+          <div class="flex-1 flex flex-col items-center px-3.5 pb-2.5 gap-1">
+            <!-- Decorative divider -->
+            <div class="w-10 h-px bg-gradient-to-r from-transparent via-amber-400/30 to-transparent mb-1"></div>
+
             <!-- Photo -->
-            <div class="p-[3px] rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm shrink-0 mt-8">
+            <div class="p-[2px] rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm shadow-amber-500/10">
               <div @click="handlePhotoClick"
-                class="rounded-2xl overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer group relative"
+                class="rounded-full overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer group relative"
                 :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-                <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+                <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-600 to-amber-800">
                   <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
                 </div>
@@ -459,30 +450,33 @@ watch(() => props.showBack, (val) => {
             </div>
 
             <!-- Name -->
-            <p class="font-bold text-white text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
-              {{ displayFullName }}
+            <p class="font-bold text-white text-center truncate w-full px-1 drop-shadow-sm" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ student?.full_name || 'Student Name' }}
             </p>
 
             <!-- ID -->
-            <p class="font-mono font-semibold text-amber-400 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
-              {{ displayStudentId }}
+            <p class="font-mono font-semibold text-amber-400 text-center tracking-wide" :class="size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-sm' : 'text-xs'">
+              {{ student?.student_id_no || 'ST-0000' }}
             </p>
 
             <!-- Pills -->
-            <div class="flex items-center gap-1.5 flex-wrap justify-center">
-              <span class="px-2 py-0.5 rounded text-[9px] font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/15">{{ displayBatchName }}</span>
-              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-semibold bg-white/5 text-gray-300 border border-white/10">Intake: {{ displayIntakeYear }}</span>
+            <div class="flex items-center gap-1.5 flex-wrap justify-center mt-0.5">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[8px] font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/15">{{ student?.selection_batch_name || '—' }}</span>
+              <span v-if="student?.intake_year" class="inline-flex items-center px-2 py-0.5 rounded text-[8px] font-semibold bg-white/5 text-gray-300 border border-white/10">{{ student.intake_year }}</span>
             </div>
 
-            <div class="flex-1 min-h-[4px]"></div>
+            <div class="flex-1 min-h-[2px]"></div>
+
+            <!-- Divider -->
+            <div class="w-full h-px bg-gradient-to-r from-transparent via-amber-400/15 to-transparent"></div>
 
             <!-- QR -->
-            <div class="flex items-center justify-between w-full px-1">
-              <div class="flex-1 min-w-0 pr-2">
-                <p class="text-[8px] text-amber-400/50 font-semibold">Scan to verify</p>
-                <p class="text-[8px] text-gray-400 font-mono truncate">{{ displayStudentId }}</p>
+            <div class="flex items-center justify-between w-full px-0.5">
+              <div class="flex-1 min-w-0 pr-1">
+                <p class="text-[7px] text-amber-400/50 font-semibold">Scan to verify</p>
+                <p class="text-[7px] text-gray-500 font-mono truncate">{{ student?.student_id_no || '' }}</p>
               </div>
-              <div class="bg-gray-900 rounded-lg p-1 border border-amber-400/15 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+              <div class="bg-gray-900 rounded p-0.5 border border-amber-400/15 shrink-0" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px', height: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 rounded">
                   <Loader2 class="w-3 h-3 text-amber-500 animate-spin" />
@@ -532,45 +526,15 @@ watch(() => props.showBack, (val) => {
               </div>
             </div>
 
-            <!-- Name -->
-            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
-              {{ displayFullName }}
-            </p>
-
-            <!-- ID -->
-            <p class="font-mono font-semibold text-green-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
-              {{ displayStudentId }}
-            </p>
-
-            <!-- Status & Pills -->
-            <div class="flex items-center gap-1.5 flex-wrap justify-center">
-              <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-green-100 text-green-700 border border-green-200">
-                {{ displayStatus }}
-              </span>
-              <span class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">{{ displayBatchName }}</span>
-              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">Intake: {{ displayIntakeYear }}</span>
-            </div>
-
-            <div class="flex-1 min-h-[4px]"></div>
-
-            <!-- QR -->
-            <div class="flex items-center justify-between w-full px-1">
-              <div class="flex-1 min-w-0 pr-2">
-                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
-                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
-              </div>
-              <div class="bg-white rounded-lg p-1 border-2 border-green-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
-                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
-                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
-                </div>
-              </div>
-            </div>
+            <p class="text-center text-amber-400/20 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
-        </div>
 
+          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-black/30 text-amber-300/50 hover:bg-black/50 hover:text-amber-300 transition cursor-pointer border border-amber-400/15 backdrop-blur-sm">
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
+          </button>
+        </div>
 
         <!-- ── CORPORATE-BLUE ── -->
         <div v-if="layout === 'corporate-blue'"
@@ -795,20 +759,24 @@ watch(() => props.showBack, (val) => {
       </div>
 
       <!-- ══ BACK ══ -->
-      <div v-else class="card-face w-full h-full">
+      <div class="card-face absolute inset-0">
 
         <!-- ── BACK: CLASSIC ── -->
         <div v-if="layout === 'classic'"
-          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
+          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
-          :style="{ background: '#fff' }"
-          :data-student-card-back="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <div class="bg-[#1e3a5f] px-3.5 py-2.5">
             <div class="flex items-center gap-2">
-              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
                 <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-2.5 h-2.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
@@ -834,32 +802,39 @@ watch(() => props.showBack, (val) => {
             </div>
             <div class="border-t border-gray-200"></div>
             <div class="grid grid-cols-2 gap-2">
-              <div class="bg-blue-50 rounded-lg px-2.5 py-1.5 border border-blue-100">
-                <p class="text-[8px] font-semibold text-blue-600 uppercase tracking-wider">Issue Date</p>
-                <p class="text-[10px] font-bold text-blue-800">{{ computedIssueDate }}</p>
+              <div class="bg-blue-50/70 rounded px-2.5 py-1.5">
+                <p class="text-[6px] font-semibold text-blue-500 uppercase tracking-wider">Issue Date</p>
+                <p class="text-[8px] font-bold text-blue-700">{{ computedIssueDate }}</p>
               </div>
-              <div class="bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-100">
-                <p class="text-[8px] font-semibold text-amber-600 uppercase tracking-wider">Expired Date</p>
-                <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
+              <div class="bg-amber-50/70 rounded px-2.5 py-1.5">
+                <p class="text-[6px] font-semibold text-amber-500 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[8px] font-bold text-amber-700">{{ computedExpiredDate }}</p>
               </div>
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
+            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
+              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
+            </button>
           </div>
         </div>
 
         <!-- ── BACK: MODERN ── -->
         <div v-if="layout === 'modern'"
-          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
+          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
-          :style="{ background: '#fff' }"
-          :data-student-card-back="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-3">
             <div class="flex items-center gap-2">
-              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
                 <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-2.5 h-2.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <p class="text-[10px] font-bold text-white leading-tight drop-shadow-sm">Passerellesnumeriques Cambodia</p>
@@ -885,17 +860,20 @@ watch(() => props.showBack, (val) => {
             </div>
             <div class="border-t border-gray-200"></div>
             <div class="grid grid-cols-2 gap-2">
-              <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg px-2.5 py-1.5 border border-blue-100">
-                <p class="text-[8px] font-semibold text-blue-600 uppercase tracking-wider">Issue Date</p>
-                <p class="text-[10px] font-bold text-blue-800">{{ computedIssueDate }}</p>
+              <div class="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded px-2.5 py-1.5 border border-blue-100/50">
+                <p class="text-[6px] font-semibold text-blue-500 uppercase tracking-wider">Issue Date</p>
+                <p class="text-[8px] font-bold text-blue-700">{{ computedIssueDate }}</p>
               </div>
-              <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg px-2.5 py-1.5 border border-amber-100">
-                <p class="text-[8px] font-semibold text-amber-600 uppercase tracking-wider">Expired Date</p>
-                <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
+              <div class="bg-gradient-to-br from-amber-50 to-amber-100/30 rounded px-2.5 py-1.5 border border-amber-100/50">
+                <p class="text-[6px] font-semibold text-amber-500 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[8px] font-bold text-amber-700">{{ computedExpiredDate }}</p>
               </div>
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
+            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
+              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
+            </button>
           </div>
         </div>
 
@@ -903,15 +881,19 @@ watch(() => props.showBack, (val) => {
         <div v-if="layout === 'premium'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300' : 'border-gray-200/60 dark:border-gray-600/60'"
-          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
-          :data-student-card-back="student?.id"
+          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
         >
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-3.5 pt-2.5 pb-2">
             <div class="flex items-center gap-2">
-              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer group relative">
                 <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
                 <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all duration-200 flex items-center justify-center">
+                  <svg class="w-2.5 h-2.5 text-white opacity-0 group-hover:opacity-100 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <p class="text-[10px] font-bold text-amber-100/90 leading-tight">Passerellesnumeriques Cambodia</p>
@@ -938,23 +920,25 @@ watch(() => props.showBack, (val) => {
             </div>
             <div class="h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent"></div>
             <div class="grid grid-cols-2 gap-2">
-              <div class="bg-white/5 rounded-lg px-2.5 py-1.5 border border-amber-400/15">
-                <p class="text-[8px] font-semibold text-amber-400/70 uppercase tracking-wider">Issue Date</p>
-                <p class="text-[10px] font-bold text-amber-200">{{ computedIssueDate }}</p>
+              <div class="bg-white/5 rounded px-2.5 py-1.5 border border-amber-400/15">
+                <p class="text-[6px] font-semibold text-amber-400/60 uppercase tracking-wider">Issue Date</p>
+                <p class="text-[8px] font-bold text-amber-200">{{ computedIssueDate }}</p>
               </div>
-              <div class="bg-white/5 rounded-lg px-2.5 py-1.5 border border-amber-400/15">
-                <p class="text-[8px] font-semibold text-amber-400/70 uppercase tracking-wider">Expired Date</p>
-                <p class="text-[10px] font-bold text-amber-200">{{ computedExpiredDate }}</p>
+              <div class="bg-white/5 rounded px-2.5 py-1.5 border border-amber-400/15">
+                <p class="text-[6px] font-semibold text-amber-400/60 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[8px] font-bold text-amber-200">{{ computedExpiredDate }}</p>
               </div>
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-amber-400/20 text-[6px] font-medium">Property of PNC Cambodia</p>
-
+            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-white/5 text-amber-300/50 hover:bg-white/10 hover:text-amber-300 transition cursor-pointer border border-amber-400/15">
+              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
+            </button>
           </div>
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
         </div>
 
-        <!-- ── BACK: CORPORATE ── -->        <div v-if="layout === 'corporate'" 
+        <!-- ── BACK: CORPORATE ── -->        <div v-if="layout === 'corporate'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
           :data-student-card-back="student?.id"
@@ -1172,14 +1156,6 @@ watch(() => props.showBack, (val) => {
         </div>
       </div>
     </div>
-
-    <!-- Actions block if requested -->
-    <div v-if="showActions && currentStudent" class="flex items-center justify-center gap-2 px-4 pb-3 pt-2 mt-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-      <button @click="emit('preview', currentStudent.id)" class="px-2.5 py-1 rounded-lg text-[9px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 cursor-pointer">Preview</button>
-      <button @click="emit('generate', currentStudent.id)" class="px-2.5 py-1 rounded-lg text-[9px] font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer">Generate</button>
-      <button @click="emit('reprint', currentStudent.id)" class="px-2.5 py-1 rounded-lg text-[9px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer">Reprint</button>
-      <button @click="emit('download', currentStudent.id)" class="px-2.5 py-1 rounded-lg text-[9px] font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 cursor-pointer">PDF</button>
-    </div>
   </div>
 </template>
 
@@ -1187,8 +1163,20 @@ watch(() => props.showBack, (val) => {
 .card-wrap {
   display: inline-block;
 }
+.card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
 .card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border-radius: 0.75rem;
   overflow: hidden;
+}
+.card-face:last-child {
+  transform: rotateY(180deg);
 }
 </style>

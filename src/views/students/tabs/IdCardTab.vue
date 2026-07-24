@@ -97,13 +97,10 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   ctx.moveTo(28, midY)
   ctx.lineTo(width - 28, midY)
   ctx.stroke()
-
-  // ── Photo / Initials ──
   const photoSize = 70
   const photoX = 28
   const photoY = midY - 50
 
-  // If photo exists, try to draw it
   const photoUrl = resolvePhotoUrl(s.photoPath)
   if (photoUrl) {
     try {
@@ -115,14 +112,12 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
       ctx.drawImage(img, photoX, photoY, photoSize, photoSize)
       ctx.restore()
     } catch {
-      // Fallback to initials
       drawInitials(ctx, photoX, photoY, photoSize, s.fullName)
     }
   } else {
     drawInitials(ctx, photoX, photoY, photoSize, s.fullName)
   }
 
-  // ── Student info ──
   const infoX = photoX + photoSize + 20
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 18px Inter, sans-serif'
@@ -134,7 +129,6 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   ctx.font = '10px Inter, sans-serif'
   ctx.fillText(`${s.selectionBatchName || 'Batch B'} · Intake ${s.intakeYear || '2025'}`, infoX, photoY + 66)
 
-  // ── Details grid ──
   const gridY = midY + 20
   const col1X = 28
   const col2X = width / 2 + 10
@@ -153,8 +147,6 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   drawDetail(col2X, gridY, 'DOB', s.dob ? formatDate(s.dob) : '—')
   drawDetail(col1X, gridY + rowGap, 'Province', s.province || '—')
   drawDetail(col2X, gridY + rowGap, 'Batch', s.selectionBatchName || '—')
-
-  // ── Bottom line ──
   ctx.strokeStyle = 'rgba(255,255,255,0.1)'
   ctx.beginPath()
   ctx.moveTo(28, height - 38)
@@ -374,7 +366,7 @@ function printCard() {
           <div class="boxes"><div class="box"></div><div class="box"></div></div>
         </div>
       </div>
-      <script>
+      <scr${'ipt'}>
         window.onload = function() { window.print(); window.close(); }
       ${closeScript}
     </body>
@@ -402,11 +394,9 @@ async function shareCard() {
       shareSuccess.value = true
       setTimeout(() => { shareSuccess.value = false }, 2000)
     } else {
-      // Fallback: share via clipboard
       await navigator.clipboard.writeText(
         `ID Card - ${props.student.fullName}\nStudent ID: ${props.student.studentIdNo}\nBatch: ${props.student.selectionBatchName || '—'}`
       )
-      // Also try to copy the image
       try {
         const clipboardItem = new ClipboardItem({ 'image/png': blob })
         await navigator.clipboard.write([clipboardItem])
