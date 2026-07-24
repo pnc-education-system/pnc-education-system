@@ -78,14 +78,11 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number, pdfBlob: Blob, templateId?: number): Promise<CardGenerationResult> {
-    const formData = new FormData()
-    formData.append('pdf', pdfBlob, `student-card-${studentId}.pdf`)
-    if (templateId) formData.append('template_id', String(templateId))
+  async generate(studentId: number, templateId?: number): Promise<CardGenerationResult> {
+    const params: { template_id?: string } = {}
+    if (templateId) params.template_id = String(templateId)
 
-    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
-      headers: { 'Content-Type': undefined as unknown as string },
-    })
+    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, params)
     return data.data as CardGenerationResult
   },
 
