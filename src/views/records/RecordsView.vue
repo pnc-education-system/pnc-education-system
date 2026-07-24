@@ -645,6 +645,20 @@ watch(() => route.query.student_id, (val) => {
   }
 })
 
+// Auto-open edit modal when edit_id is present in query params (e.g. from Student Profile)
+const autoOpenEditId = ref<number | null>(null)
+
+watch([() => route.query.edit_id, records], () => {
+  const editId = route.query.edit_id ? Number(route.query.edit_id) : null
+  if (editId && records.value.length > 0 && autoOpenEditId.value !== editId) {
+    const record = records.value.find((r: StudentRecord) => r.id === editId)
+    if (record) {
+      autoOpenEditId.value = editId
+      nextTick(() => openEditRecord(record))
+    }
+  }
+})
+
 // ── Inline Form Submit ──
 async function submitInlineForm() {
   if (!selectedStudentId.value) {
@@ -785,6 +799,13 @@ async function submitRecordForm() {
     }
     closeRecordForm()
     loadRecords()
+    // Auto-navigate back to Student Profile after editing a record from profile
+    if (route.query.edit_id) {
+      const studentId = selectedStudentId.value
+      if (studentId) {
+        router.push({ name: 'StudentProfile', params: { id: String(studentId) } })
+      }
+    }
   } catch (error: any) {
     const message = getApiErrorMessage(error, t('records.toast_save_error'))
     showErrorToast(message, t('records.toast_error'))
@@ -929,6 +950,15 @@ onMounted(async () => {
           </div>
         </div>
         <div class="flex items-center gap-3 flex-shrink-0">
+          <!-- Back to Student Profile button (shown when navigated from edit link) -->
+          <button
+            v-if="route.query.edit_id && selectedStudentId"
+            @click="router.push({ name: 'StudentProfile', params: { id: String(selectedStudentId) } })"
+            class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+          >
+            <ChevronLeft :size="14" />
+            Back to Profile
+          </button>
           <button
             v-if="canManage"
             @click="openAttachmentUpload()"
@@ -1360,12 +1390,21 @@ onMounted(async () => {
                                     </p>
                                   </div>
 
-                                  <!-- Right: Date & Time Column -->
+                                  <!-- Right: Date & Time Column with Edit Icon -->
                                   <div class="flex flex-col items-end gap-1.5 shrink-0">
                                     <div class="text-right">
                                       <p class="text-[11px] font-semibold text-gray-900 dark:text-white">{{ formatDateOnly(item.record!.recorded_at || item.record!.created_at) }}</p>
                                       <p class="text-[9px] text-gray-400 dark:text-gray-500">{{ formatTimeOnly(item.record!.recorded_at || item.record!.created_at) }}</p>
                                     </div>
+                                    <!-- Quick Edit Icon Button -->
+                                    <button
+                                      v-if="canManage"
+                                      @click.stop="openEditRecord(item.record!)"
+                                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/30 hover:bg-amber-50 dark:hover:bg-amber-500/15 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm hover:border-amber-200 dark:hover:border-amber-500/30 border border-transparent transition-all duration-200 cursor-pointer group/edit"
+                                      title="Edit record"
+                                    >
+                                      <Pencil :size="12" class="transition-transform duration-200 group-hover/edit:scale-110" />
+                                    </button>
                                   </div>
                                 </div>
 
