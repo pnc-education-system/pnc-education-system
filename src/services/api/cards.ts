@@ -78,14 +78,11 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number, pdfBlob: Blob, templateId?: number): Promise<CardGenerationResult> {
-    const formData = new FormData()
-    formData.append('pdf', pdfBlob, `student-card-${studentId}.pdf`)
-    if (templateId) formData.append('template_id', String(templateId))
+  async generate(studentId: number, templateId?: number): Promise<CardGenerationResult> {
+    const params: { template_id?: string } = {}
+    if (templateId) params.template_id = String(templateId)
 
-    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
-      headers: { 'Content-Type': undefined as unknown as string },
-    })
+    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, params)
     return data.data as CardGenerationResult
   },
 
@@ -123,23 +120,13 @@ export const cardsApi = {
     return data as Blob
   },
 
-  /** Get student details by student_id_no (public endpoint for verification) */
+  /** Get student details by student_id_no (public — used for QR verification) */
   async getByStudentIdNo(studentIdNo: string): Promise<CardStudent> {
-    const { data } = await axiosInstance.get(
-      '/student-cards/student/' + encodeURIComponent(studentIdNo)
-    )
+    const { data } = await axiosInstance.get(`/student-cards/student/${encodeURIComponent(studentIdNo)}`)
     return (data.data ?? data) as CardStudent
   },
 
-  /** Verify QR token and return student profile */
-  async verifyQrToken(qrToken: string): Promise<CardStudent> {
-    const { data } = await axiosInstance.get(
-      '/cards/verify/' + encodeURIComponent(qrToken)
-    )
-    return (data.data ?? data) as CardStudent
-  },
-
-  /** Get student details by numeric ID (public endpoint for verification page) */
+  /** Verify student by numeric ID (public — used for QR verification) */
   async verifyById(studentId: number): Promise<CardStudent> {
     const { data } = await axiosInstance.get(`/students/verify/${studentId}`)
     return (data.data ?? data) as CardStudent

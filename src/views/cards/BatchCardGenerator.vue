@@ -108,7 +108,7 @@ async function fetchBatches() {
   try {
     batches.value = await selectionBatchesApi.list()
   } catch (error) {
-    showErrorToast('Failed to fetch batches', 'Error')
+    showErrorToast(t('batch_gen.toast_fetch_failed'), t('users.toast_error'))
   }
 }
 
@@ -125,7 +125,7 @@ async function fetchStudents() {
     console.log('Students loaded:', students.value.length)
   } catch (error) {
     console.error('Failed to fetch students:', error)
-    showErrorToast('Failed to fetch students', 'Error')
+    showErrorToast(t('batch_gen.toast_fetch_students_failed'), t('users.toast_error'))
   }
 }
 
@@ -136,7 +136,7 @@ async function fetchCardTemplates() {
       selectedTemplate.value = cardTemplates.value[0].id
     }
   } catch (error) {
-    showErrorToast('Failed to fetch card templates', 'Error')
+    showErrorToast(t('batch_gen.toast_fetch_templates_failed'), t('users.toast_error'))
   }
 }
 
@@ -176,7 +176,7 @@ function downloadBlob(blob: Blob, filename: string) {
 
 async function handleGenerate() {
   if (!selectedBatch.value || !selectedTemplate.value) {
-    showErrorToast('Please select a batch and template', 'Missing Selection')
+    showErrorToast(t('batch_gen.toast_select_batch'), t('batch_gen.toast_select_batch_title'))
     return
   }
 
@@ -185,7 +185,7 @@ async function handleGenerate() {
     : new Set(eligibleStudents.value.map(s => s.id))
 
   if (studentsToGenerate.size === 0) {
-    showErrorToast('No eligible students to generate cards for', 'No Students')
+    showErrorToast(t('batch_gen.toast_no_students'), t('batch_gen.toast_no_students_title'))
     return
   }
 
@@ -303,8 +303,8 @@ async function handleGenerate() {
     downloadBlob(pdfBlob, `ID_Cards_Batch_${batchName}_${Date.now()}.pdf`)
 
     showSuccessToast(
-      `Successfully generated ${canvasImages.length} cards. PDF downloaded.`,
-      'Generation Complete'
+      t('batch_gen.toast_success', { count: canvasImages.length }),
+      t('batch_gen.toast_success_title')
     )
 
   } catch (error: any) {
@@ -319,9 +319,9 @@ async function handleGenerate() {
         'Batch Generation Failed'
       )
     } else if (error.response?.data?.message) {
-      showErrorToast(error.response.data.message, 'Batch Generation Failed')
+      showErrorToast(error.response.data.message, t('batch_gen.toast_gen_failed_title'))
     } else {
-      showErrorToast('Failed to generate batch cards. Please try again.', 'Batch Generation Failed')
+      showErrorToast(t('batch_gen.toast_gen_failed'), t('batch_gen.toast_gen_failed_title'))
     }
   } finally {
     isGenerating.value = false
@@ -336,9 +336,9 @@ function getPhotoStatus(student: CardStudent) {
 }
 
 function getCardStatus(student: CardStudent) {
-  if (!student.photo_path) return 'no photo - skipped'
-  if (student.enrollment_status !== 'Enrolled') return 'not enrolled - skipped'
-  return 'ready'
+  if (!student.photo_path) return t('batch_gen.status_no_photo')
+  if (student.enrollment_status !== 'Enrolled') return t('batch_gen.status_not_enrolled')
+  return t('batch_gen.status_ready')
 }
 
 function handlePhotoUpload(event: Event) {
@@ -358,7 +358,7 @@ function handlePhotoUpload(event: Event) {
   }
 
   if (invalidFiles.length > 0) {
-    showErrorToast(invalidFiles.join('. '), 'Invalid Files')
+    showErrorToast(invalidFiles.join('. '), t('batch_gen.toast_invalid_files'))
     target.value = ''
     return
   }
@@ -389,7 +389,7 @@ function handlePhotoUpload(event: Event) {
 
 async function handleUploadPhotos() {
   if (photoFiles.value.length === 0) {
-    showErrorToast('No photos selected', 'Error')
+    showErrorToast(t('batch_gen.toast_no_photos'), t('users.toast_error'))
     return
   }
 
@@ -400,8 +400,8 @@ async function handleUploadPhotos() {
     const result = await cardsApi.batchUploadPhotos(photoFiles.value)
 
     showSuccessToast(
-      `${result.success_count} photos uploaded successfully. ${result.failed_count} failed.`,
-      'Upload Complete'
+      t('batch_gen.toast_upload_complete', { success: result.success_count, failed: result.failed_count }),
+      t('batch_gen.toast_upload_title')
     )
 
     // Refresh student data
@@ -411,7 +411,7 @@ async function handleUploadPhotos() {
     photoFiles.value = []
     showPhotoUpload.value = false
   } catch (error) {
-    showErrorToast('Failed to upload photos', 'Error')
+    showErrorToast(t('batch_gen.toast_upload_failed'), t('users.toast_error'))
   } finally {
     isUploadingPhotos.value = false
   }
@@ -432,8 +432,8 @@ onMounted(async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Batch Card Generator</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Generate ID cards for students in batches</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{{ t('batch_gen.title') }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('batch_gen.subtitle') }}</p>
       </div>
     </div>
 
@@ -441,14 +441,14 @@ onMounted(async () => {
     <div class="flex flex-col sm:flex-row gap-4">
       <!-- Batch Dropdown -->
       <div class="relative flex-1">
-        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Batch</label>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{{ t('batch_gen.batch_label') }}</label>
         <div class="relative">
           <select
             v-model="selectedBatch"
             @change="fetchStudents"
             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 appearance-none cursor-pointer"
           >
-            <option :value="null">Select Batch</option>
+            <option :value="null">{{ t('batch_gen.select_batch') }}</option>
             <option v-for="batch in batches" :key="batch.id" :value="batch.id">
               {{ batch.name }} · {{ String(batch.year).slice(-2) }}
             </option>
@@ -459,16 +459,16 @@ onMounted(async () => {
 
       <!-- Filter Dropdown -->
       <div class="relative w-full sm:w-48">
-        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Filter</label>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{{ t('batch_gen.filter_label') }}</label>
         <div class="relative">
           <select
             v-model="selectedFilter"
             @change="fetchStudents"
             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 appearance-none cursor-pointer"
           >
-            <option value="all">All Students</option>
-            <option value="enrolled">Enrolled only</option>
-            <option value="with_photo">With photos only</option>
+            <option value="all">{{ t('batch_gen.filter_all') }}</option>
+            <option value="enrolled">{{ t('batch_gen.filter_enrolled') }}</option>
+            <option value="with_photo">{{ t('batch_gen.filter_with_photo') }}</option>
           </select>
           <ChevronDown :size="16" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -476,13 +476,13 @@ onMounted(async () => {
 
       <!-- Template Dropdown -->
       <div class="relative w-full sm:w-48">
-        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Template</label>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">{{ t('batch_gen.template_label') }}</label>
         <div class="relative">
           <select
             v-model="selectedTemplate"
             class="w-full px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 appearance-none cursor-pointer"
           >
-            <option :value="null">Select Template</option>
+            <option :value="null">{{ t('batch_gen.select_template') }}</option>
             <option v-for="template in cardTemplates" :key="template.id" :value="template.id">
               {{ template.name }}
             </option>
@@ -495,23 +495,23 @@ onMounted(async () => {
     <!-- Stats -->
     <div class="flex gap-6">
       <div class="flex items-center gap-2">
-        <span class="text-sm text-gray-600 dark:text-gray-400">{{ filteredStudents.length }} students</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ t('batch_gen.students_count', { count: filteredStudents.length }) }}</span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-sm text-gray-600 dark:text-gray-400">{{ studentsWithPhotos }} have photos</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ t('batch_gen.have_photos', { count: studentsWithPhotos }) }}</span>
       </div>
       <button
         @click="showPhotoUpload = !showPhotoUpload"
         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
       >
         <Upload :size="14" />
-        Upload Photos
+        {{ t('batch_gen.upload_photos') }}
       </button>
     </div>
 
     <!-- Photo Upload Section -->
     <div v-if="showPhotoUpload" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Upload Student Photos</h3>
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">{{ t('batch_gen.upload_title') }}</h3>
 
       <div class="space-y-4">
         <!-- Upload Area -->
@@ -530,10 +530,10 @@ onMounted(async () => {
           >
             <ImageIcon :size="32" class="text-gray-400" />
             <span class="text-sm text-gray-600 dark:text-gray-400">
-              Click to select photos or drag and drop
+              {{ t('batch_gen.click_to_select') }}
             </span>
             <span class="text-xs text-gray-400">
-              JPEG, JPG, PNG, WEBP up to 10MB each
+              {{ t('batch_gen.file_types') }}
             </span>
           </label>
         </div>
@@ -541,7 +541,7 @@ onMounted(async () => {
         <!-- Photo Previews -->
         <div v-if="photoFiles.length > 0" class="space-y-3">
           <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {{ photoFiles.length }} photo(s) selected
+            {{ t('batch_gen.photos_selected', { count: photoFiles.length }) }}
           </h4>
           <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
             <div
@@ -561,7 +561,7 @@ onMounted(async () => {
                 <X :size="12" />
               </button>
               <div class="absolute bottom-1 left-1 right-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded truncate">
-                Student ID: {{ photo.student_id }}
+                {{ t('batch_gen.student_id_prefix') }} {{ photo.student_id }}
               </div>
             </div>
           </div>
@@ -573,7 +573,7 @@ onMounted(async () => {
             class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
           >
             <Upload :size="16" />
-            {{ isUploadingPhotos ? 'Uploading...' : 'Upload Photos' }}
+            {{ isUploadingPhotos ? t('batch_gen.uploading') : t('batch_gen.upload_photos_btn') }}
           </button>
         </div>
       </div>
@@ -584,10 +584,10 @@ onMounted(async () => {
       <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-            Selection
+            {{ t('batch_gen.selection_title') }}
           </h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Cards with no photo are skipped & listed
+            {{ t('batch_gen.selection_hint') }}
           </p>
         </div>
       </div>
@@ -603,15 +603,15 @@ onMounted(async () => {
             class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
           />
         </div>
-        <span>Student ID</span>
-        <span>Name</span>
-        <span>Card Status</span>
+        <span>{{ t('batch_gen.table_student_id') }}</span>
+        <span>{{ t('batch_gen.table_name') }}</span>
+        <span>{{ t('batch_gen.table_card_status') }}</span>
       </div>
 
       <!-- Table Body -->
       <div v-if="filteredStudents.length === 0" class="px-4 py-12 text-center">
-        <p class="text-sm font-medium text-gray-400">No students found</p>
-        <p class="text-xs text-gray-400 mt-1">Select a batch to view students</p>
+        <p class="text-sm font-medium text-gray-400">{{ t('batch_gen.no_students') }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ t('batch_gen.no_students_hint') }}</p>
       </div>
 
       <div
@@ -647,8 +647,8 @@ onMounted(async () => {
     <!-- A4 Sheet Preview -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">A4 sheet preview</h3>
-        <span class="text-xs text-gray-500 dark:text-gray-400">3 students / page (front + back)</span>
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('batch_gen.preview_title') }}</h3>
+        <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('batch_gen.preview_subtitle') }}</span>
       </div>
 
       <div class="flex justify-center">
@@ -669,7 +669,7 @@ onMounted(async () => {
                 </div>
               </div>
               <div v-else class="border border-dashed border-gray-200 rounded bg-gray-50 flex items-center justify-center text-xs text-gray-400">
-                Empty
+                {{ t('batch_gen.empty_slot') }}
               </div>
             </template>
           </div>
@@ -712,18 +712,18 @@ onMounted(async () => {
 
   <!-- Generate Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Generate</h3>
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">{{ t('batch_gen.generate_title') }}</h3>
 
       <div class="space-y-4">
         <p class="text-sm text-gray-600 dark:text-gray-400">
-          {{ eligibleStudents.length }} cards → {{ totalPages }} A4 pages. Runs as a background job; you'll get a download when ready.
+          {{ t('batch_gen.generate_desc', { count: eligibleStudents.length, pages: totalPages }) }}
         </p>
 
         <!-- Progress Bar -->
         <div v-if="isGenerating" class="space-y-2">
           <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-            <span>Generating...</span>
-            <span>{{ generationProgress }} / {{ generationTotal }}</span>
+            <span>{{ t('batch_gen.generating') }}</span>
+            <span>{{ t('batch_gen.progress_label', { current: generationProgress, total: generationTotal }) }}</span>
           </div>
           <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
@@ -740,7 +740,7 @@ onMounted(async () => {
           class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
         >
           <Download :size="16" />
-          {{ isGenerating ? 'Generating...' : 'Generate batch PDF' }}
+          {{ isGenerating ? t('batch_gen.generating_button') : t('batch_gen.generate_button') }}
         </button>
       </div>
     </div>

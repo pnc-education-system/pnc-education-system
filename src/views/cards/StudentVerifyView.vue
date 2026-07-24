@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { cardsApi, type CardStudent } from '@/services/api/cards'
 import StudentCard from '@/components/cards/StudentCard.vue'
 import { Loader2, AlertCircle, ShieldCheck } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const token = computed(() => (route.params.token as string) || '')
@@ -39,7 +42,7 @@ onMounted(() => {
     fetchStudent()
   } else {
     loading.value = false
-    error.value = 'No verification token provided'
+    error.value = t('student_verify.no_token')
   }
 })
 
@@ -50,21 +53,21 @@ const hasCard = computed(() => !!student.value?.qr_token)
 const cardNotice = computed(() => {
   if (!student.value) return ''
   if (!hasCard.value) {
-    return 'ID card coming soon! An administrator will generate this student\'s ID card.'
+    return t('student_verify.card_coming_soon')
   }
   return ''
 })
 
 // Error header based on context
 const errorHeader = computed(() => {
-  if (!error.value) return 'Student Not Found'
+  if (!error.value) return t('student_verify.student_not_found')
   if (error.value.toLowerCase().includes('token') || error.value.toLowerCase().includes('qr')) {
-    return 'Invalid Verification Link'
+    return t('student_verify.invalid_link')
   }
   if (error.value.toLowerCase().includes('not found')) {
-    return 'Student Not Found'
+    return t('student_verify.student_not_found')
   }
-  return 'Verification Failed'
+  return t('student_verify.verification_failed')
 })
 
 // Fetch verified student data from the public API
@@ -118,14 +121,25 @@ async function fetchStudent() {
     student.value = null
     valid.value = false
     const axiosErr = err as { response?: { status?: number; data?: { message?: string } } }
-    error.value = axiosErr.response?.data?.message || (axiosErr.response?.status === 404 ? 'Student not found. The link may be invalid or the student has been removed.' : 'Could not load student details. Please try again later.')
+    error.value = axiosErr.response?.data?.message || (axiosErr.response?.status === 404 ? t('student_verify.student_not_found') : t('student_verify.no_token'))
   } finally {
     loading.value = false
   }
 }
 
+// Fallback data from URL query params
+const queryData = computed(() => ({
+  name: (route.query.name as string) || student.value?.full_name || 'Student',
+  gender: (route.query.gender as string) || student.value?.gender || '—',
+  batch: (route.query.batch as string) || student.value?.selection_batch_name || '—',
+  year: (route.query.year as string) || String(student.value?.intake_year || ''),
+  status: (route.query.status as string) || student.value?.enrollment_status || 'unknown',
+  dob: (route.query.dob as string) || student.value?.dob || '',
+  province: (route.query.province as string) || student.value?.province || '',
+}))
+
 const initials = computed(() => {
-  const name = student.value?.full_name
+  const name = queryData.value.name
   if (!name?.trim()) return 'ST'
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2)
 })
@@ -148,16 +162,16 @@ const initials = computed(() => {
       >
         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-3 backdrop-blur-sm border border-blue-200/50 dark:border-blue-500/20 shadow-sm">
           <ShieldCheck :size="14" />
-          Student ID Verification
+          {{ t('student_verify.identity_verified') }}
         </div>
-        <h1 class="text-lg font-bold text-gray-900 dark:text-white">Identity Card</h1>
-        <p class="text-sm text-gray-400 mt-1">Passerelles Numériques Cambodge</p>
+        <h1 class="text-lg font-bold text-gray-900 dark:text-white">{{ t('student_verify.valid_card') }}</h1>
+        <p class="text-sm text-gray-400 mt-1">Passerellesnumeriques Cambodia</p>
       </div>
 
       <!-- Loading -->
       <div v-if="loading" class="flex flex-col items-center justify-center py-16">
         <Loader2 :size="32" class="text-blue-500 animate-spin mb-3" />
-        <p class="text-sm text-gray-400">Verifying student identity...</p>
+        <p class="text-sm text-gray-400">{{ t('student_verify.loading') }}</p>
       </div>
 
       <!-- Student Card Display -->
@@ -171,10 +185,10 @@ const initials = computed(() => {
           <AlertCircle :size="18" class="text-amber-500 shrink-0 mt-0.5" />
           <div>
             <p class="text-xs font-semibold text-amber-800 dark:text-amber-300">
-              {{ student.id === 0 ? 'Limited Information' : 'No ID Card Generated' }}
+              {{ student.id === 0 ? t('student_verify.card_not_generated') : t('student_verify.card_not_generated') }}
             </p>
             <p class="text-xs text-amber-600/80 dark:text-amber-400/70 mt-0.5">
-              {{ student.id === 0 ? 'Student data was extracted from the QR code. Full details may not be available from the server.' : cardNotice }}
+              {{ student.id === 0 ? t('student_verify.card_coming_soon') : cardNotice }}
             </p>
           </div>
         </div>
@@ -198,12 +212,12 @@ const initials = computed(() => {
           <AlertCircle :size="28" class="text-red-500" />
         </div>
         <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">{{ errorHeader }}</h2>
-        <p class="text-sm text-gray-400">{{ error || 'This student ID could not be found. The link may be invalid or the student record has been removed.' }}</p>
+        <p class="text-sm text-gray-400">{{ error || t('student_verify.student_not_found') }}</p>
       </div>
 
       <!-- Footer note -->
       <p class="text-center text-[10px] text-gray-400 mt-6 mb-4 transition-all duration-700" :class="mounted ? 'opacity-100' : 'opacity-0'">
-        This is an official student identity verification from Passerelles Numériques Cambodge.
+        Passerellesnumeriques Cambodia
       </p>
     </div>
   </div>

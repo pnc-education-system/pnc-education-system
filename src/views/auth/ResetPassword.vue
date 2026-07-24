@@ -11,7 +11,7 @@ const route = useRoute()
 
 const form = ref<PasswordResetConfirm>({
   email: '',
-  token: '',
+  reset_token: '',
   password: '',
   password_confirmation: '',
 })
@@ -25,7 +25,7 @@ const successMessage = ref('')
 
 onMounted(() => {
   form.value.email = (route.query.email as string) || ''
-  form.value.token = (route.query.token as string) || (route.query.reset_token as string) || ''
+  form.value.reset_token = (route.query.token as string) || (route.query.reset_token as string) || ''
 })
 
 async function handleSubmit() {

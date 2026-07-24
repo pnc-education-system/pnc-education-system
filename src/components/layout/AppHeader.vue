@@ -3,6 +3,7 @@ import { ref, inject, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
+import { useI18n } from 'vue-i18n'
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher.vue'
 
 const authStore = useAuthStore()
@@ -10,6 +11,8 @@ const route = useRoute()
 const router = useRouter()
 const showProfileMenu = ref(false)
 const profileMenuRef = ref<HTMLElement | null>(null)
+
+const { t } = useI18n()
 
 const toggleSidebar = inject('toggleSidebar') as () => void
 const { isDark, toggleTheme } = useTheme()
@@ -65,7 +68,7 @@ const userInitials = authStore.user?.name
         <button
           class="flex items-center justify-center w-9 h-9 rounded-xl text-gray-500 hover:bg-gray-100 transition-all duration-200 cursor-pointer lg:hidden"
           @click="toggleSidebar"
-          title="Toggle sidebar"
+          :title="t('header.toggle_sidebar')"
         >
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" x2="21" y1="6" y2="6" />
@@ -78,7 +81,7 @@ const userInitials = authStore.user?.name
             class="text-gray-400 font-medium hidden sm:inline cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors dark:text-gray-500"
             @click="router.push('/dashboard')"
           >
-            Pages
+            {{ t('header.pages') }}
           </button>
           <svg class="w-3.5 h-3.5 text-gray-300 hidden sm:block dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="m9 18 6-6-6-6" />
@@ -89,7 +92,7 @@ const userInitials = authStore.user?.name
       <div class="flex items-center gap-1 sm:gap-2">
         <button
           class="relative w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
-          :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          :title="isDark ? t('header.light_mode') : t('header.dark_mode')"
           @click="toggleTheme"
         >
           <svg v-if="isDark" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -172,7 +175,7 @@ const userInitials = authStore.user?.name
                     <circle cx="12" cy="12" r="3" />
                     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                   </svg>
-                  <span>Settings</span>
+                  <span>{{ t('header.settings') }}</span>
                 </button>
                 <button
                   class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
@@ -182,7 +185,7 @@ const userInitials = authStore.user?.name
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <span>Profile</span>
+                  <span>{{ t('header.profile') }}</span>
                 </button>
 
                 <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
@@ -190,13 +193,13 @@ const userInitials = authStore.user?.name
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                     <circle cx="12" cy="12" r="2" />
                   </svg>
-                  <span>Security</span>
+                  <span>{{ t('header.security') }}</span>
                 </button>
                 <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer dark:text-gray-300 dark:hover:bg-white/[0.04]">
                   <svg class="w-4 h-4 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
-                  <span>Privacy</span>
+                  <span>{{ t('header.privacy') }}</span>
                 </button>
               </div>
               <div class="border-t border-gray-100 p-1.5 dark:border-gray-700/80">
@@ -209,7 +212,7 @@ const userInitials = authStore.user?.name
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" x2="9" y1="12" y2="12" />
                   </svg>
-                  <span>Log out</span>
+                  <span>{{ t('header.logout') }}</span>
                 </button>
               </div>
             </div>

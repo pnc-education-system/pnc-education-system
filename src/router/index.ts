@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { prefetchBatches } from '@/utils/batchesCache'
-
+//
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',

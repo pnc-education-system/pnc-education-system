@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { recordsApi } from '@/services/api/records'
 import type { Student, StudentRecord } from '@/types'
 import { FileText, AlertTriangle, Award, MessageSquare, Calendar, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{ student: Student }>()
+const { t } = useI18n()
 const { showErrorToast } = useToast()
 
 const records = ref<StudentRecord[]>([])
@@ -41,7 +43,7 @@ async function loadRecords() {
     // If 404, the endpoint might not be available yet — just show empty
     if (error?.response?.status !== 404) {
       console.error('Failed to load student records:', error)
-      showErrorToast('Failed to load records', 'Error')
+      showErrorToast(t('records.toast_load_failed'), t('records.toast_error'))
     }
   } finally {
     isLoading.value = false
@@ -88,8 +90,8 @@ watch(() => props.student.id, loadRecords)
         <div class="w-16 h-16 mx-auto rounded-2xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center mb-4">
           <FileText :size="32" class="text-gray-300 dark:text-gray-600" />
         </div>
-        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No records found</p>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Student records will appear here once available.</p>
+        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">{{ t('records.no_records') }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ t('records.no_records_hint') }}</p>
       </div>
     </template>
   </div>

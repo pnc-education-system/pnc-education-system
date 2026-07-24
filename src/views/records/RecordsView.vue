@@ -265,12 +265,16 @@ function toggleRecordExpand(recordId: number) {
 function getApiErrorMessage(error: any, fallback: string): string {
   const data = error?.response?.data
   if (data) {
+    // Handle ApiErrorEnvelopeMiddleware format: { error: { code, message, errors } }
+    if (data.error?.message && typeof data.error.message === 'string') return data.error.message
+    // Handle direct format: { message: "..." }
     if (data.message && typeof data.message === 'string') return data.message
-    const errors = data.errors
-    if (errors && typeof errors === 'object') {
-      const firstKey = Object.keys(errors)[0]
+    // Handle field-level errors from envelope
+    const fieldErrors = data.error?.errors || data.errors
+    if (fieldErrors && typeof fieldErrors === 'object') {
+      const firstKey = Object.keys(fieldErrors)[0]
       if (firstKey) {
-        const msgs = errors[firstKey]
+        const msgs = fieldErrors[firstKey]
         const msg = Array.isArray(msgs) ? msgs[0] : msgs
         if (msg) return `${firstKey}: ${msg}`
       }
@@ -745,8 +749,10 @@ async function submitAttachmentUpload() {
         console.log('[RecordsView] After loadRecords — timeline items:', timelineItems.value.length)
         console.log('[RecordsView] After loadRecords — hasRecords:', hasRecords.value)
   } catch (error: any) {
-    // Show the actual error message from the backend (e.g. file too large, unsupported type)
-    const message = error instanceof Error ? error.message : getApiErrorMessage(error, 'Failed to upload attachment.')
+    // Always extract the actual error message from the backend response
+    // Axios errors are `Error` instances but their `.message` is just "Request failed with status code 500".
+    // The real error is in the response body wrapped by ApiErrorEnvelopeMiddleware.
+    const message = getApiErrorMessage(error, 'Failed to upload attachment.')
     showErrorToast(message, t('records.toast_error'))
   } finally {
     isUploading.value = false

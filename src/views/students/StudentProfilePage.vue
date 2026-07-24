@@ -229,8 +229,8 @@ async function uploadPhoto(file: File) {
   if (!student.value) return
   isUploadingPhoto.value = true
   try {
-    const updated = await studentsApi.uploadPhoto(Number(student.value.id), file)
-    student.value.photoPath = updated.photo_path ?? undefined
+    const result = await studentsApi.uploadPhoto(Number(student.value.id), file)
+    student.value.photoPath = result.photo_url
     clearPhotoPreview()
     // Refresh the student in the store
     const storeStudent = studentsStore.getById(student.value.id)

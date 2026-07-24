@@ -42,7 +42,7 @@ const colors = computed<ThemeColors>(() => themeColors[props.theme])
         <div class="mb-4">
           <h3 class="text-xs font-bold uppercase mb-2" :style="{ color: colors.primary }">About Us</h3>
           <p class="text-xs leading-relaxed" :style="{ color: colors.text }">
-            <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+            <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
           </p>
         </div>
 
@@ -132,7 +132,7 @@ const colors = computed<ThemeColors>(() => themeColors[props.theme])
         <div class="mb-4">
           <h3 class="text-xs font-bold uppercase mb-2 text-white" :style="{ color: colors.primary }">About Us</h3>
           <p class="text-xs leading-relaxed text-gray-600">
-            <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+            <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
           </p>
         </div>
 
@@ -220,7 +220,7 @@ const colors = computed<ThemeColors>(() => themeColors[props.theme])
         <div class="mb-3">
           <h3 class="text-[10px] font-bold uppercase mb-1" :style="{ color: colors.primary }">About Us</h3>
           <p class="text-[10.5px] leading-relaxed" :style="{ color: colors.text }">
-            <strong>Passerelles Numeriques</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+            <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
           </p>
         </div>
 
