@@ -11,6 +11,8 @@ import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selecti
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 import StudentCard from '@/components/cards/StudentCard.vue'
 
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
+
 import {
   Search,
   Filter,
@@ -25,6 +27,7 @@ import {
   CreditCard,
   RotateCcw,
   Loader2,
+  Camera,
 } from 'lucide-vue-next'
 
 // ── Data ──
@@ -506,14 +509,7 @@ function getStatusStyle(status: string) {
   return styles[status] || styles.pending
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
+
 
 // ── Pagination ──
 function goToPage(page: number) {
@@ -862,8 +858,9 @@ onUnmounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+                    <span v-else class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                   </div>
                   <div>
                     <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ student.full_name }}</p>
@@ -892,8 +889,9 @@ onUnmounted(() => {
                 <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
               </div>
               <div class="col-span-2 flex items-center gap-2">
-                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                  <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+                  <span v-else class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                 </div>
                 <p class="text-xs font-semibold text-gray-900 dark:text-white truncate">{{ student.full_name }}</p>
               </div>
@@ -981,8 +979,9 @@ onUnmounted(() => {
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-xl">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm font-bold text-white">{{ getInitials(livePreviewStudent.full_name) }}</span>
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img v-if="livePreviewStudent.photo_path" :src="resolvePhotoUrl(livePreviewStudent.photo_path, livePreviewStudent.id)" :alt="livePreviewStudent.full_name" class="w-full h-full object-cover" />
+                <span v-else class="text-sm font-bold text-white">{{ getInitials(livePreviewStudent.full_name) }}</span>
               </div>
               <div>
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ livePreviewStudent.full_name }}</h3>

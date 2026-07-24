@@ -11,6 +11,7 @@ import type { StudentStatus, Student } from '@/types'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { studentsApi } from '@/services/api'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
+import { resolvePhotoUrl, getInitials as getInitialsUtil } from '@/utils/photoUrl'
 
 import {
   Search,
@@ -469,17 +470,7 @@ function formatDate(dateStr?: string): string {
 }
 
 function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
-function resolvePhotoUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (/^https?:\/\//i.test(path)) return path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
+  return getInitialsUtil(name)
 }
 
 function goToPage(page: number) {
@@ -616,7 +607,7 @@ function goToPage(page: number) {
                     class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                   <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath)" :alt="student.fullName" class="w-full h-full object-cover" />
+                    <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath, student.id)" :alt="student.fullName" class="w-full h-full object-cover" />
                     <span v-else class="text-xs font-bold text-white">{{ getInitials(student.fullName) }}</span>
                   </div>
                   <div>
@@ -700,7 +691,7 @@ function goToPage(page: number) {
               <!-- Student Name -->
               <div class="col-span-3 flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath)" :alt="student.fullName" class="w-full h-full object-cover" />
+                  <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath, student.id)" :alt="student.fullName" class="w-full h-full object-cover" />
                   <span v-else class="text-xs font-bold text-white">{{ getInitials(student.fullName) }}</span>
                 </div>
                 <div>

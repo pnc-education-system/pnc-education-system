@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { CardStudent } from '@/services/api/cards'
+import { resolvePhotoUrl } from '@/utils/photoUrl'
 import QRCode from 'qrcode'
 import defaultSchoolLogo from '@/assets/images/PN_logo_clear.png'
 import { Loader2 } from 'lucide-vue-next'
@@ -80,13 +81,7 @@ const studentInitials = computed(() => {
 const photoUrl = computed(() => {
   if (localPhotoUrl.value) return localPhotoUrl.value
   if (!props.student?.photo_path) return null
-  if (/^https?:\/\//i.test(props.student.photo_path)) return props.student.photo_path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  const path = props.student.photo_path
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
+  return resolvePhotoUrl(props.student.photo_path, props.student.id)
 })
 
 const qrContent = computed(() => {

@@ -5,6 +5,7 @@ import { cardsApi, type CardStudent, type CardTemplate } from '@/services/api/ca
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { useToast } from '@/composables/useToast'
 import StudentCard from '@/components/cards/StudentCard.vue'
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import { Check, X, ChevronDown, Download, Upload, Image as ImageIcon } from 'lucide-vue-next'
@@ -630,7 +631,13 @@ onMounted(async () => {
           />
         </div>
         <span class="text-sm font-mono text-gray-900 dark:text-white">{{ student.student_id_no || '—' }}</span>
-        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ student.full_name }}</span>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+            <span v-else class="text-[10px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+          </div>
+          <span class="text-sm font-medium text-gray-900 dark:text-white">{{ student.full_name }}</span>
+        </div>
         <div class="flex items-center gap-2">
           <!-- Photo Status -->
           <div v-if="getPhotoStatus(student) === 'has'" class="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20">
