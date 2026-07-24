@@ -125,7 +125,7 @@ export const cardsApi = {
 
   /** Get student details by student_id_no (public — used for QR verification) */
   async getByStudentIdNo(studentIdNo: string): Promise<CardStudent> {
-    const { data } = await axiosInstance.get(`/students/verify/${encodeURIComponent(studentIdNo)}`)
+    const { data } = await axiosInstance.get(`/student-cards/student/${encodeURIComponent(studentIdNo)}`)
     return (data.data ?? data) as CardStudent
   },
 

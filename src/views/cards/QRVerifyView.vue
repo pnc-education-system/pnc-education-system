@@ -29,9 +29,35 @@ const recentVerifications = ref<Array<{
   time: string
 }>>(loadRecentVerifications())
 
-const displayedVerifications = computed(() => {
-  return showMoreVerifications.value ? recentVerifications.value : recentVerifications.value.slice(0, 5)
+// Pagination for recent verifications
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+const totalPages = computed(() => Math.ceil(recentVerifications.value.length / itemsPerPage))
+
+const paginatedVerifications = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return recentVerifications.value.slice(start, end)
 })
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
 
 function loadRecentVerifications() {
   try {
@@ -161,7 +187,7 @@ function getStatusStyle(status: string) {
                 <input
                   v-model="studentIdInput"
                   type="text"
-                  placeholder="Enter Student ID (e.g., STU-2025-0123)"
+                  placeholder="Enter Student ID (e.g., PNC2027-020)"
                   class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                   @keyup.enter="handleVerify"
                 />
@@ -322,7 +348,7 @@ function getStatusStyle(status: string) {
           </div>
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
             <div
-              v-for="item in recentVerifications"
+              v-for="item in paginatedVerifications"
               :key="item.studentId"
               class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors"
             >
@@ -344,6 +370,37 @@ function getStatusStyle(status: string) {
           </div>
           <div v-if="recentVerifications.length === 0" class="px-5 py-8 text-center">
             <p class="text-xs text-gray-400">No recent verifications.</p>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div v-if="totalPages > 1" class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+            <button
+              @click="prevPage"
+              :disabled="currentPage === 1"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="page in totalPages"
+                :key="page"
+                @click="goToPage(page)"
+                class="w-8 h-8 text-xs font-medium rounded-lg transition-colors"
+                :class="currentPage === page
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <button
+              @click="nextPage"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         </div>
 
