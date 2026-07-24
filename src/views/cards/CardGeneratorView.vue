@@ -78,8 +78,8 @@ const dbTemplates = ref<CardTemplate[]>([])
 const cardStats = ref<CardStats | null>(null)
 
 const savedLayout = localStorage.getItem('card_template_preference')
-const selectedLayout = ref<'classic' | 'modern' | 'premium'>(
-  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium') ? savedLayout : 'classic'
+const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official' | 'minimal' | 'creative' | 'tech'>(
+  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium' || savedLayout === 'corporate' || savedLayout === 'corporate-blue' || savedLayout === 'corporate-yellow' || savedLayout === 'official' || savedLayout === 'minimal' || savedLayout === 'creative' || savedLayout === 'tech') ? savedLayout : 'classic'
 )
 
 watch(selectedLayout, (val) => {
@@ -103,6 +103,48 @@ const templates = [
     id: 'premium' as const,
     name: 'Premium',
     description: 'Elegant dark design with gold accents',
+    popular: false,
+  },
+  {
+    id: 'corporate' as const,
+    name: 'Corporate',
+    description: 'Professional green branding design',
+    popular: false,
+  },
+  {
+    id: 'corporate-blue' as const,
+    name: 'Corporate Blue',
+    description: 'Professional blue branding design',
+    popular: false,
+  },
+  {
+    id: 'corporate-yellow' as const,
+    name: 'Corporate Yellow',
+    description: 'Professional yellow branding design',
+    popular: false,
+  },
+  {
+    id: 'official' as const,
+    name: 'Official',
+    description: 'Formal design with gold stripe',
+    popular: false,
+  },
+  {
+    id: 'minimal' as const,
+    name: 'Minimal',
+    description: 'Clean and simple gray design',
+    popular: false,
+  },
+  {
+    id: 'creative' as const,
+    name: 'Creative',
+    description: 'Vibrant purple gradient design',
+    popular: false,
+  },
+  {
+    id: 'tech' as const,
+    name: 'Tech',
+    description: 'Dark theme with cyan accents',
     popular: false,
   },
 ] as const
@@ -141,6 +183,12 @@ const isSomeSelected = computed(
 const hasSelectedStudents = computed(() => selectedStudentIds.value.size > 0)
 
 const selectedCount = computed(() => selectedStudentIds.value.size)
+
+// ── Current Layout Key for display ──
+const currentLayoutKey = computed(() => selectedLayout.value)
+
+// ── Show Preview Card Back ──
+const showPreviewCardBack = computed(() => showCardBack.value)
 
 // ── Live Preview Student (default demo or selected) ──
 const livePreviewStudent = computed<CardStudent>(() => {
@@ -939,12 +987,12 @@ onUnmounted(() => {
               <!-- Front / Back Toggle -->
               <div class="flex items-center gap-0.5 bg-gray-200/70 dark:bg-gray-700/50 rounded-lg p-0.5 mb-3">
                 <button
-                  @click="showPreviewCardBack = false"
+                  @click="showCardBack = false"
                   class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
                   :class="!showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
                 >{{ t('card_gen.front') }}</button>
                 <button
-                  @click="showPreviewCardBack = true"
+                  @click="showCardBack = true"
                   class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
                   :class="showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
                 >{{ t('card_gen.back') }}</button>

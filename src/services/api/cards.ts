@@ -129,6 +129,12 @@ export const cardsApi = {
     return (data.data ?? data) as CardStudent
   },
 
+  /** Verify student by numeric ID (public — used for QR verification) */
+  async verifyById(studentId: number): Promise<CardStudent> {
+    const { data } = await axiosInstance.get(`/students/verify/${studentId}`)
+    return (data.data ?? data) as CardStudent
+  },
+
   /** Generate batch cards for a selection batch */
   async batchGenerate(request: BatchCardRequest): Promise<BatchCardResponse> {
     console.log('batchGenerate called with:', request)

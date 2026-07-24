@@ -11,7 +11,7 @@ const props = withDefaults(
     size?: 'sm' | 'md' | 'lg'
     showActions?: boolean
     generated?: boolean
-    layout?: 'classic' | 'modern' | 'premium'
+    layout?: 'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official' | 'minimal' | 'creative' | 'tech'
     managerName?: string
     issueDate?: string
     expiredDate?: string
@@ -116,6 +116,13 @@ const computedExpiredDate = computed(() => {
   return '—'
 })
 
+// Display properties for corporate templates
+const displayFullName = computed(() => props.student?.full_name || 'Student Name')
+const displayStudentId = computed(() => props.student?.student_id_no || 'ST-0000')
+const displayStatus = computed(() => capitalize(props.student?.enrollment_status))
+const displayBatchName = computed(() => props.student?.selection_batch_name || '—')
+const displayIntakeYear = computed(() => props.student?.intake_year ? String(props.student.intake_year) : 'N/A')
+
 const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
   enrolled: { bg: '#ECFDF5', text: '#059669', dot: '#10B981' },
   pending: { bg: '#FFFBEB', text: '#D97706', dot: '#F59E0B' },
@@ -125,7 +132,7 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
 }
 
 function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
-  return statusStyles[status] || statusStyles.pending
+  return statusStyles[status] ?? statusStyles.pending
 }
 
 function capitalize(s: string | null | undefined) {
@@ -755,6 +762,233 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </svg>
             <p class="text-[7px] font-mono text-gray-500 tracking-widest">{{ displayStudentId }}</p>
           </div>
+        </div>
+
+        <!-- ── MINIMAL ── -->
+        <div v-if="layout === 'minimal'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow-sm"
+          :class="generated ? 'border-gray-400' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card="student?.id"
+        >
+          <!-- Clean header -->
+          <div class="bg-gray-50 px-4 py-2 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick"
+                class="w-6 h-6 rounded bg-gray-200 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-bold text-gray-600">PNC</span>
+              </div>
+              <p class="text-[9px] font-semibold text-gray-600">Passerellesnumeriques Cambodia</p>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-center px-4 py-3 gap-2 justify-center">
+            <!-- Photo -->
+            <div @click="handlePhotoClick"
+              class="rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer group relative shrink-0"
+              :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
+                <span class="font-bold text-gray-400" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
+              </div>
+            </div>
+
+            <!-- Name -->
+            <p class="font-semibold text-gray-800 text-center truncate w-full" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID -->
+            <p class="font-mono text-gray-500 text-center text-xs">{{ displayStudentId }}</p>
+
+            <!-- Simple info row -->
+            <div class="flex items-center gap-2 text-[9px] text-gray-500">
+              <span>{{ displayBatchName }}</span>
+              <span>·</span>
+              <span>{{ displayIntakeYear }}</span>
+              <span>·</span>
+              <span class="capitalize">{{ displayStatus }}</span>
+            </div>
+
+            <div class="flex-1 min-h-[2px]"></div>
+
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full">
+              <p class="text-[7px] text-gray-400">{{ displayStudentId }}</p>
+              <div class="bg-gray-100 rounded p-0.5" :style="{ width: size === 'sm' ? '36px' : size === 'lg' ? '48px' : '42px', height: size === 'sm' ? '36px' : size === 'lg' ? '48px' : '42px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-200 rounded">
+                  <Loader2 class="w-2 h-2 text-gray-400 animate-spin" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CREATIVE ── -->
+        <div v-if="layout === 'creative'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden shadow-lg"
+          :class="generated ? 'border-purple-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card="student?.id"
+          :style="{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }"
+        >
+          <!-- Decorative circles -->
+          <div class="absolute top-[-20px] right-[-20px] w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+          <div class="absolute bottom-[-30px] left-[-30px] w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+
+          <!-- Header -->
+          <div class="px-4 py-2.5 relative z-10">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick"
+                class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer backdrop-blur-sm">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-white">PNC</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[10px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-center px-4 py-2 gap-2 justify-center relative z-10">
+            <!-- Photo with glow -->
+            <div class="relative">
+              <div class="absolute inset-0 bg-white/20 rounded-full blur-md"></div>
+              <div @click="handlePhotoClick"
+                class="relative rounded-full overflow-hidden bg-white flex items-center justify-center cursor-pointer group shrink-0"
+                :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+                <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-200 to-purple-300">
+                  <span class="font-bold text-purple-600" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Name -->
+            <p class="font-bold text-white text-center truncate w-full drop-shadow-sm" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID in pill -->
+            <span class="px-3 py-1 rounded-full text-[9px] font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/30">
+              {{ displayStudentId }}
+            </span>
+
+            <!-- Info pills -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+              <span class="px-2 py-0.5 rounded text-[8px] font-medium bg-white/15 text-white/90">{{ displayBatchName }}</span>
+              <span class="px-2 py-0.5 rounded text-[8px] font-medium bg-white/15 text-white/90">{{ displayIntakeYear }}</span>
+              <span class="px-2 py-0.5 rounded text-[8px] font-medium bg-white/15 text-white/90 capitalize">{{ displayStatus }}</span>
+            </div>
+
+            <div class="flex-1 min-h-[2px]"></div>
+
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full">
+              <p class="text-[7px] text-white/70">{{ displayStudentId }}</p>
+              <div class="bg-white/90 rounded-lg p-0.5 backdrop-blur-sm" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '50px' : '44px', height: size === 'sm' ? '38px' : size === 'lg' ? '50px' : '44px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-white/80 rounded">
+                  <Loader2 class="w-2 h-2 text-purple-500 animate-spin" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TECH ── -->
+        <div v-if="layout === 'tech'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-gray-900 shadow-lg"
+          :class="generated ? 'border-cyan-400' : 'border-gray-700'"
+          :data-student-card="student?.id"
+        >
+          <!-- Tech grid background -->
+          <div class="absolute inset-0 opacity-5" style="background-image: linear-gradient(rgba(0,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+          <!-- Glowing top border -->
+          <div class="h-[2px] bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400"></div>
+
+          <!-- Header -->
+          <div class="px-4 py-2.5 relative z-10 bg-gray-800/50 backdrop-blur-sm">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick"
+                class="w-7 h-7 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer border border-cyan-500/30">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[9px] font-extrabold text-cyan-400">PNC</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[10px] font-bold text-cyan-400 leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[7px] font-medium text-gray-400 leading-tight">Cambodia</p>
+              </div>
+              <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-center px-4 py-2 gap-2 justify-center relative z-10">
+            <!-- Photo with tech border -->
+            <div class="relative">
+              <div class="absolute inset-0 bg-cyan-500/20 rounded-lg blur-sm"></div>
+              <div @click="handlePhotoClick"
+                class="relative rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center cursor-pointer group shrink-0 border border-cyan-500/30"
+                :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+                <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-700 text-gray-500">
+                  <span class="font-bold text-cyan-400" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
+                </div>
+              </div>
+              <!-- Corner accents -->
+              <div class="absolute -top-1 -left-1 w-3 h-3 border-l-2 border-t-2 border-cyan-400"></div>
+              <div class="absolute -top-1 -right-1 w-3 h-3 border-r-2 border-t-2 border-cyan-400"></div>
+              <div class="absolute -bottom-1 -left-1 w-3 h-3 border-l-2 border-b-2 border-cyan-400"></div>
+              <div class="absolute -bottom-1 -right-1 w-3 h-3 border-r-2 border-b-2 border-cyan-400"></div>
+            </div>
+
+            <!-- Name -->
+            <p class="font-bold text-cyan-400 text-center truncate w-full" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID with tech styling -->
+            <div class="flex items-center gap-1">
+              <span class="text-[7px] text-gray-500 font-mono">ID:</span>
+              <p class="font-mono text-cyan-300 text-xs">{{ displayStudentId }}</p>
+            </div>
+
+            <!-- Tech info grid -->
+            <div class="grid grid-cols-3 gap-1 text-[8px] w-full">
+              <div class="bg-gray-800/50 rounded px-1.5 py-1 border border-gray-700">
+                <p class="text-gray-500 text-[6px]">BATCH</p>
+                <p class="text-gray-300 font-semibold truncate">{{ displayBatchName }}</p>
+              </div>
+              <div class="bg-gray-800/50 rounded px-1.5 py-1 border border-gray-700">
+                <p class="text-gray-500 text-[6px]">YEAR</p>
+                <p class="text-gray-300 font-semibold">{{ displayIntakeYear }}</p>
+              </div>
+              <div class="bg-gray-800/50 rounded px-1.5 py-1 border border-gray-700">
+                <p class="text-gray-500 text-[6px]">STATUS</p>
+                <p class="text-cyan-400 font-semibold capitalize">{{ displayStatus }}</p>
+              </div>
+            </div>
+
+            <div class="flex-1 min-h-[2px]"></div>
+
+            <!-- QR with tech frame -->
+            <div class="flex items-center justify-between w-full">
+              <div class="text-[7px] text-gray-500 font-mono">
+                <p class="text-cyan-400/50">VERIFY</p>
+                <p>{{ displayStudentId }}</p>
+              </div>
+              <div class="bg-gray-800 rounded p-0.5 border border-cyan-500/30" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '50px' : '44px', height: size === 'sm' ? '38px' : size === 'lg' ? '50px' : '44px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-700 rounded">
+                  <Loader2 class="w-2 h-2 text-cyan-400 animate-spin" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom tech line -->
+          <div class="h-[2px] bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400"></div>
         </div>
       </div>
 
