@@ -75,7 +75,6 @@ const newStudent = ref({
   selectionBatchId: null as number | null,
   enrollmentStatus: 'Pending' as 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped',
   intakeYear: new Date().getFullYear(),
-  enrolledAt: '',
 })
 
 const canManage = computed(() => authStore.hasPermission('students.edit'))
@@ -356,7 +355,6 @@ function closeAddStudentModal() {
     selectionBatchId: null as number | null,
     enrollmentStatus: 'Pending' as 'Pending' | 'Enrolled' | 'Rejected' | 'Graduated' | 'Dropped',
     intakeYear: new Date().getFullYear(),
-    enrolledAt: '',
   }
 }
 
@@ -379,7 +377,6 @@ async function submitNewStudent() {
       high_school: newStudent.value.highSchool,
       enrollment_status: newStudent.value.enrollmentStatus,
       intake_year: newStudent.value.intakeYear,
-      enrolled_at: newStudent.value.enrolledAt,
     }
 
     if (newStudent.value.selectionBatchId) {
@@ -1225,16 +1222,6 @@ function goToPage(page: number) {
                 type="number"
                 placeholder="Enter intake year"
                 class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-
-            <!-- Enrolled Date -->
-            <div>
-              <label class="block text-xs font-medium text-[#6B7280] dark:text-gray-400 mb-1">Enrolled Date</label>
-              <input
-                v-model="newStudent.enrolledAt"
-                type="date"
-                class="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
 

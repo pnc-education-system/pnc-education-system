@@ -25,6 +25,7 @@ export interface StudentActivity {
   type: 'status_change' | 'record_update' | 'evaluation'
   title: string
   description: string
+  note?: string
   performed_by: string
   date: string
 }

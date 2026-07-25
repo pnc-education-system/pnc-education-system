@@ -1,199 +1,79 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Student } from '@/types'
+import type { Student as AppStudent } from '@/types'
+import type { Student as CardStudent, CardTheme } from '@/types/card'
+import { themeColors } from '@/types/card'
 import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
-import { Download, Printer, Share2, Shield, Check } from 'lucide-vue-next'
+import { Download, Printer, Share2, Check, Palette } from 'lucide-vue-next'
+import IDCard from '@/components/card/IDCard.vue'
 
 const { t } = useI18n()
 
-const props = defineProps<{ student: Student }>()
+const props = defineProps<{ student: AppStudent }>()
 const downloadSuccess = ref(false)
 const printSuccess = ref(false)
 const shareSuccess = ref(false)
+const cardContainerRef = ref<HTMLElement | null>(null)
 
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
+// Card theme state
+const selectedTheme = ref<CardTheme>('blue')
 
-async function generateCardCanvas(): Promise<HTMLCanvasElement> {
+const themeOptions: { id: CardTheme; name: string; colors: { primary: string; secondary: string } }[] = [
+  { id: 'blue', name: 'Blue', colors: { primary: '#1e3a8a', secondary: '#3b82f6' } },
+  { id: 'green', name: 'Green', colors: { primary: '#166534', secondary: '#22c55e' } },
+  { id: 'purple', name: 'Purple', colors: { primary: '#7c3aed', secondary: '#a855f7' } },
+  { id: 'orange', name: 'Orange', colors: { primary: '#c2410c', secondary: '#f97316' } },
+  { id: 'dark', name: 'Dark', colors: { primary: '#1f2937', secondary: '#374151' } },
+]
+
+// Map app Student to card Student
+const cardStudent = computed<CardStudent>(() => {
   const s = props.student
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')!
-  const width = 600
-  const height = 378 // 1.586:1 aspect ratio
-  canvas.width = width
-  canvas.height = height
-
-  // ── Background gradient ──
-  const gradient = ctx.createLinearGradient(0, 0, width, height)
-  gradient.addColorStop(0, '#64748b')
-  gradient.addColorStop(0.5, '#475569')
-  gradient.addColorStop(1, '#334155')
-  ctx.fillStyle = gradient
-  ctx.beginPath()
-  ctx.roundRect(0, 0, width, height, 20)
-  ctx.fill()
-
-  // ── Decorative circles ──
-  ctx.fillStyle = 'rgba(255,255,255,0.05)'
-  ctx.beginPath()
-  ctx.arc(width - 60, -40, 120, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(-30, height + 20, 80, 0, Math.PI * 2)
-  ctx.fill()
-
-  // ── Radial highlights ──
-  const radialGrad = ctx.createRadialGradient(width - 80, 40, 0, width - 80, 40, 200)
-  radialGrad.addColorStop(0, 'rgba(255,255,255,0.06)')
-  radialGrad.addColorStop(1, 'transparent')
-  ctx.fillStyle = radialGrad
-  ctx.fillRect(0, 0, width, height)
-
-  const radialGrad2 = ctx.createRadialGradient(60, height - 60, 0, 60, height - 60, 150)
-  radialGrad2.addColorStop(0, 'rgba(255,255,255,0.03)')
-  radialGrad2.addColorStop(1, 'transparent')
-  ctx.fillStyle = radialGrad2
-  ctx.fillRect(0, 0, width, height)
-
-  // ── Top section: Logo + Header ──
-  ctx.fillStyle = '#94a3b8'
-  ctx.font = 'bold 18px Inter, sans-serif'
-  ctx.fillText('PNC', 28, 40)
-  ctx.fillStyle = '#cbd5e1'
-  ctx.font = '10px Inter, sans-serif'
-  ctx.fillText('EDUCATION SYSTEM', 28, 56)
-
-  // Shield icon
-  ctx.fillStyle = '#94a3b8'
-  ctx.font = '14px sans-serif'
-  ctx.textAlign = 'right'
-  ctx.fillText('🛡', width - 28, 40)
-  ctx.fillStyle = '#94a3b8'
-  ctx.font = '10px Inter, sans-serif'
-  ctx.fillText('STUDENT', width - 28, 56)
-  ctx.textAlign = 'left'
-
-  // ── Divider line ──
-  const midY = height / 2
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(28, midY)
-  ctx.lineTo(width - 28, midY)
-  ctx.stroke()
-  const photoSize = 70
-  const photoX = 28
-  const photoY = midY - 50
-
-  const photoUrl = resolvePhotoUrl(s.photoPath, s.id)
-  if (photoUrl) {
-    try {
-      const img = await loadImage(photoUrl)
-      ctx.save()
-      ctx.beginPath()
-      ctx.roundRect(photoX, photoY, photoSize, photoSize, 10)
-      ctx.clip()
-      ctx.drawImage(img, photoX, photoY, photoSize, photoSize)
-      ctx.restore()
-    } catch {
-      drawInitials(ctx, photoX, photoY, photoSize, getInitials(s.fullName))
-    }
-  } else {
-    drawInitials(ctx, photoX, photoY, photoSize, getInitials(s.fullName))
+  return {
+    id: s.id,
+    name: s.fullName,
+    avatar: s.photoPath ? (resolvePhotoUrl(s.photoPath, s.id) ?? undefined) : undefined,
+    studentId: s.studentIdNo,
+    batch: s.selectionBatchName || `Batch ${s.intakeYear || ''}`,
+    year: s.intakeYear || new Date().getFullYear().toString(),
+    status: mapStatus(s.status),
+    school: 'Passerellesnumeriques Cambodia',
+    logo: '',
+    emergencyContact: '',
+    website: 'https://pnc.edu.kh',
+    address: s.province || 'Phnom Penh, Cambodia',
   }
+})
 
-  const infoX = photoX + photoSize + 20
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 18px Inter, sans-serif'
-  ctx.fillText(truncateText(ctx, s.fullName, 280), infoX, photoY + 24)
-  ctx.fillStyle = '#e2e8f0'
-  ctx.font = '12px monospace'
-  ctx.fillText(s.studentIdNo, infoX, photoY + 48)
-  ctx.fillStyle = '#94a3b8'
-  ctx.font = '10px Inter, sans-serif'
-  ctx.fillText(`${s.selectionBatchName || 'Batch B'} · Intake ${s.intakeYear || '2025'}`, infoX, photoY + 66)
-
-  const gridY = midY + 20
-  const col1X = 28
-  const col2X = width / 2 + 10
-  const rowGap = 22
-
-  function drawDetail(x: number, y: number, label: string, value: string) {
-    ctx.fillStyle = '#94a3b8'
-    ctx.font = '10px Inter, sans-serif'
-    ctx.fillText(label.toUpperCase(), x, y)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 12px Inter, sans-serif'
-    ctx.fillText(value, x, y + 16)
+function mapStatus(status: string): 'Active' | 'Pending' | 'Inactive' | 'Graduated' {
+  const map: Record<string, 'Active' | 'Pending' | 'Inactive' | 'Graduated'> = {
+    enrolled: 'Active',
+    pending: 'Pending',
+    rejected: 'Inactive',
+    graduated: 'Graduated',
+    dropped: 'Inactive',
+    approved: 'Active',
+    inactive: 'Inactive',
   }
-
-  drawDetail(col1X, gridY, 'Gender', s.gender || '—')
-  drawDetail(col2X, gridY, 'DOB', s.dob ? formatDate(s.dob) : '—')
-  drawDetail(col1X, gridY + rowGap, 'Province', s.province || '—')
-  drawDetail(col2X, gridY + rowGap, 'Batch', s.selectionBatchName || '—')
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'
-  ctx.beginPath()
-  ctx.moveTo(28, height - 38)
-  ctx.lineTo(width - 28, height - 38)
-  ctx.stroke()
-
-  ctx.fillStyle = '#94a3b8'
-  ctx.font = '9px Inter, sans-serif'
-  ctx.fillText(`Valid academic year ${s.intakeYear || '2025'}`, 28, height - 20)
-
-  // Small squares
-  ctx.fillStyle = 'rgba(255,255,255,0.1)'
-  ctx.beginPath()
-  ctx.roundRect(width - 60, height - 32, 22, 14, 4)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.roundRect(width - 34, height - 32, 22, 14, 4)
-  ctx.fill()
-
-  return canvas
-}
-
-function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, initials: string) {
-  ctx.fillStyle = 'rgba(255,255,255,0.15)'
-  ctx.beginPath()
-  ctx.roundRect(x, y, size, size, 10)
-  ctx.fill()
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 26px Inter, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(initials, x + size / 2, y + size / 2)
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'alphabetic'
-}
-
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = reject
-    img.src = url
-  })
-}
-
-function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
-  if (ctx.measureText(text).width <= maxWidth) return text
-  let truncated = text
-  while (truncated.length > 0 && ctx.measureText(truncated + '...').width > maxWidth) {
-    truncated = truncated.slice(0, -1)
-  }
-  return truncated + '...'
+  return map[status] || 'Pending'
 }
 
 async function downloadCard() {
   try {
-    const canvas = await generateCardCanvas()
+    const html2canvas = (await import('html2canvas')).default
+    const element = cardContainerRef.value
+    if (!element) return
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    })
+
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) return
+
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -209,8 +89,14 @@ async function downloadCard() {
   }
 }
 
-function printCard() {
+async function printCard() {
   const s = props.student
+  const colors = themeColors[selectedTheme.value]
+  const photoUrl = s.photoPath ? resolvePhotoUrl(s.photoPath, s.id) : null
+  const initials = getInitials(s.fullName)
+  const batch = s.selectionBatchName || `Batch ${s.intakeYear || ''}`
+  const intakeYear = s.intakeYear || new Date().getFullYear().toString()
+
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
 
@@ -231,94 +117,104 @@ function printCard() {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         .card {
-          width: 340px;
+          width: 320px;
+          height: 500px;
           border-radius: 16px;
           overflow: hidden;
-          background: linear-gradient(135deg, #64748b, #475569, #334155);
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          color: white;
-          padding: 24px;
+          background: #ffffff;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+          display: flex;
+          flex-direction: column;
           position: relative;
         }
-        .card::before {
-          content: '';
-          position: absolute;
-          top: -40px;
-          right: -40px;
-          width: 160px;
-          height: 160px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.05);
-        }
-        .card::after {
-          content: '';
-          position: absolute;
-          bottom: -30px;
-          left: -30px;
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.05);
-        }
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 24px;
-        }
-        .logo { font-size: 14px; font-weight: bold; letter-spacing: 2px; color: #cbd5e1; }
-        .logo-sub { font-size: 10px; letter-spacing: 3px; color: #94a3b8; margin-top: 2px; }
-        .badge { font-size: 10px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
-        .mid-section {
+        .card-header {
+          background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+          padding: 12px 16px;
           display: flex;
           align-items: center;
-          gap: 16px;
-          margin-bottom: 24px;
-          border-top: 1px solid rgba(255,255,255,0.1);
-          padding-top: 24px;
+          gap: 12px;
         }
-        .avatar {
-          width: 60px;
-          height: 60px;
-          border-radius: 12px;
-          background: rgba(255,255,255,0.15);
+        .card-logo {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.2);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 22px;
-          font-weight: bold;
-          flex-shrink: 0;
-          overflow: hidden;
         }
-        .avatar img {
+        .card-logo svg { width: 24px; height: 24px; color: white; }
+        .card-title { color: white; font-size: 14px; font-weight: bold; }
+        .card-subtitle { color: rgba(255,255,255,0.7); font-size: 10px; }
+        .card-body {
+          flex: 1;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .avatar-wrapper {
+          position: relative;
+          margin-top: 32px;
+          margin-bottom: 12px;
+        }
+        .avatar {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          border: 4px solid ${colors.primary};
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-initials { font-size: 32px; font-weight: bold; color: white; }
+        .status-badge {
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: bold;
+          border: 1px solid ${colors.secondary}88;
+          background: ${colors.secondary}22;
+          color: ${colors.primary};
+        }
+        .student-name { font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 4px; }
+        .student-id { font-size: 12px; font-weight: 600; color: ${colors.secondary}; margin-bottom: 12px; }
+        .detail-pills { display: flex; gap: 8px; margin-bottom: 12px; }
+        .pill { padding: 4px 12px; border-radius: 999px; font-size: 11px; background: #f1f5f9; color: #1e293b; }
+        .qrcode {
+          margin-top: auto;
+          margin-bottom: 12px;
+          width: 64px;
+          height: 64px;
+          background: white;
+          border-radius: 8px;
+          padding: 4px;
+          border: 2px solid ${colors.secondary};
+        }
+        .qrcode-inner {
           width: 100%;
           height: 100%;
-          object-fit: cover;
-        }
-        .info h3 { font-size: 15px; font-weight: bold; }
-        .info .id { font-size: 11px; color: #e2e8f0; font-family: monospace; margin-top: 4px; }
-        .info .meta { font-size: 10px; color: #94a3b8; margin-top: 4px; }
-        .details {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px 16px;
-          border-top: 1px solid rgba(255,255,255,0.1);
-          padding-top: 16px;
-        }
-        .detail-label { font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-        .detail-value { font-size: 11px; font-weight: 600; margin-top: 2px; }
-        .footer {
+          background: #f3f4f6;
+          border-radius: 4px;
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px solid rgba(255,255,255,0.1);
-          font-size: 9px;
-          color: #94a3b8;
+          justify-content: center;
         }
-        .boxes { display: flex; gap: 4px; }
-        .box { width: 22px; height: 14px; border-radius: 4px; background: rgba(255,255,255,0.1); }
+        .qrcode-inner svg { width: 40px; height: 40px; color: #9ca3af; }
+        .scan-text { font-size: 10px; color: #9ca3af; }
+        .card-footer {
+          background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+          padding: 8px 16px;
+          text-align: center;
+        }
+        .card-footer p { color: white; font-size: 10px; }
+        .card-footer .sub { color: rgba(255,255,255,0.7); font-size: 9px; }
         @media print {
           body { background: white; }
           .card { box-shadow: none; }
@@ -327,30 +223,39 @@ function printCard() {
     </head>
     <body>
       <div class="card">
-        <div class="header">
+        <div class="card-header">
+          <div class="card-logo">
+            <svg fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
           <div>
-            <div class="logo">PNC</div>
-            <div class="logo-sub">Education System</div>
-          </div>
-          <div class="badge">🛡 STUDENT</div>
-        </div>
-        <div class="mid-section">
-          <div class="avatar">${s.photoPath ? '<img src="' + resolvePhotoUrl(s.photoPath, s.id) + '" alt="' + s.fullName + '" />' : getInitials(s.fullName)}</div>
-          <div class="info">
-            <h3>${s.fullName}</h3>
-            <div class="id">${s.studentIdNo}</div>
-            <div class="meta">${s.selectionBatchName || 'Batch B'} · Intake ${s.intakeYear || '2025'}</div>
+            <div class="card-title">Passerellesnumeriques Cambodia</div>
+            <div class="card-subtitle">Student ID Card</div>
           </div>
         </div>
-        <div class="details">
-          <div><div class="detail-label">Gender</div><div class="detail-value">${s.gender || '—'}</div></div>
-          <div><div class="detail-label">DOB</div><div class="detail-value">${s.dob ? formatDate(s.dob) : '—'}</div></div>
-          <div><div class="detail-label">Province</div><div class="detail-value">${s.province || '—'}</div></div>
-          <div><div class="detail-label">Batch</div><div class="detail-value">${s.selectionBatchName || '—'}</div></div>
+        <div class="card-body">
+          <div class="avatar-wrapper">
+            <div class="avatar">
+              ${photoUrl ? `<img src="${photoUrl}" alt="${s.fullName}" />` : `<span class="avatar-initials">${initials}</span>`}
+            </div>
+            <div class="status-badge">${mapStatus(s.status)}</div>
+          </div>
+          <div class="student-name">${s.fullName}</div>
+          <div class="student-id">${s.studentIdNo}</div>
+          ${batch ? `<div class="detail-pills"><span class="pill">${batch}</span><span class="pill">${intakeYear}</span></div>` : ''}
+          <div class="qrcode">
+            <div class="qrcode-inner">
+              <svg fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm13-2h1v1h-1v-1zm-3 0h1v1h-1v-1zm-1 1h1v1h-1v-1zm2 0h1v1h-1v-1zm1 1h1v1h-1v-1zm-3 0h1v1h-1v-1zm1 1h1v1h-1v-1zm2 0h1v1h-1v-1zm1 1h1v1h-1v-1zm-3 0h1v1h-1v-1zm1 1h1v1h-1v-1zm2 0h1v1h-1v-1zm1 1h1v1h-1v-1z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="scan-text">Scan to verify: ${s.studentIdNo}</div>
         </div>
-        <div class="footer">
-          <span>Valid academic year ${s.intakeYear || '2025'}</span>
-          <div class="boxes"><div class="box"></div><div class="box"></div></div>
+        <div class="card-footer">
+          <p>Passerellesnumeriques Cambodia</p>
+          <p class="sub">${intakeYear}</p>
         </div>
       </div>
       <scr${'ipt'}>
@@ -366,11 +271,24 @@ function printCard() {
 
 async function shareCard() {
   try {
-    const canvas = await generateCardCanvas()
+    const html2canvas = (await import('html2canvas')).default
+    const element = cardContainerRef.value
+    if (!element) return
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    })
+
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
     if (!blob) return
 
-    const file = new File([blob], `${props.student.fullName.replace(/\s+/g, '_').toLowerCase()}_id_card.png`, { type: 'image/png' })
+    const file = new File(
+      [blob],
+      `${props.student.fullName.replace(/\s+/g, '_').toLowerCase()}_id_card.png`,
+      { type: 'image/png' }
+    )
 
     if (navigator.share && navigator.canShare({ files: [file] })) {
       await navigator.share({
@@ -401,50 +319,55 @@ async function shareCard() {
 
 <template>
   <div class="space-y-8">
-    <!-- ID Card Preview -->
-    <div class="relative max-w-[340px] mx-auto">
-      <div class="relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700 dark:from-slate-600 dark:via-slate-700 dark:to-slate-800 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1" style="aspect-ratio: 1.586 / 1;">
-        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.06)_0%,_transparent_60%)]"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.03)_0%,_transparent_50%)]"></div>
-        <div class="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5"></div>
-        <div class="absolute -bottom-6 -left-6 w-28 h-28 rounded-full bg-white/5"></div>
-        <div class="absolute top-1/2 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+    <!-- ID Card Preview using the shared IDCard component -->
+    <div ref="cardContainerRef" class="flex justify-center">
+      <IDCard
+        :student="cardStudent"
+        template="classic"
+        :theme="selectedTheme"
+        background="white"
+        :showQRCode="true"
+        :showAcademicYear="true"
+        :showBatch="true"
+        :showStatus="true"
+        :showFooter="true"
+      />
+    </div>
 
-        <div class="relative p-5 sm:p-6 h-full flex flex-col">
-          <div class="flex items-center justify-between mb-auto">
-            <div>
-              <p class="text-[11px] font-bold text-gray-200 uppercase tracking-[0.15em]">PNC</p>
-              <p class="text-[7px] text-gray-300 uppercase tracking-[0.2em] font-medium">Education System</p>
+    <!-- Theme Selector -->
+    <div class="max-w-sm mx-auto">
+      <div class="bg-white dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
+        <div class="flex items-center gap-2 mb-3">
+          <Palette :size="16" class="text-gray-400 dark:text-gray-500" />
+          <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Card Theme</span>
+        </div>
+        <div class="flex gap-2">
+          <button
+            v-for="theme in themeOptions"
+            :key="theme.id"
+            @click="selectedTheme = theme.id"
+            class="flex-1 flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 transition-all duration-200"
+            :class="selectedTheme === theme.id
+              ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800/40 bg-blue-50/50 dark:bg-blue-500/5'
+              : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+          >
+            <div class="flex gap-1">
+              <div
+                class="w-4 h-4 rounded-full ring-1 ring-white/30"
+                :style="{ backgroundColor: theme.colors.primary }"
+              ></div>
+              <div
+                class="w-4 h-4 rounded-full ring-1 ring-white/30"
+                :style="{ backgroundColor: theme.colors.secondary }"
+              ></div>
             </div>
-            <div class="flex items-center gap-1.5">
-              <Shield :size="16" class="text-gray-300" />
-              <span class="text-[7px] text-gray-300 uppercase tracking-wider font-medium">Student</span>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-4 mt-4 mb-auto">
-            <div class="w-[60px] h-[60px] rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 backdrop-blur-sm ring-2 ring-white/10 shadow-lg overflow-hidden">
-            <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath, student.id) ?? undefined" :alt="student.fullName" class="w-full h-full object-cover" />
-            <span v-else class="text-xl font-bold text-white">{{ getInitials(student.fullName) }}</span>
-          </div>
-            <div class="min-w-0">
-              <h3 class="text-sm sm:text-base font-bold text-white leading-tight truncate">{{ student.fullName }}</h3>
-              <p class="text-[10px] text-gray-200 font-mono mt-1">{{ student.studentIdNo }}</p>
-              <p class="text-[9px] text-gray-300 mt-0.5 truncate">{{ student.selectionBatchName || 'Batch B' }} · Intake {{ student.intakeYear || '2025' }}</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-y-2 gap-x-4 mt-auto pt-3 border-t border-white/10">
-            <div class="flex items-center gap-2"><span class="text-[8px] text-gray-300 uppercase tracking-wider font-medium min-w-[44px]">Gender</span><span class="text-[10px] text-white font-semibold">{{ student.gender || '—' }}</span></div>
-            <div class="flex items-center gap-2"><span class="text-[8px] text-gray-300 uppercase tracking-wider font-medium min-w-[28px]">DOB</span><span class="text-[10px] text-white font-semibold truncate">{{ student.dob ? new Date(student.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' }}</span></div>
-            <div class="flex items-center gap-2"><span class="text-[8px] text-gray-300 uppercase tracking-wider font-medium min-w-[44px]">Province</span><span class="text-[10px] text-white font-semibold truncate">{{ student.province || '—' }}</span></div>
-            <div class="flex items-center gap-2"><span class="text-[8px] text-gray-300 uppercase tracking-wider font-medium min-w-[28px]">Batch</span><span class="text-[10px] text-white font-semibold truncate">{{ student.selectionBatchName || '—' }}</span></div>
-          </div>
-
-          <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
-            <p class="text-[7px] text-gray-300">Valid academic year {{ student.intakeYear || '2025' }}</p>
-            <div class="flex gap-1"><div class="w-5 h-3 rounded-sm bg-white/10"></div><div class="w-5 h-3 rounded-sm bg-white/10"></div></div>
-          </div>
+            <span
+              class="text-[10px] font-semibold"
+              :class="selectedTheme === theme.id ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'"
+            >
+              {{ theme.name }}
+            </span>
+          </button>
         </div>
       </div>
     </div>
