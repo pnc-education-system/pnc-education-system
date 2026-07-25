@@ -176,8 +176,6 @@ function handleLogoChange(event: Event) {
   emit('logo-upload', file)
 }
 
-function toggleFlip() { isFlipped.value = !isFlipped.value }
-
 onMounted(() => { generateQR() })
 
 onUnmounted(() => {
@@ -300,11 +298,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-          <!-- Flip -->
-          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-gray-100/60 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer border border-gray-200/40">
-            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
-          </button>
-
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
             <button @click="emit('generate', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer">Generate</button>
@@ -388,10 +381,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 
             <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
-
-          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-white/70 text-gray-400 hover:bg-white hover:text-gray-500 transition cursor-pointer border border-gray-200/60 backdrop-blur-sm shadow-xs">
-            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
-          </button>
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100 bg-white">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -528,14 +517,41 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               </div>
             </div>
 
-            <p class="text-center text-amber-400/20 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
+            <!-- Name -->
+            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID -->
+            <p class="font-mono font-semibold text-green-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ displayStudentId }}
+            </p>
+
+            <!-- Status & Pills -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-green-100 text-green-700 border border-green-200">
+                {{ displayStatus }}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">{{ displayBatchName }}</span>
+              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">Intake: {{ displayIntakeYear }}</span>
+            </div>
+
+            <div class="flex-1 min-h-[4px]"></div>
+
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full px-1">
+              <div class="flex-1 min-w-0 pr-2">
+                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
+                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-1 border-2 border-green-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
-
-          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-black/30 text-amber-300/50 hover:bg-black/50 hover:text-amber-300 transition cursor-pointer border border-amber-400/15 backdrop-blur-sm">
-            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
-          </button>
         </div>
 
         <!-- ── CORPORATE-BLUE ── -->
@@ -816,9 +832,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
-            </button>
           </div>
         </div>
 
@@ -874,9 +887,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
-            </button>
           </div>
         </div>
 
@@ -934,9 +944,6 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-amber-400/20 text-[6px] font-medium">Property of PNC Cambodia</p>
-            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-white/5 text-amber-300/50 hover:bg-white/10 hover:text-amber-300 transition cursor-pointer border border-amber-400/15">
-              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
-            </button>
           </div>
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
         </div>

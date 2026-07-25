@@ -90,8 +90,9 @@ const filteredStudents = computed<Student[]>(() => {
       (s.email && s.email.toLowerCase().includes(q))
 
     const matchesStatus = statusFilter.value === 'all' || s.status === statusFilter.value
+    const matchesProvince = provinceFilter.value === 'all' || !provinceFilter.value || s.province === provinceFilter.value
 
-    return matchesSearch && matchesStatus
+    return matchesSearch && matchesStatus && matchesProvince
   })
 })
 
@@ -480,7 +481,7 @@ function goToPage(page: number) {
 </script>
 
 <template>
-  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">>
+  <div class="space-y-6" style="font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('students.title') }}</h1>
@@ -928,7 +929,7 @@ function goToPage(page: number) {
             <!-- Header -->
             <div class="flex items-center gap-4 mb-6">
               <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                <img v-if="detailStudentObj.photoPath" :src="resolvePhotoUrl(detailStudentObj.photoPath)" :alt="detailStudentObj.fullName" class="w-full h-full object-cover" />
+                <img v-if="detailStudentObj.photoPath" :src="resolvePhotoUrl(detailStudentObj.photoPath, detailStudentObj.id)" :alt="detailStudentObj.fullName" class="w-full h-full object-cover" />
                 <span v-else class="text-lg font-bold text-white">{{ getInitials(detailStudentObj.fullName) }}</span>
               </div>
               <div>
