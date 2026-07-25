@@ -104,6 +104,7 @@ function mapBackendStudent(backend: BackendStudent): Student {
     selectionBatchName: backend.selection_batch_name ?? undefined,
     status: ((backend.enrollment_status || backend.status || 'Pending') as string).toLowerCase() as any,
     enrolledAt: backend.enrolled_at ?? undefined,
+    enrollmentNote: backend.enrollment_note ?? undefined,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
     importLogId: undefined,
@@ -165,6 +166,11 @@ onMounted(() => {
   if (tabParam && tabs.some(t => t.id === tabParam)) {
     switchTab(tabParam as TabId)
   }
+})
+
+// Watch for changes to the student in the store (e.g., after status update from TrackingList)
+watch(() => route.params.id, () => {
+  loadStudent()
 })
 
 function formatDate(dateStr?: string): string {

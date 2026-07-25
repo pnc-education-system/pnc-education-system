@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { studentsApi } from '@/services/api/students'
-import type { Student, StudentActivity } from '@/types'
+import { studentsApi, type StudentActivity } from '@/services/api/students'
+import type { Student } from '@/types'
 import {
   Calendar,
   CheckCircle,
@@ -130,6 +130,17 @@ const enrollmentInfo = computed(() => [
   { label: 'Last Updated', value: props.student.updatedAt ? formatDate(props.student.updatedAt) : '—', icon: Clock },
 ])
 
+// Reactive enrollment note — derived from live history data first, then falls back to prop
+const enrollmentNote = computed(() => {
+  // Look for the most recent "Enrolled" status change entry in the loaded history
+  const enrolledEntry = [...history.value]
+    .reverse()
+    .find(h => h.type === 'status_change' && h.title.toLowerCase().includes('enrolled'))
+  if (enrolledEntry?.note) return enrolledEntry.note
+  // Fall back to the prop from the initial student load
+  return props.student.enrollmentNote || ''
+})
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
@@ -160,6 +171,9 @@ async function loadHistory() {
 
 onMounted(loadHistory)
 watch(() => props.student.id, loadHistory)
+watch(() => props.student.status, () => {
+  if (props.student.id) loadHistory()
+})
 </script>
 
 <template>
@@ -177,6 +191,24 @@ watch(() => props.student.id, loadHistory)
         <div class="min-w-0">
           <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{{ info.label }}</p>
           <p class="text-xs font-bold text-gray-800 dark:text-white mt-0.5 truncate">{{ info.value }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enrollment Note -->
+    <div v-if="enrollmentNote" class="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-500/10 dark:to-teal-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20 p-4 shadow-sm">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+            {{ t('enrollment_tab.enrollment_note') || 'Enrollment Note' }}
+          </p>
+          <p class="text-sm font-medium text-emerald-800 dark:text-emerald-300 mt-1.5 leading-relaxed whitespace-pre-wrap">{{ enrollmentNote }}</p>
         </div>
       </div>
     </div>

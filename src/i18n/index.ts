@@ -858,6 +858,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'enrollment_tab.interview_note': 'Interview completed successfully',
     'enrollment_tab.enrolled': 'Enrolled',
     'enrollment_tab.enrolled_note': 'Officially enrolled at PNC',
+    'enrollment_tab.enrollment_note': 'Enrollment Note',
 
     // Evaluation Tab (Star Assessment)
     'evaluation_tab.title': 'Star Assessment',
@@ -1873,6 +1874,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'enrollment_tab.interview_note': 'សម្ភាសន៍បានជោគជ័យ',
     'enrollment_tab.enrolled': 'បានចុះឈ្មោះ',
     'enrollment_tab.enrolled_note': 'បានចុះឈ្មោះជាផ្លូវការនៅ PNC',
+    'enrollment_tab.enrollment_note': 'កំណត់ត្រាការចុះឈ្មោះ',
 
     // Evaluation Tab
     'evaluation_tab.title': 'ការវាយតម្លៃផ្កាយ',

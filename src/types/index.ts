@@ -186,6 +186,7 @@ export interface BackendStudent {
   photo_path?: string
   intake_year?: number
   enrolled_at?: string
+  enrollment_note?: string
   created_by?: number
   created_at: string
   updated_at: string
@@ -237,6 +238,7 @@ export interface Student {
   photoPath?: string
   status: StudentStatus
   enrolledAt?: string
+  enrollmentNote?: string
   createdAt: string
   updatedAt: string
   importLogId?: number
