@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { studentsApi, type StudentFormPayload } from '@/services/api/students'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
+import { resolvePhotoUrl } from '@/utils/photoUrl'
+import WebcamCapture from '@/components/camera/WebcamCapture.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -62,53 +64,51 @@ const isLoading = ref(false)
 const selectedPhoto = ref<File | null>(null)
 const existingPhotoPath = ref<string | null>(null)
 const photoPreviewUrl = ref<string | null>(null)
-const photoInput = ref<HTMLInputElement | null>(null)
 
-const allowedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
 const allowedStatuses = ['Pending', 'Enrolled', 'Rejected', 'Graduated', 'Dropped'] as const
 type EnrollmentStatusOption = (typeof allowedStatuses)[number]
 
-const displayPhotoUrl = computed(() => photoPreviewUrl.value || resolvePhotoUrl(existingPhotoPath.value))
-
 onMounted(async () => {
-  try {
-    const response = await selectionBatchesApi.list()
-    selectionBatches.value = response
-    console.log('Selection batches loaded:', selectionBatches.value)
-    if (selectionBatches.value.length > 0 && selectionBatches.value[0]) {
-      form.value.selection_batch_id = selectionBatches.value[0].id
-    }
-  } catch {
-    console.error('Failed to load selection batches:')
-    showErrorToast('Failed to load selection batches', 'Error')
-  }
+  isLoading.value = true
+
+  const promises: Promise<void>[] = [
+    selectionBatchesApi.list().then((batches) => {
+      selectionBatches.value = batches
+      if (batches.length > 0 && batches[0] && !isEditing.value) {
+        form.value.selection_batch_id = batches[0].id
+      }
+    }).catch(() => {
+      showErrorToast('Failed to load selection batches', 'Error')
+    }),
+  ]
 
   if (isEditing.value && editingId.value) {
-    isLoading.value = true
-    try {
-      const student = await studentsApi.get(Number(editingId.value))
-      form.value = {
-        student_id_no: student.student_id_no,
-        full_name: student.full_name,
-        gender: student.gender === 'Female' ? 'Female' : 'Male',
-        dob: student.dob || '',
-        phone: student.phone || '',
-        email: student.email || '',
-        province: student.province || '',
-        high_school: student.high_school || '',
-        selection_batch_id: student.selection_batch_id ?? null,
-        enrollment_status: normalizeEnrollmentStatus(student.enrollment_status),
-        intake_year: student.intake_year || new Date().getFullYear(),
-        enrolled_at: student.enrolled_at || '',
-      }
-      existingPhotoPath.value = student.photo_path || null
-    } catch {
-      showErrorToast('Failed to load student data', 'Error')
-      router.push('/students')
-    } finally {
-      isLoading.value = false
-    }
+    promises.push(
+      studentsApi.get(Number(editingId.value)).then((student) => {
+        form.value = {
+          student_id_no: student.student_id_no,
+          full_name: student.full_name,
+          gender: student.gender === 'Female' ? 'Female' : 'Male',
+          dob: student.dob || '',
+          phone: student.phone || '',
+          email: student.email || '',
+          province: student.province || '',
+          high_school: student.high_school || '',
+          selection_batch_id: student.selection_batch_id ?? null,
+          enrollment_status: normalizeEnrollmentStatus(student.enrollment_status),
+          intake_year: student.intake_year || new Date().getFullYear(),
+          enrolled_at: student.enrolled_at || '',
+        }
+        existingPhotoPath.value = student.photo_path || null
+      }).catch(() => {
+        showErrorToast('Failed to load student data', 'Error')
+        router.push('/students')
+      }),
+    )
   }
+
+  await Promise.all(promises)
+  isLoading.value = false
 })
 
 onUnmounted(() => {
@@ -135,11 +135,6 @@ async function handleSubmit() {
     return
   }
 
-  if (selectedPhoto.value && !allowedPhotoTypes.includes(selectedPhoto.value.type)) {
-    showErrorToast('Student photo must be a JPG, PNG, or WEBP file.', toastValidationTitle.value)
-    return
-  }
-
   isSaving.value = true
   try {
     const payload: StudentFormPayload = {
@@ -150,26 +145,62 @@ async function handleSubmit() {
       phone: form.value.phone.trim() || null,
       email: form.value.email.trim() || null,
       province: form.value.province.trim() || null,
-      high_school: form.value.high_school.trim() || null,
+      high_school: form.value.high_school.trim() || '',
       selection_batch_id: selectionBatchId,
       enrollment_status: form.value.enrollment_status,
       intake_year: form.value.intake_year || null,
       enrolled_at: form.value.enrolled_at || null,
-      photo: selectedPhoto.value,
     }
 
+    console.log('[StudentForm] handleSubmit: payload prepared, hasPhoto=', !!selectedPhoto.value, 'isEditing=', isEditing.value)
+
     if (isEditing.value && editingId.value) {
-      await studentsApi.update(Number(editingId.value), payload)
+      const studentId = Number(editingId.value)
+      await studentsApi.update(studentId, payload)
+      console.log('[StudentForm] update done')
+      if (selectedPhoto.value) {
+        console.log('[StudentForm] uploading photo...')
+        const result = await studentsApi.uploadPhoto(studentId, selectedPhoto.value)
+        console.log('[StudentForm] photo uploaded:', result)
+      } else {
+        console.log('[StudentForm] no selectedPhoto, skipping upload')
+      }
       showSuccessToast('Student updated successfully.', toastUpdatedTitle.value)
     } else {
-      await studentsApi.create(payload)
+      const student = await studentsApi.create(payload)
+      console.log('[StudentForm] create done, id=', student.id)
+      if (selectedPhoto.value) {
+        console.log('[StudentForm] uploading photo for new student...')
+        const result = await studentsApi.uploadPhoto(student.id, selectedPhoto.value)
+        console.log('[StudentForm] photo uploaded:', result)
+      } else {
+        console.log('[StudentForm] no selectedPhoto, skipping upload')
+      }
       showSuccessToast(toastCreated.value, toastCreatedTitle.value)
     }
+    // Small delay so the success toast renders before navigating away
+    await new Promise(r => setTimeout(r, 300))
     router.push(getTrackingRoute())
   } catch (error: unknown) {
-    console.error('Error creating student:', error)
-    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
-    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'An error occurred while saving'
+    console.error('[StudentForm] handleSubmit caught error:', error)
+    const err = error as { response?: { data?: Record<string, unknown> }; message?: string } | null
+    const data = err?.response?.data as Record<string, unknown> | undefined
+    let errorMessage = 'An error occurred while saving'
+
+    if (data) {
+      const errBlock = data.error as Record<string, unknown> | undefined
+      // Read field-level errors from wrapped format: { error: { message, errors: { field: [...] } } }
+      if (errBlock?.errors && typeof errBlock.errors === 'object') {
+        const all = Object.values(errBlock.errors as Record<string, string[]>).flat()
+        if (all.length > 0) { errorMessage = all[0] }
+      } else if (errBlock?.message) {
+        errorMessage = errBlock.message as string
+      } else if (data.message) {
+        errorMessage = data.message as string
+      }
+    } else if (err?.message) {
+      errorMessage = err.message
+    }
     showErrorToast(errorMessage, toastValidationTitle.value)
   } finally {
     isSaving.value = false
@@ -180,33 +211,9 @@ function goBack() {
   router.push(getTrackingRoute())
 }
 
-function handlePhotoChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0] || null
-
-  if (!file) {
-    selectedPhoto.value = null
-    clearPhotoPreview()
-    return
-  }
-
-  if (!allowedPhotoTypes.includes(file.type)) {
-    showErrorToast('Student photo must be a JPG, PNG, or WEBP file.', toastValidationTitle.value)
-    input.value = ''
-    return
-  }
-
-  selectedPhoto.value = file
-  clearPhotoPreview()
-  photoPreviewUrl.value = URL.createObjectURL(file)
-}
-
 function clearSelectedPhoto() {
   selectedPhoto.value = null
   clearPhotoPreview()
-  if (photoInput.value) {
-    photoInput.value.value = ''
-  }
 }
 
 function clearPhotoPreview() {
@@ -216,26 +223,21 @@ function clearPhotoPreview() {
   }
 }
 
-function resolvePhotoUrl(path: string | null): string | null {
-  if (!path) return null
-  if (/^https?:\/\//i.test(path)) return path
-
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-
-  if (path.startsWith('/storage/')) {
-    return `${apiOrigin}${path}`
-  }
-
-  if (path.startsWith('storage/')) {
-    return `${apiOrigin}/${path}`
-  }
-
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
-}
 
 function normalizeEnrollmentStatus(status: string): EnrollmentStatusOption {
   return (allowedStatuses as readonly string[]).includes(status) ? status as EnrollmentStatusOption : 'Pending'
+}
+
+function onWebcamSave(blob: Blob | null): void {
+  if (!blob) {
+    console.log('[StudentForm] onWebcamSave: null blob, clearing photo')
+    clearSelectedPhoto()
+    return
+  }
+  console.log('[StudentForm] onWebcamSave: blob received, size=' + blob.size + ', type=' + blob.type)
+  clearPhotoPreview()
+  selectedPhoto.value = new File([blob], 'student-photo.jpg', { type: 'image/jpeg' })
+  photoPreviewUrl.value = URL.createObjectURL(blob)
 }
 
 function getTrackingRoute() {
@@ -251,259 +253,203 @@ function getTrackingRoute() {
   return { name: 'StudentTracking', query }
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'ST'
-}
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto">
-    <div class="flex items-center gap-4 mb-6">
-      <button
-        @click="goBack"
-        class="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-800"
-      >
-        <svg
-          class="w-5 h-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
+  <div class="h-screen flex flex-col bg-gray-50 dark:bg-[#0B1120] overflow-hidden">
+    <!-- Top Bar -->
+    <div class="flex items-center gap-3 px-6 h-14 shrink-0 bg-white dark:bg-[#131B2E] border-b border-gray-100 dark:border-gray-800">
+      <button @click="goBack"
+        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-pointer shrink-0">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
       </button>
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ title }}
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ subtitle }}
-        </p>
+      <div class="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 min-w-0">
+        <router-link to="/students" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors font-medium shrink-0">Students</router-link>
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+        <span class="text-gray-700 dark:text-gray-200 font-semibold truncate">{{ isEditing ? 'Edit Student' : 'New Student' }}</span>
       </div>
+      <div class="ml-auto flex items-center gap-3 shrink-0"></div>
     </div>
 
-    <div
-      class="bg-white dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700/50 rounded-2xl overflow-hidden"
-    >
-      <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-          {{ sectionDetails }}
-        </h2>
-      </div>
+    <!-- Main Content -->
+    <div class="flex-1 flex overflow-hidden">
+      <!-- Left: Form -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="max-w-2xl mx-auto px-6 py-8">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{{ title }}</h1>
+          <p class="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-6">{{ subtitle }}</p>
 
-      <div class="p-6 space-y-5">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Student ID <span class="text-red-400">{{ required }}</span>
-          </label>
-          <input
-            v-model="form.student_id_no"
-            type="text"
-            placeholder="e.g. ST001"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {{ labelName }} <span class="text-red-400">{{ required }}</span>
-          </label>
-          <input
-            v-model="form.full_name"
-            type="text"
-            placeholder="e.g. Jane Doe"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Gender <span class="text-red-400">{{ required }}</span>
-          </label>
-          <select
-            v-model="form.gender"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Date of Birth
-          </label>
-          <input
-            v-model="form.dob"
-            type="date"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {{ labelEmail }}
-          </label>
-          <input
-            v-model="form.email"
-            type="email"
-            placeholder="e.g. jane@pnc.edu"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            {{ labelPhone }}
-          </label>
-          <input
-            v-model="form.phone"
-            type="tel"
-            placeholder="e.g. +855 12 345 678"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Province
-          </label>
-          <input
-            v-model="form.province"
-            type="text"
-            placeholder="e.g. Phnom Penh"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            High School
-          </label>
-          <input
-            v-model="form.high_school"
-            type="text"
-            placeholder="e.g. Lincoln High School"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Selection Batch <span class="text-red-400">{{ required }}</span>
-          </label>
-          <select
-            v-model.number="form.selection_batch_id"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option v-if="selectionBatches.length === 0" value="" disabled>
-              No selection batches available
-            </option>
-            <option v-for="batch in selectionBatches" :key="batch.id" :value="batch.id">
-              {{ batch.name }} ({{ batch.year }})
-            </option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Intake Year
-          </label>
-          <input
-            v-model.number="form.intake_year"
-            type="number"
-            placeholder="e.g. 2025"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Enrolled Date
-          </label>
-          <input
-            v-model="form.enrolled_at"
-            type="date"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2.5">
-            {{ labelStatus }}
-          </label>
-          <select
-            v-model="form.enrollment_status"
-            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option value="Pending">Pending</option>
-            <option value="Enrolled">Enrolled</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Graduated">Graduated</option>
-            <option value="Dropped">Dropped</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2.5">
-            Student Photo
-          </label>
-          <div class="flex items-center gap-4">
-            <div class="w-20 h-20 rounded-xl bg-blue-50 dark:bg-blue-500/10 overflow-hidden flex items-center justify-center flex-shrink-0">
-              <img
-                v-if="displayPhotoUrl"
-                :src="displayPhotoUrl"
-                alt="Student photo"
-                class="w-full h-full object-cover"
-              />
-              <span v-else class="text-sm font-bold text-blue-600 dark:text-blue-300">
-                {{ getInitials(form.full_name) }}
-              </span>
+          <!-- Identity -->
+          <div class="mb-8">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-1 h-5 bg-blue-500 rounded-full"></div>
+              <div>
+                <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Identity</span>
+                <p class="text-[11px] text-gray-300 dark:text-gray-600">Primary identifiers</p>
+              </div>
             </div>
-            <div class="flex-1 space-y-2">
-              <input
-                ref="photoInput"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                @change="handlePhotoChange"
-                class="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-500/10 dark:file:text-blue-300"
-              />
-              <button
-                v-if="selectedPhoto"
-                type="button"
-                @click="clearSelectedPhoto"
-                class="text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                Clear selected photo
-              </button>
+            <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-gray-200/70 dark:border-gray-800 p-5 space-y-4">
+              <div class="flex items-start gap-5">
+                <div class="shrink-0">
+                  <WebcamCapture :existing-photo-url="resolvePhotoUrl(existingPhotoPath)" @save="onWebcamSave" />
+                </div>
+                <div class="flex-1 space-y-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Full Name <span class="text-red-400">*</span></label>
+                    <input v-model="form.full_name" type="text" placeholder="e.g. Jane Doe" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Student ID <span class="text-red-400">*</span></label>
+                      <input v-model="form.student_id_no" type="text" placeholder="e.g. ST001" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Gender <span class="text-red-400">*</span></label>
+                      <select v-model="form.gender" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact -->
+          <div class="mb-8">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-1 h-5 bg-emerald-500 rounded-full"></div>
+              <div>
+                <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Contact</span>
+                <p class="text-[11px] text-gray-300 dark:text-gray-600">Personal contact information</p>
+              </div>
+            </div>
+            <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-gray-200/70 dark:border-gray-800 p-5">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Date of Birth</label>
+                  <input v-model="form.dob" type="date" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Phone</label>
+                  <input v-model="form.phone" type="tel" placeholder="e.g. +855 12 345 678" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Email</label>
+                  <input v-model="form.email" type="email" placeholder="e.g. jane@pnc.edu" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Province</label>
+                  <input v-model="form.province" type="text" placeholder="e.g. Phnom Penh" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">High School</label>
+                  <input v-model="form.high_school" type="text" placeholder="e.g. Lincoln High School" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enrollment -->
+          <div class="mb-8">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-1 h-5 bg-amber-500 rounded-full"></div>
+              <div>
+                <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Enrollment</span>
+                <p class="text-[11px] text-gray-300 dark:text-gray-600">Batch, status, and academic dates</p>
+              </div>
+            </div>
+            <div class="bg-white dark:bg-[#131B2E] rounded-xl border border-gray-200/70 dark:border-gray-800 p-5 space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Selection Batch <span class="text-red-400">*</span></label>
+                <select v-model.number="form.selection_batch_id" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20">
+                  <option v-if="selectionBatches.length === 0" value="" disabled>No selection batches available</option>
+                  <option v-for="batch in selectionBatches" :key="batch.id" :value="batch.id">{{ batch.name }} ({{ batch.year }})</option>
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Enrollment Status</label>
+                  <select v-model="form.enrollment_status" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20">
+                    <option v-for="s in allowedStatuses" :key="s" :value="s">{{ s }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Intake Year</label>
+                  <input v-model.number="form.intake_year" type="number" placeholder="e.g. 2025" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Enrolled Date</label>
+                <input v-model="form.enrolled_at" type="date" class="w-full h-11 px-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-800/70 focus:ring-2 focus:ring-blue-500/20" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div
-        class="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-end gap-3"
-      >
-        <button
-          @click="goBack"
-          class="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 cursor-pointer"
-        >
+      <!-- Right: Summary Panel -->
+      <div class="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-[#131B2E] border-l border-gray-100 dark:border-gray-800 flex-col shrink-0">
+        <div class="h-14 flex items-center px-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+          <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Summary</span>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+          <div class="bg-gray-50 dark:bg-gray-800/30 rounded-xl p-5 border border-gray-100 dark:border-gray-700/50">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 text-xl font-bold shrink-0">
+                {{ form.full_name ? form.full_name.charAt(0).toUpperCase() : '?' }}
+              </div>
+              <div class="min-w-0">
+                <p class="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate">{{ form.full_name || 'Full Name' }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 font-mono mt-0.5">{{ form.student_id_no || 'ST—0000' }}</p>
+              </div>
+            </div>
+            <div class="space-y-2.5 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-400 dark:text-gray-500">Gender</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{ form.gender }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-400 dark:text-gray-500">DOB</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{ form.dob || '—' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-400 dark:text-gray-500">Batch</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{ selectionBatches.find(b => b.id === form.selection_batch_id)?.name || '—' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-400 dark:text-gray-500">Status</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{ form.enrollment_status }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 border-t border-gray-100 dark:border-gray-800 space-y-3 shrink-0">
+          <button @click="handleSubmit" :disabled="isSaving || isLoading"
+            class="w-full h-12 text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center justify-center gap-2">
+            <svg v-if="isSaving" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+            <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5l7 7-7 7" /></svg>
+            {{ isSaving ? 'Saving...' : (isEditing ? 'Update Student' : 'Create Student') }}
+          </button>
+          <button @click="goBack"
+            class="w-full h-11 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/60 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer border border-gray-200/80 dark:border-gray-700/50">
+            {{ cancel }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Bottom Bar -->
+      <div class="lg:hidden flex items-center gap-3 px-6 py-3 bg-white dark:bg-[#131B2E] border-t border-gray-100 dark:border-gray-800 shrink-0">
+        <button @click="goBack"
+          class="flex-1 h-11 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/60 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer border border-gray-200/80 dark:border-gray-700/50">
           {{ cancel }}
         </button>
-        <button
-          @click="handleSubmit"
-          :disabled="isSaving || isLoading"
-          class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {{ isSaving ? saving : createLabel }}
+        <button @click="handleSubmit" :disabled="isSaving || isLoading"
+          class="flex-1 h-11 text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center justify-center gap-2">
+          <svg v-if="isSaving" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+          <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5l7 7-7 7" /></svg>
+          {{ isSaving ? 'Saving' : (isEditing ? 'Update' : 'Create') }}
         </button>
       </div>
     </div>

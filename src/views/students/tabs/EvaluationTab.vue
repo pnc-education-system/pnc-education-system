@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { computed } from 'vue'
 import type { Student } from '@/types'
 import {
@@ -28,6 +29,8 @@ import {
 
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
+const { t } = useI18n()
+
 defineProps<{ student: Student }>()
 
 // ── Assessment Data (1–5 scale) ──
@@ -38,14 +41,14 @@ interface Assessment {
 }
 
 const assessments: Assessment[] = [
-  { category: 'Self-Development', score: 4.0, icon: BookOpen },
-  { category: 'Responsibility',   score: 4.6, icon: CheckCircle },
-  { category: 'Diligence',        score: 4.4, icon: Zap },
-  { category: 'Integrity',        score: 4.3, icon: Shield },
-  { category: 'Teamwork',         score: 4.5, icon: Target },
-  { category: 'Leadership',       score: 3.5, icon: Crown },
-  { category: 'Justice',          score: 3.9, icon: Scale },
-  { category: 'Communication',    score: 3.8, icon: MessageSquareText },
+  { category: t('evaluation_tab.self_dev'), score: 4.0, icon: BookOpen },
+  { category: t('evaluation_tab.responsibility'),   score: 4.6, icon: CheckCircle },
+  { category: t('evaluation_tab.diligence'),        score: 4.4, icon: Zap },
+  { category: t('evaluation_tab.integrity'),        score: 4.3, icon: Shield },
+  { category: t('evaluation_tab.teamwork'),         score: 4.5, icon: Target },
+  { category: t('evaluation_tab.leadership'),       score: 3.5, icon: Crown },
+  { category: t('evaluation_tab.justice'),          score: 3.9, icon: Scale },
+  { category: t('evaluation_tab.communication'),    score: 3.8, icon: MessageSquareText },
 ]
 
 const labels = assessments.map(a => a.category)
@@ -163,8 +166,8 @@ function grade(s: number) {
       <!-- Header -->
       <div class="flex items-center justify-between mb-5">
         <div>
-          <h3 class="text-base font-semibold text-[#111827] dark:text-white">Star Assessment</h3>
-          <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">8 categories &middot; 1–5 scale</p>
+          <h3 class="text-base font-semibold text-[#111827] dark:text-white">{{ t('evaluation_tab.title') }}</h3>
+          <p class="text-[13px] text-[#6B7280] dark:text-gray-400 mt-0.5">{{ t('evaluation_tab.subtitle') }}</p>
         </div>
         <div
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] dark:bg-[#355C8C]/20 border border-[#BFDBFE] dark:border-[#355C8C]/30"
@@ -351,7 +354,7 @@ function grade(s: number) {
               }}</span>
             </div>
             <div>
-              <p class="text-xs font-semibold text-[#374151] dark:text-gray-300">Average Score</p>
+              <p class="text-xs font-semibold text-[#374151] dark:text-gray-300">{{ t('evaluation_tab.average_score') }}</p>
               <div class="flex items-center gap-1.5 mt-0.5">
                 <div class="flex gap-px">
                   <svg
@@ -385,7 +388,7 @@ function grade(s: number) {
             <p
               class="text-[10px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 mb-2 text-center sm:text-left"
             >
-              Legend
+              {{ t('evaluation_tab.legend') }}
             </p>
             <div class="grid grid-cols-5 gap-1.5">
               <div

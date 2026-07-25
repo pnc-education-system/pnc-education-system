@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { CardStudent } from '@/services/api/cards'
+import { resolvePhotoUrl } from '@/utils/photoUrl'
 import QRCode from 'qrcode'
 import defaultSchoolLogo from '@/assets/images/PN_logo_clear.png'
+import { Loader2 } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
@@ -10,7 +12,7 @@ const props = withDefaults(
     size?: 'sm' | 'md' | 'lg'
     showActions?: boolean
     generated?: boolean
-    layout?: 'classic' | 'modern' | 'premium'
+    layout?: 'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'
     managerName?: string
     issueDate?: string
     expiredDate?: string
@@ -79,13 +81,7 @@ const studentInitials = computed(() => {
 const photoUrl = computed(() => {
   if (localPhotoUrl.value) return localPhotoUrl.value
   if (!props.student?.photo_path) return null
-  if (/^https?:\/\//i.test(props.student.photo_path)) return props.student.photo_path
-  // Use relative URL so Vite proxy handles it (same origin, no CORS issues)
-  // In production, /storage/ works if frontend/backend are on the same domain
-  const path = props.student.photo_path
-  if (path.startsWith('/storage/')) return path
-  if (path.startsWith('storage/')) return `/${path}`
-  return `/storage/${path.replace(/^\/+/, '')}`
+  return resolvePhotoUrl(props.student.photo_path, props.student.id)
 })
 
 const qrContent = computed(() => {
@@ -115,6 +111,13 @@ const computedExpiredDate = computed(() => {
   return '—'
 })
 
+// Display properties for corporate templates
+const displayFullName = computed(() => props.student?.full_name || 'Student Name')
+const displayStudentId = computed(() => props.student?.student_id_no || 'ST-0000')
+const displayStatus = computed(() => capitalize(props.student?.enrollment_status))
+const displayBatchName = computed(() => props.student?.selection_batch_name || '—')
+const displayIntakeYear = computed(() => props.student?.intake_year ? String(props.student.intake_year) : 'N/A')
+
 const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
   enrolled: { bg: '#ECFDF5', text: '#059669', dot: '#10B981' },
   pending: { bg: '#FFFBEB', text: '#D97706', dot: '#F59E0B' },
@@ -123,12 +126,20 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   dropped: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
 }
 
-function getStatusStyle(status: string) {
-  return statusStyles[status] || statusStyles.pending
+function getStatusStyle(status: string): { bg: string; text: string; dot: string } {
+  return statusStyles[status] ?? statusStyles.pending
 }
 
-function capitalize(s: string) {
+function capitalize(s: string | null | undefined) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
+}
+
+function studentStatus(): string {
+  return props.student?.enrollment_status ?? ''
+}
+
+function studentIdNo(): string {
+  return props.student?.student_id_no ?? ''
 }
 
 async function generateQR() {
@@ -165,6 +176,8 @@ function handleLogoChange(event: Event) {
   emit('logo-upload', file)
 }
 
+function toggleFlip() { isFlipped.value = !isFlipped.value }
+
 onMounted(() => { generateQR() })
 
 onUnmounted(() => {
@@ -195,17 +208,20 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
   <input ref="photoInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="handlePhotoChange" />
   <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden" @change="handleLogoChange" />
 
-  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px' }">
-    <div class="card-inner relative w-full h-full">
+  <div class="card-wrap" :style="{ width: sizePx.width + 'px', height: sizePx.height + 'px', perspective: '1000px' }">
+    <div
+      class="card-inner relative w-full h-full"
+      :class="{ flipped: isFlipped }"
+      :style="{ transformStyle: 'preserve-3d', transition: 'transform 0.5s ease' }"
+    >
       <!-- ══ FRONT ══ -->
-      <div v-if="!isFlipped" class="card-face w-full h-full">
+      <div class="card-face absolute inset-0">
 
         <!-- ── CLASSIC ── -->
         <div v-if="layout === 'classic'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
-          :style="{ background: '#fff' }"
-          :data-student-card="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <!-- Header bar -->
           <div class="bg-[#1e3a5f] px-3.5 py-2">
@@ -221,8 +237,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
                 </div>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
-                <p class="text-[7px] font-medium text-white/50 leading-tight">Cambodia</p>
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
               </div>
               <div v-if="generated" class="shrink-0 px-2 py-0.5 rounded-full text-[7px] font-semibold bg-emerald-400/15 text-emerald-300 border border-emerald-400/25">
                 <svg class="w-2 h-2 inline mr-0.5 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Generated
@@ -235,7 +251,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <div @click="handlePhotoClick"
               class="rounded-full overflow-hidden border-2 border-gray-100 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
                 <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
               </div>
@@ -253,15 +269,15 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 
             <!-- ID -->
             <p class="font-mono font-semibold text-blue-500 text-center tracking-wide" :class="size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-sm' : 'text-xs'">
-              {{ student?.student_id_no || 'ST-0000' }}
+              {{ studentIdNo() || 'ST-0000' }}
             </p>
 
             <!-- Status & Batch -->
             <div class="flex items-center gap-1.5 flex-wrap justify-center mt-0.5">
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-semibold"
-                :style="{ backgroundColor: getStatusStyle(student?.enrollment_status || '').bg, color: getStatusStyle(student?.enrollment_status || '').text }">
-                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(student?.enrollment_status || '').dot }"></span>
-                {{ capitalize(student?.enrollment_status) }}
+                :style="{ backgroundColor: getStatusStyle(studentStatus()).bg, color: getStatusStyle(studentStatus()).text }">
+                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(studentStatus()).dot }"></span>
+                {{ capitalize(studentStatus()) }}
               </span>
               <span v-if="student?.selection_batch_name" class="text-[8px] text-gray-400 font-medium">{{ student.selection_batch_name }}</span>
               <span v-if="student?.intake_year" class="text-[8px] text-gray-300">· {{ student.intake_year }}</span>
@@ -284,7 +300,10 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-
+          <!-- Flip -->
+          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-gray-100/60 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer border border-gray-200/40">
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
+          </button>
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -298,8 +317,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'modern'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
-          :style="{ background: '#fff' }"
-          :data-student-card="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <!-- Top gradient band -->
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-7">
@@ -315,11 +333,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
                 </div>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-bold text-white leading-tight truncate">Passerelles Numériques</p>
-                <p class="text-[7px] font-medium text-white/50 leading-tight">Cambodia</p>
-              </div>
-              <div v-if="generated" class="shrink-0 px-2 py-0.5 rounded-full text-[7px] font-semibold bg-white/15 text-white border border-white/25 backdrop-blur">
-                <svg class="w-2 h-2 inline mr-0.5 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Generated
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-white/77 leading-tight">Cambodia</p>
               </div>
             </div>
           </div>
@@ -329,7 +344,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <div @click="handlePhotoClick"
               class="rounded-full overflow-hidden border-[3px] border-white shadow bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0"
               :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-              <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-300 to-blue-500">
                 <span class="font-bold text-white drop-shadow-sm" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
               </div>
@@ -374,7 +389,9 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             <p class="text-center text-gray-300 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
           </div>
 
-
+          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-white/70 text-gray-400 hover:bg-white hover:text-gray-500 transition cursor-pointer border border-gray-200/60 backdrop-blur-sm shadow-xs">
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
+          </button>
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100 bg-white">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
@@ -388,8 +405,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'premium'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300 shadow-md' : 'border-gray-200/60 dark:border-gray-600/60 shadow'"
-          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
-          :data-student-card="student?.id"
+          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
         >
           <!-- Gold line -->
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
@@ -408,11 +424,8 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
                 </div>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-bold text-amber-100/90 leading-tight truncate">Passerelles Numériques</p>
-                <p class="text-[7px] font-medium text-amber-400/50 leading-tight">Cambodia</p>
-              </div>
-              <div v-if="generated" class="shrink-0 px-2 py-0.5 rounded-full text-[7px] font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/20 backdrop-blur-sm">
-                <svg class="w-2 h-2 inline mr-0.5 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Generated
+                <p class="text-[11px] font-bold text-amber-100/90 leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-amber-400/70 leading-tight">Cambodia</p>
               </div>
             </div>
           </div>
@@ -426,7 +439,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               <div @click="handlePhotoClick"
                 class="rounded-full overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer group relative"
                 :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
-                <img v-if="photoUrl && !photoError" :src="photoUrl" crossorigin="anonymous" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
+                <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="student?.full_name" class="w-full h-full object-cover" @error="photoError = true" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-600 to-amber-800">
                   <span class="font-bold text-white" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl' : 'text-lg'">{{ studentInitials }}</span>
                 </div>
@@ -467,7 +480,51 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               </div>
               <div class="bg-gray-900 rounded p-0.5 border border-amber-400/15 shrink-0" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px', height: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
-                <div v-else class="w-full h-full flex items-center justify-center"><svg class="w-3 h-3 text-gray-600 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg></div>
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 rounded">
+                  <Loader2 class="w-3 h-3 text-amber-500 animate-spin" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── CORPORATE ── -->
+        <div v-if="layout === 'corporate'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow"
+          :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card="student?.id"
+        >
+          <!-- Top right green decorative corner -->
+          <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-green-600 to-green-500 rounded-bl-2xl"></div>
+          </div>
+
+          <!-- Header bar -->
+          <div class="bg-[#16A34A] px-4 py-2.5">
+            <div class="flex items-center gap-3">
+              <div @click="handleLogoClick"
+                class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
+                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-center px-4 pt-4 pb-3 gap-1.5 justify-center">
+            <!-- Photo -->
+            <div @click="handlePhotoClick"
+              class="rounded-2xl overflow-hidden border-2 border-green-500 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
+              :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
               </div>
             </div>
 
@@ -476,26 +533,242 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
 
+          <button @click="toggleFlip" class="absolute bottom-1 right-1 z-10 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium bg-black/30 text-amber-300/50 hover:bg-black/50 hover:text-amber-300 transition cursor-pointer border border-amber-400/15 backdrop-blur-sm">
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Flip
+          </button>
+        </div>
 
+        <!-- ── CORPORATE-BLUE ── -->
+        <div v-if="layout === 'corporate-blue'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow"
+          :class="generated ? 'border-blue-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card="student?.id"
+        >
+          <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-blue-600 to-blue-500 rounded-bl-2xl"></div>
+          </div>
 
-          <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-amber-400/10">
-            <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 transition cursor-pointer border border-blue-500/15">Preview</button>
-            <button @click="emit('generate', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 transition cursor-pointer border border-emerald-500/15">Generate</button>
-            <button @click="emit('reprint', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 transition cursor-pointer border border-amber-500/15">Reprint</button>
-            <button @click="emit('download', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition cursor-pointer border border-white/10">PDF</button>
+          <!-- Header bar -->
+          <div class="bg-[#2563EB] px-4 py-2.5">
+            <div class="flex items-center gap-3">
+              <div @click="handleLogoClick"
+                class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
+                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-center px-4 pt-4 pb-3 gap-1.5 justify-center">
+            <!-- Photo -->
+            <div @click="handlePhotoClick"
+              class="rounded-2xl overflow-hidden border-2 border-blue-500 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
+              :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Name -->
+            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID -->
+            <p class="font-mono font-semibold text-blue-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ displayStudentId }}
+            </p>
+
+            <!-- Status & Pills -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                {{ displayStatus }}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">{{ displayBatchName }}</span>
+              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">Intake: {{ displayIntakeYear }}</span>
+            </div>
+
+            <div class="flex-1 min-h-[4px]"></div>
+
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full px-1">
+              <div class="flex-1 min-w-0 pr-2">
+                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
+                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-1 border-2 border-blue-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- ── CORPORATE-YELLOW ── -->
+        <div v-if="layout === 'corporate-yellow'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow"
+          :class="generated ? 'border-yellow-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card="student?.id"
+        >
+          <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-yellow-600 to-yellow-500 rounded-bl-2xl"></div>
+          </div>
+
+          <!-- Header bar -->
+          <div class="bg-[#EAB308] px-4 py-2.5">
+            <div class="flex items-center gap-3">
+              <div @click="handleLogoClick"
+                class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
+                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col items-center px-4 pt-4 pb-3 gap-1.5 justify-center">
+            <!-- Photo -->
+            <div @click="handlePhotoClick"
+              class="rounded-2xl overflow-hidden border-2 border-yellow-500 bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
+              :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Name -->
+            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID -->
+            <p class="font-mono font-semibold text-yellow-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ displayStudentId }}
+            </p>
+
+            <!-- Status & Pills -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-yellow-100 text-yellow-700 border border-yellow-200">
+                {{ displayStatus }}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">{{ displayBatchName }}</span>
+              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">Intake: {{ displayIntakeYear }}</span>
+            </div>
+
+            <div class="flex-1 min-h-[4px]"></div>
+
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full px-1">
+              <div class="flex-1 min-w-0 pr-2">
+                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
+                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-1 border-2 border-yellow-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── OFFICIAL ── -->
+        <div v-if="layout === 'official'"
+          class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white shadow"
+          :class="generated ? 'border-blue-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card="student?.id"
+        >
+          <!-- Left gold stripe -->
+          <div class="absolute left-0 top-0 bottom-0 w-2.5 bg-[#F5C518] z-10"></div>
+
+          <!-- Header -->
+          <div class="bg-[#1B3FA0] pl-5 pr-12 py-2.5">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick"
+                class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-1" @error="logoError = true" />
+                <span v-else class="text-[10px] font-extrabold text-white tracking-wide">PNC</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold text-white leading-tight truncate">Passerellesnumeriques Cambodia</p>
+                <p class="text-[8px] font-medium text-white/70 leading-tight">Cambodia</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Photo + Name -->
+          <div class="flex flex-col items-center pt-4 pb-2 pl-3 gap-1.5 justify-center">
+            <div @click="handlePhotoClick"
+              class="rounded-full overflow-hidden border-4 border-[#1B3FA0] bg-gray-50 flex items-center justify-center cursor-pointer group relative shrink-0 mt-8"
+              :style="{ width: photoSize + 'px', height: photoSize + 'px' }">
+              <img v-if="photoUrl && !photoError" :src="photoUrl" :alt="displayFullName" class="w-full h-full object-cover" @error="photoError = true" />
+              <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                <svg class="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+            </div>
+            <p class="font-bold text-[#1B3FA0] text-center truncate w-full px-4" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+            <span class="px-3 py-0.5 rounded-full text-[8px] font-bold bg-[#F5C518] text-[#1B3FA0] tracking-wider uppercase">Student</span>
+          </div>
+
+          <!-- Info fields -->
+          <div class="flex flex-col gap-1 px-3 pl-5" :class="size === 'sm' ? 'text-[8px]' : 'text-[9px]'">
+            <div class="flex items-center gap-1">
+              <span class="text-gray-400 font-semibold shrink-0" :style="{ width: '44px' }">ID No</span>
+              <span class="text-gray-700 font-bold font-mono truncate">: {{ displayStudentId }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-gray-400 font-semibold shrink-0" :style="{ width: '44px' }">Batch</span>
+              <span class="text-gray-700 font-semibold truncate">: {{ displayBatchName }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-gray-400 font-semibold shrink-0" :style="{ width: '44px' }">Year</span>
+              <span class="text-gray-700 font-semibold">: {{ displayIntakeYear }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-gray-400 font-semibold shrink-0" :style="{ width: '44px' }">Status</span>
+              <span class="text-gray-700 font-semibold capitalize">: {{ displayStatus }}</span>
+            </div>
+          </div>
+
+          <!-- Barcode at bottom -->
+          <div class="mt-auto pl-3 pb-2.5 pr-3 flex flex-col items-center gap-0.5">
+            <svg class="w-full" :height="size === 'sm' ? '24' : '28'" viewBox="0 0 140 28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="2" height="28" fill="#111"/><rect x="3" y="0" width="1" height="28" fill="#111"/><rect x="5" y="0" width="2" height="28" fill="#111"/><rect x="8" y="0" width="3" height="28" fill="#111"/><rect x="12" y="0" width="1" height="28" fill="#111"/><rect x="14" y="0" width="2" height="28" fill="#111"/><rect x="17" y="0" width="1" height="28" fill="#111"/><rect x="19" y="0" width="3" height="28" fill="#111"/><rect x="23" y="0" width="1" height="28" fill="#111"/><rect x="25" y="0" width="2" height="28" fill="#111"/><rect x="28" y="0" width="3" height="28" fill="#111"/><rect x="32" y="0" width="1" height="28" fill="#111"/><rect x="34" y="0" width="2" height="28" fill="#111"/><rect x="37" y="0" width="1" height="28" fill="#111"/><rect x="39" y="0" width="3" height="28" fill="#111"/><rect x="43" y="0" width="2" height="28" fill="#111"/><rect x="46" y="0" width="1" height="28" fill="#111"/><rect x="48" y="0" width="2" height="28" fill="#111"/><rect x="51" y="0" width="3" height="28" fill="#111"/><rect x="55" y="0" width="1" height="28" fill="#111"/><rect x="57" y="0" width="2" height="28" fill="#111"/><rect x="60" y="0" width="1" height="28" fill="#111"/><rect x="62" y="0" width="3" height="28" fill="#111"/><rect x="66" y="0" width="2" height="28" fill="#111"/><rect x="69" y="0" width="1" height="28" fill="#111"/><rect x="71" y="0" width="2" height="28" fill="#111"/><rect x="74" y="0" width="3" height="28" fill="#111"/><rect x="78" y="0" width="1" height="28" fill="#111"/><rect x="80" y="0" width="2" height="28" fill="#111"/><rect x="83" y="0" width="1" height="28" fill="#111"/><rect x="85" y="0" width="3" height="28" fill="#111"/><rect x="89" y="0" width="2" height="28" fill="#111"/><rect x="92" y="0" width="1" height="28" fill="#111"/><rect x="94" y="0" width="2" height="28" fill="#111"/><rect x="97" y="0" width="3" height="28" fill="#111"/><rect x="101" y="0" width="1" height="28" fill="#111"/><rect x="103" y="0" width="2" height="28" fill="#111"/><rect x="106" y="0" width="1" height="28" fill="#111"/><rect x="108" y="0" width="3" height="28" fill="#111"/><rect x="112" y="0" width="2" height="28" fill="#111"/><rect x="115" y="0" width="1" height="28" fill="#111"/><rect x="117" y="0" width="2" height="28" fill="#111"/><rect x="120" y="0" width="3" height="28" fill="#111"/><rect x="124" y="0" width="1" height="28" fill="#111"/><rect x="126" y="0" width="2" height="28" fill="#111"/><rect x="129" y="0" width="1" height="28" fill="#111"/><rect x="131" y="0" width="3" height="28" fill="#111"/><rect x="135" y="0" width="2" height="28" fill="#111"/><rect x="138" y="0" width="2" height="28" fill="#111"/>
+            </svg>
+            <p class="text-[7px] font-mono text-gray-500 tracking-widest">{{ displayStudentId }}</p>
+          </div>
+        </div>
+
       </div>
 
       <!-- ══ BACK ══ -->
-      <div v-else class="card-face w-full h-full">
+      <div class="card-face absolute inset-0">
 
         <!-- ── BACK: CLASSIC ── -->
         <div v-if="layout === 'classic'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
-          :style="{ background: '#fff' }"
-          :data-student-card-back="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <div class="bg-[#1e3a5f] px-3.5 py-2.5">
             <div class="flex items-center gap-2">
@@ -509,17 +782,28 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
                 </div>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
           </div>
-          <div class="flex-1 flex flex-col px-3.5 py-2.5 gap-1.5">
-            <p class="text-[7px] text-gray-500 leading-relaxed line-clamp-3"><b>Passerelles Numériques Cambodia.</b> Is a french non-profit organization, created in 2005, wihich intends to enable the most under priviliged young people access to higher education and skilled employment in the promising sector of Information Technology.</p>
-            <div class="border-t border-gray-100"></div>
-            <p class="text-[7px] font-semibold text-gray-400 uppercase tracking-wider">Education Manager</p>
-            <p class="text-[10px] font-bold text-gray-700 -mt-0.5">{{ managerName }}</p>
-            <div class="border-t border-gray-100"></div>
+          <div class="flex-1 flex flex-col px-4 py-3 gap-1.5 justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-[#1e3a5f] dark:text-[#38bdf8] font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer pushes manager/dates to lower half -->
+            <div class="flex-1"></div>
+
+            <div class="flex flex-col items-center gap-0.5">
+              <p class="text-[8px] font-semibold text-blue-600 uppercase tracking-wider">Education Manager</p>
+              <p class="text-[11px] font-bold text-gray-900">{{ managerName }}</p>
+            </div>
+            <div class="border-t border-gray-200"></div>
             <div class="grid grid-cols-2 gap-2">
               <div class="bg-blue-50/70 rounded px-2.5 py-1.5">
                 <p class="text-[6px] font-semibold text-blue-500 uppercase tracking-wider">Issue Date</p>
@@ -532,6 +816,9 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
+            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
+              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
+            </button>
           </div>
         </div>
 
@@ -539,8 +826,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'modern'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
-          :style="{ background: '#fff' }"
-          :data-student-card-back="student?.id"
+          :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-3">
             <div class="flex items-center gap-2">
@@ -554,17 +840,28 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
                 </div>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-white leading-tight drop-shadow-sm">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-white leading-tight drop-shadow-sm">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
           </div>
-          <div class="flex-1 flex flex-col px-3.5 py-2.5 gap-1.5 bg-white">
-            <p class="text-[7px] text-gray-500 leading-relaxed line-clamp-3"><b>Passerelles Numériques Cambodia.</b> Is a french non-profit organization, created in 2005, wihich intends to enable the most under priviliged young people access to higher education and skilled employment in the promising sector of Information Technology.</p>
-            <div class="border-t border-gray-100"></div>
-            <div class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-indigo-500"></span><p class="text-[7px] font-semibold text-gray-400 uppercase tracking-wider">Education Manager</p></div>
-            <p class="text-[10px] font-bold text-gray-700 -mt-0.5 ml-2.5">{{ managerName }}</p>
-            <div class="border-t border-gray-100"></div>
+          <div class="flex-1 flex flex-col px-4 py-3 gap-1.5 bg-white justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-[#2563eb] dark:text-[#60a5fa] font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer pushes manager/dates to lower half -->
+            <div class="flex-1"></div>
+
+            <div class="flex flex-col items-center gap-0.5">
+              <p class="text-[8px] font-semibold text-indigo-600 uppercase tracking-wider">Education Manager</p>
+              <p class="text-[11px] font-bold text-gray-900">{{ managerName }}</p>
+            </div>
+            <div class="border-t border-gray-200"></div>
             <div class="grid grid-cols-2 gap-2">
               <div class="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded px-2.5 py-1.5 border border-blue-100/50">
                 <p class="text-[6px] font-semibold text-blue-500 uppercase tracking-wider">Issue Date</p>
@@ -577,6 +874,9 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-gray-300 text-[6px] font-medium">Property of PNC Cambodia</p>
+            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500 transition cursor-pointer">
+              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
+            </button>
           </div>
         </div>
 
@@ -584,8 +884,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
         <div v-if="layout === 'premium'"
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300' : 'border-gray-200/60 dark:border-gray-600/60'"
-          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)' }"
-          :data-student-card-back="student?.id"
+          :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
         >
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-3.5 pt-2.5 pb-2">
@@ -600,18 +899,29 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
                 </div>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-amber-100/90 leading-tight">Passerelles Numériques Cambodge</p>
+                <p class="text-[10px] font-bold text-amber-100/90 leading-tight">Passerellesnumeriques Cambodia</p>
                 <p class="text-[7px] font-medium text-amber-400/50 leading-tight">Education for a Better Future</p>
               </div>
             </div>
           </div>
           <div class="mx-3.5 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent"></div>
-          <div class="flex-1 flex flex-col px-3.5 py-2.5 gap-1.5">
-            <p class="text-[7px] text-gray-400 leading-relaxed line-clamp-3"><b>Passerelles Numériques Cambodia.</b> Is a french non-profit organization, created in 2005, wihich intends to enable the most under priviliged young people access to higher education and skilled employment in the promising sector of Information Technology.</p>
-            <div class="h-px bg-gradient-to-r from-transparent via-amber-400/15 to-transparent"></div>
-            <div class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-amber-500"></span><p class="text-[7px] font-semibold text-amber-400/60 uppercase tracking-wider">Education Manager</p></div>
-            <p class="text-[10px] font-bold text-amber-100/90 -mt-0.5 ml-2.5">{{ managerName }}</p>
-            <div class="h-px bg-gradient-to-r from-transparent via-amber-400/15 to-transparent"></div>
+          <div class="flex-1 flex flex-col px-4 py-3 gap-1.5 justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-amber-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-white/5 p-2 rounded-lg border border-amber-400/15 text-[10px] leading-relaxed text-gray-200">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer pushes manager/dates to lower half -->
+            <div class="flex-1"></div>
+
+            <div class="flex flex-col items-center gap-0.5">
+              <p class="text-[8px] font-semibold text-amber-400/70 uppercase tracking-wider">Education Manager</p>
+              <p class="text-[11px] font-bold text-amber-100/90">{{ managerName }}</p>
+            </div>
+            <div class="h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent"></div>
             <div class="grid grid-cols-2 gap-2">
               <div class="bg-white/5 rounded px-2.5 py-1.5 border border-amber-400/15">
                 <p class="text-[6px] font-semibold text-amber-400/60 uppercase tracking-wider">Issue Date</p>
@@ -624,9 +934,228 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
             </div>
             <div class="flex-1"></div>
             <p class="text-center text-amber-400/20 text-[6px] font-medium">Property of PNC Cambodia</p>
-
+            <button @click="toggleFlip" class="self-center inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[7px] font-medium bg-white/5 text-amber-300/50 hover:bg-white/10 hover:text-amber-300 transition cursor-pointer border border-amber-400/15">
+              <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2L21 6L17 10"/><path d="M3 12V14C3 17.3 5.7 20 9 20H11"/><path d="M7 2L3 6L7 10"/><path d="M21 12V14C21 17.3 18.3 20 15 20H13"/></svg>Front
+            </button>
           </div>
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
+        </div>
+
+        <!-- ── BACK: CORPORATE ── -->        <div v-if="layout === 'corporate'"
+          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
+          :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card-back="student?.id"
+        >
+          <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-green-600 to-green-500 rounded-bl-2xl"></div>
+          </div>
+          <div class="bg-[#16A34A] px-3.5 py-2.5">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
+                <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col px-4 py-3 gap-1.5 justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-green-600 dark:text-green-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer pushes manager/dates to lower half -->
+            <div class="flex-1"></div>
+
+            <div class="flex flex-col items-center gap-0.5">
+              <p class="text-[8px] font-semibold text-green-600 uppercase tracking-wider">Education Manager</p>
+              <p class="text-[11px] font-bold text-gray-900">{{ managerName }}</p>
+            </div>
+            <div class="border-t border-gray-200"></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-green-50 rounded-lg px-2.5 py-1.5 border border-green-100">
+                <p class="text-[8px] font-semibold text-green-600 uppercase tracking-wider">Issue Date</p>
+                <p class="text-[10px] font-bold text-green-800">{{ computedIssueDate }}</p>
+              </div>
+              <div class="bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-100">
+                <p class="text-[8px] font-semibold text-amber-600 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
+              </div>
+            </div>
+            <p class="text-center text-gray-400 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
+          </div>
+        </div>
+
+        <!-- ── BACK: CORPORATE-BLUE ── -->
+        <div v-if="layout === 'corporate-blue'"
+          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
+          :class="generated ? 'border-blue-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card-back="student?.id"
+        >
+          <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-blue-600 to-blue-500 rounded-bl-2xl"></div>
+          </div>
+          <div class="bg-[#2563EB] px-3.5 py-2.5">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
+                <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col px-4 py-3 gap-1.5 justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-blue-600 dark:text-blue-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer pushes manager/dates to lower half -->
+            <div class="flex-1"></div>
+
+            <div class="flex flex-col items-center gap-0.5">
+              <p class="text-[8px] font-semibold text-blue-600 uppercase tracking-wider">Education Manager</p>
+              <p class="text-[11px] font-bold text-gray-900">{{ managerName }}</p>
+            </div>
+            <div class="border-t border-gray-200"></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-blue-50 rounded-lg px-2.5 py-1.5 border border-blue-100">
+                <p class="text-[8px] font-semibold text-blue-600 uppercase tracking-wider">Issue Date</p>
+                <p class="text-[10px] font-bold text-blue-800">{{ computedIssueDate }}</p>
+              </div>
+              <div class="bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-100">
+                <p class="text-[8px] font-semibold text-amber-600 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
+              </div>
+            </div>
+            <p class="text-center text-gray-400 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
+          </div>
+        </div>
+
+        <!-- ── BACK: CORPORATE-YELLOW ── -->
+        <div v-if="layout === 'corporate-yellow'"
+          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
+          :class="generated ? 'border-yellow-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card-back="student?.id"
+        >
+          <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-yellow-600 to-yellow-500 rounded-bl-2xl"></div>
+          </div>
+          <div class="bg-[#EAB308] px-3.5 py-2.5">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
+                <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col px-4 py-3 gap-1.5 justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-yellow-600 dark:text-yellow-400 font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer pushes manager/dates to lower half -->
+            <div class="flex-1"></div>
+
+            <div class="flex flex-col items-center gap-0.5">
+              <p class="text-[8px] font-semibold text-yellow-600 uppercase tracking-wider">Education Manager</p>
+              <p class="text-[11px] font-bold text-gray-900">{{ managerName }}</p>
+            </div>
+            <div class="border-t border-gray-200"></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-yellow-50 rounded-lg px-2.5 py-1.5 border border-yellow-100">
+                <p class="text-[8px] font-semibold text-yellow-600 uppercase tracking-wider">Issue Date</p>
+                <p class="text-[10px] font-bold text-yellow-800">{{ computedIssueDate }}</p>
+              </div>
+              <div class="bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-100">
+                <p class="text-[8px] font-semibold text-amber-600 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
+              </div>
+            </div>
+            <p class="text-center text-gray-400 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
+          </div>
+        </div>
+
+        <!-- ── BACK: OFFICIAL ── -->
+        <div v-if="layout === 'official'"
+          class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden bg-white"
+          :class="generated ? 'border-blue-300' : 'border-gray-200 dark:border-gray-600'"
+          :data-student-card-back="student?.id"
+        >
+          <!-- Left gold stripe -->
+          <div class="absolute left-0 top-0 bottom-0 w-2.5 bg-[#F5C518] z-10"></div>
+          <div class="bg-[#1B3FA0] pl-5 pr-12 py-2.5">
+            <div class="flex items-center gap-2">
+              <div @click="handleLogoClick" class="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer">
+                <img v-if="schoolLogoUrl && !logoError" :src="schoolLogoUrl" alt="School Logo" class="w-full h-full object-contain p-0.5" @error="logoError = true" />
+                <span v-else class="text-[8px] font-extrabold text-white">PNC</span>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-white leading-tight">Passerellesnumeriques Cambodia</p>
+                <p class="text-[7px] font-medium text-white/50 leading-tight">Education for a Better Future</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col pl-5 pr-4 py-3 gap-1.5 justify-center">
+            <!-- About Us Section -->
+            <div class="flex flex-col gap-1 text-left">
+              <span class="text-[#1B3FA0] font-bold text-[8px] uppercase tracking-wider">About Us</span>
+              <p class="bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg border border-gray-100 dark:border-gray-700 text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <strong>Passerellesnumeriques Cambodia</strong> is a french non-profit organization, created in 2005, which intends to enable the most under pribilged young people access to to higher education and skilled employment in the promising sector of information technology
+              </p>
+            </div>
+
+            <!-- Spacer -->
+            <div class="flex-1"></div>
+
+            <!-- QR + Manager side by side -->
+            <div class="flex items-end justify-between gap-2">
+              <div class="flex flex-col gap-0.5">
+                <p class="text-[8px] font-semibold text-[#1B3FA0] uppercase tracking-wider">Education Manager</p>
+                <p class="text-[11px] font-bold text-gray-900">{{ managerName }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-1 border-2 border-[#1B3FA0] shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-gray-200"></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-blue-50 rounded-lg px-2.5 py-1.5 border border-blue-100">
+                <p class="text-[8px] font-semibold text-[#1B3FA0] uppercase tracking-wider">Issue Date</p>
+                <p class="text-[10px] font-bold text-[#1B3FA0]">{{ computedIssueDate }}</p>
+              </div>
+              <div class="bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-100">
+                <p class="text-[8px] font-semibold text-amber-600 uppercase tracking-wider">Expired Date</p>
+                <p class="text-[10px] font-bold text-amber-800">{{ computedExpiredDate }}</p>
+              </div>
+            </div>
+            <p class="text-center text-gray-400 text-[8px] font-medium">Property of PNC Cambodia • Valid ID Card</p>
+          </div>
         </div>
       </div>
     </div>
@@ -637,8 +1166,20 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 .card-wrap {
   display: inline-block;
 }
+.card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
 .card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border-radius: 0.75rem;
   overflow: hidden;
+}
+.card-face:last-child {
+  transform: rotateY(180deg);
 }
 </style>

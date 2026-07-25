@@ -1,28 +1,86 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Search, ScanLine, CheckCircle, ExternalLink, Copy, Info } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import { cardsApi, type CardStudent } from '@/services/api/cards'
+
+const { t } = useI18n()
 
 const { showSuccessToast, showErrorToast } = useToast()
 
 const studentIdInput = ref('')
-const verifyResult = ref<{
+const qrTokenInput = ref('')
+interface VerifyResultData {
+  valid: boolean
+  student: CardStudent | null
+  message?: string
+}
+
+const verifyResult = ref<VerifyResultData | null>(null)
+const searching = ref(false)
+
+// Recent verifications loaded from session storage
+const recentVerifications = ref<Array<{
   name: string
   studentId: string
   status: string
-  batch: string
-  year: string
-  timestamp: string
-} | null>(null)
-const searching = ref(false)
+  date: string
+  time: string
+}>>(loadRecentVerifications())
 
-// Mock recent verifications
-const recentVerifications = ref([
-  { name: 'Sok Chan', studentId: 'STU-2025-0123', status: 'verified', date: '2026-07-19', time: '14:32' },
-  { name: 'Chea Rithy', studentId: 'STU-2025-0089', status: 'verified', date: '2026-07-19', time: '11:15' },
-  { name: 'Srey Neang', studentId: 'STU-2024-0456', status: 'failed', date: '2026-07-18', time: '09:47' },
-  { name: 'Vannak Phirum', studentId: 'STU-2025-0234', status: 'verified', date: '2026-07-18', time: '08:02' },
-])
+// Pagination for recent verifications
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+const totalPages = computed(() => Math.ceil(recentVerifications.value.length / itemsPerPage))
+
+const paginatedVerifications = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return recentVerifications.value.slice(start, end)
+})
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+function loadRecentVerifications() {
+  try {
+    const stored = sessionStorage.getItem('recentVerifications')
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function saveRecentVerification(item: { name: string; studentId: string; status: string }) {
+  const entry = {
+    ...item,
+    date: new Date().toLocaleDateString('en-CA'),
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+  }
+  recentVerifications.value = [entry, ...recentVerifications.value].slice(0, 20)
+  try {
+    sessionStorage.setItem('recentVerifications', JSON.stringify(recentVerifications.value))
+  } catch {
+    // ignore storage errors
+  }
+}
 
 const baseUrl = computed(() => window.location.origin)
 
@@ -39,20 +97,48 @@ async function handleVerify() {
   }
 
   searching.value = true
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 800))
+  verifyResult.value = null
 
-  // Mock result
-  verifyResult.value = {
-    name: 'Sok Chan',
-    studentId: id,
-    status: 'enrolled',
-    batch: '2025 Intake Batch 1',
-    year: '2025',
-    timestamp: new Date().toISOString(),
+  try {
+    // Try numeric ID first, then fall back to student_id_no
+    let student
+    const numericId = Number(id)
+    if (!isNaN(numericId)) {
+      student = await cardsApi.verifyById(numericId)
+    } else {
+      student = await cardsApi.getByStudentIdNo(id)
+    }
+
+    verifyResult.value = {
+      valid: true,
+      student: student,
+    }
+
+    saveRecentVerification({
+      name: student.full_name,
+      studentId: student.student_id_no,
+      status: 'verified',
+    })
+
+    showSuccessToast(t('qr_verify.verified_success'), t('qr_verify.verified'))
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { status?: number; data?: { message?: string } } }
+
+    // Show friendly message instead of error toast
+    verifyResult.value = {
+      valid: false,
+      student: null,
+      message: t('qr_verify.student_not_found'),
+    }
+
+    saveRecentVerification({
+      name: id,
+      studentId: id,
+      status: 'failed',
+    })
+  } finally {
+    searching.value = false
   }
-  searching.value = false
-  showSuccessToast('Student identity verified successfully.', 'Verified')
 }
 
 function copyLink() {
@@ -68,8 +154,9 @@ function getStatusStyle(status: string) {
     pending: { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', label: 'Pending' },
     graduated: { bg: 'bg-purple-50 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', label: 'Graduated' },
     rejected: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Rejected' },
+    dropped: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Dropped' },
   }
-  return styles[status] || { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', label: status }
+  return styles[status.toLowerCase()] || { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', label: status }
 }
 </script>
 
@@ -100,7 +187,7 @@ function getStatusStyle(status: string) {
                 <input
                   v-model="studentIdInput"
                   type="text"
-                  placeholder="Enter Student ID (e.g., STU-2025-0123)"
+                  placeholder="Enter Student ID (e.g., PNC2027-020)"
                   class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                   @keyup.enter="handleVerify"
                 />
@@ -124,33 +211,99 @@ function getStatusStyle(status: string) {
               leave-from-class="opacity-100 translate-y-0"
               leave-to-class="opacity-0 -translate-y-2"
             >
-              <div v-if="verifyResult" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl p-4 space-y-3">
-                <div class="flex items-center gap-2">
-                  <CheckCircle :size="18" class="text-emerald-500" />
-                  <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Student Found</span>
+              <div v-if="verifyResult">
+                <!-- Error/Not Found Message -->
+                <div v-if="verifyResult.valid === false" class="border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 rounded-xl p-4">
+                  <div class="flex items-center gap-2">
+                    <CheckCircle :size="18" class="text-gray-400" />
+                    <span class="text-sm font-semibold text-gray-600 dark:text-gray-400">{{ t('qr_verify.verification_failed') }}</span>
+                  </div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ verifyResult.message }}</p>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Full Name</p>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.name }}</p>
+
+                <!-- Success Result -->
+                <div v-if="verifyResult.valid && verifyResult.student" class="border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl overflow-hidden">
+                <!-- Verified header -->
+                <div class="flex items-center gap-2 px-4 pt-4 pb-2">
+                  <CheckCircle :size="18" class="text-emerald-500" />
+                  <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{{ t('qr_verify.student_found') }}</span>
+                </div>
+
+                <!-- Student details grid -->
+                <div class="p-4 pt-2 space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.full_name') }}</p>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.full_name }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.student_id') }}</p>
+                      <p class="text-sm font-mono font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.student_id_no }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.gender') }}</p>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.gender || '—' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.batch') }}</p>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.selection_batch_name || '—' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.intake_year') }}</p>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.intake_year || '—' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.province') }}</p>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.province || '—' }}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Student ID</p>
-                    <p class="text-sm font-mono font-semibold text-gray-900 dark:text-white">{{ verifyResult.studentId }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Batch</p>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.batch }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Status</p>
+
+                  <!-- Status badge -->
+                  <div class="flex items-center justify-between pt-2 border-t border-emerald-100 dark:border-emerald-500/10">
+                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.status') }}</p>
                     <span
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold mt-0.5"
-                      :class="getStatusStyle(verifyResult.status).bg + ' ' + getStatusStyle(verifyResult.status).text"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                      :class="getStatusStyle(verifyResult.student.enrollment_status).bg + ' ' + getStatusStyle(verifyResult.student.enrollment_status).text"
                     >
-                      {{ getStatusStyle(verifyResult.status).label }}
+                      <span class="w-1.5 h-1.5 rounded-full" :class="{
+                        'bg-emerald-500': verifyResult.student.enrollment_status?.toLowerCase() === 'enrolled',
+                        'bg-amber-500': verifyResult.student.enrollment_status?.toLowerCase() === 'pending',
+                        'bg-purple-500': verifyResult.student.enrollment_status?.toLowerCase() === 'graduated',
+                        'bg-red-500': ['rejected','dropped'].includes(verifyResult.student.enrollment_status?.toLowerCase() || ''),
+                      }"></span>
+                      {{ getStatusStyle(verifyResult.student.enrollment_status).label }}
                     </span>
                   </div>
+
+                  <!-- Contact info (if available) -->
+                  <div v-if="verifyResult.student.phone || verifyResult.student.email || verifyResult.student.high_school" class="pt-2 border-t border-emerald-100 dark:border-emerald-500/10 space-y-2">
+                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{{ t('qr_verify.contact_info') }}</p>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div v-if="verifyResult.student.phone">
+                        <p class="text-[10px] font-medium text-gray-400">{{ t('qr_verify.phone') }}</p>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.phone }}</p>
+                      </div>
+                      <div v-if="verifyResult.student.email">
+                        <p class="text-[10px] font-medium text-gray-400">{{ t('qr_verify.email') }}</p>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.email }}</p>
+                      </div>
+                      <div v-if="verifyResult.student.high_school" class="col-span-2">
+                        <p class="text-[10px] font-medium text-gray-400">{{ t('qr_verify.high_school') }}</p>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ verifyResult.student.high_school }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- DOB (if available) -->
+                  <div v-if="verifyResult.student.dob" class="pt-2 border-t border-emerald-100 dark:border-emerald-500/10">
+                    <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.dob') }}</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ new Date(verifyResult.student.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
+                  </div>
+                </div>
+
+                <div v-if="verifyResult.message" class="px-4 pb-3">
+                  <p class="text-xs text-red-600 dark:text-red-400">{{ verifyResult.message }}</p>
+                </div>
                 </div>
               </div>
             </transition>
@@ -195,7 +348,7 @@ function getStatusStyle(status: string) {
           </div>
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
             <div
-              v-for="item in recentVerifications"
+              v-for="item in paginatedVerifications"
               :key="item.studentId"
               class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors"
             >
@@ -217,6 +370,37 @@ function getStatusStyle(status: string) {
           </div>
           <div v-if="recentVerifications.length === 0" class="px-5 py-8 text-center">
             <p class="text-xs text-gray-400">No recent verifications.</p>
+          </div>
+
+          <!-- Pagination Controls -->
+          <div v-if="totalPages > 1" class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+            <button
+              @click="prevPage"
+              :disabled="currentPage === 1"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="page in totalPages"
+                :key="page"
+                @click="goToPage(page)"
+                class="w-8 h-8 text-xs font-medium rounded-lg transition-colors"
+                :class="currentPage === page
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <button
+              @click="nextPage"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         </div>
 

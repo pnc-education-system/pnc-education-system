@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/stores/auth'
 import { ref, computed, inject, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -16,6 +17,8 @@ const adminDropdown = ref(false)
 const cardDropdown = ref(false)
 
 const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
+const { t } = useI18n()
+
 const canManageUsers = computed(() => authStore.hasPermission('users.manage'))
 const canManageRoles = computed(() => authStore.hasPermission('roles.manage'))
 const canGenerateCards = computed(() => authStore.hasPermission('cards.generate'))
@@ -111,7 +114,7 @@ const onCardClick = () => {
           <rect x="14" y="14" width="7" height="7" rx="1" />
           <rect x="3" y="14" width="7" height="7" rx="1" />
         </svg>
-        <span>Dashboard</span>
+        <span>{{ t('sidebar.dashboard') }}</span>
       </button>
 
       <div class="relative" v-if="canManageEnrollments">
@@ -129,7 +132,7 @@ const onCardClick = () => {
             <line x1="16" x2="8" y1="17" y2="17" />
             <polyline points="10 9 9 9 8 9" />
           </svg>
-          <span class="flex-1">Enrollment</span>
+          <span class="flex-1">{{ t('sidebar.enrollment') }}</span>
           <svg
             class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
             :class="{ 'rotate-180': enrollmentDropdown }"
@@ -165,7 +168,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
               </svg>
-              <span>Import Upload</span>
+              <span>{{ t('sidebar.import_upload') }}</span>
             </button>
             <button
               class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
@@ -177,7 +180,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
               </svg>
-              <span>Import Views</span>
+              <span>{{ t('sidebar.import_views') }}</span>
             </button>
             <button
               @click="navigate('/enrollment/history')"
@@ -189,7 +192,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
               </svg>
-              <span>Import History</span>
+              <span>{{ t('sidebar.import_history') }}</span>
             </button>
           </div>
         </transition>
@@ -210,7 +213,7 @@ const onCardClick = () => {
             <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
-          <span class="flex-1">Students</span>
+          <span class="flex-1">{{ t('sidebar.students') }}</span>
           <svg
             class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
             :class="{ 'rotate-180': studentsDropdown }"
@@ -246,7 +249,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
-              <span>Tracking List</span>
+              <span>{{ t('sidebar.tracking_list') }}</span>
             </button>
             <button
               @click="navigate('/students/profile')"
@@ -258,7 +261,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
               </svg>
-              <span>Student Profile</span>
+              <span>{{ t('sidebar.student_profile') }}</span>
             </button>
           </div>
         </transition>
@@ -280,7 +283,7 @@ const onCardClick = () => {
             <line x1="10" x2="10" y1="7" y2="7.01" />
             <path d="M8 17h8" />
           </svg>
-          <span class="flex-1">Card</span>
+          <span class="flex-1">{{ t('sidebar.card') }}</span>
           <svg
             class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
             :class="{ 'rotate-180': cardDropdown }"
@@ -318,7 +321,7 @@ const onCardClick = () => {
                 <line x1="2" x2="22" y1="10" y2="10" />
                 <path d="M6 17h12" />
               </svg>
-              <span>ID Card</span>
+              <span>{{ t('sidebar.id_card') }}</span>
             </button>
             <button
               @click="navigate('/cards/batch-card')"
@@ -330,7 +333,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" />
               </svg>
-              <span>Batch Card</span>
+              <span>{{ t('sidebar.batch_card') }}</span>
             </button>
             <button
               @click="navigate('/cards/qr-verify')"
@@ -342,7 +345,19 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="5" height="5" rx="1" /><rect x="16" y="3" width="5" height="5" rx="1" /><rect x="3" y="16" width="5" height="5" rx="1" /><path d="M21 16h-5v-5" /><path d="M3 12h.01" /><path d="M12 3v.01" /><path d="M12 21v.01" />
               </svg>
-              <span>QR Verify</span>
+              <span>{{ t('sidebar.qr_verify') }}</span>
+            </button>
+            <button
+              @click="navigate('/cards/templates')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/cards/templates'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+              <span>{{ t('sidebar.manage_templates') }}</span>
             </button>
           </div>
         </transition>
@@ -363,7 +378,7 @@ const onCardClick = () => {
           <line x1="16" x2="8" y1="17" y2="17" />
           <polyline points="10 9 9 9 8 9" />
         </svg>
-        <span>Records</span>
+        <span>{{ t('sidebar.records') }}</span>
       </button>
 
       <!-- Admin Dropdown -->
@@ -380,7 +395,7 @@ const onCardClick = () => {
             <path d="M18 20V4" />
             <path d="M6 20v-4" />
           </svg>
-          <span class="flex-1">Admin</span>
+          <span class="flex-1">{{ t('sidebar.admin') }}</span>
           <svg
             class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
             :class="{ 'rotate-180': adminDropdown }"
@@ -417,7 +432,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-              <span>Manage Users</span>
+              <span>{{ t('sidebar.manage_users') }}</span>
             </button>
             <button
               v-if="canManageRoles"
@@ -430,7 +445,7 @@ const onCardClick = () => {
               <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              <span>Manage Roles</span>
+              <span>{{ t('sidebar.manage_roles') }}</span>
             </button>
           </div>
         </transition>

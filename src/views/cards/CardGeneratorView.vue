@@ -2,12 +2,16 @@
 defineOptions({ name: 'CardGeneratorPage' })
 
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
-import { cardsApi, type CardStudent } from '@/services/api/cards'
+
+const { t } = useI18n()
+import { cardsApi, type CardStudent, type CardTemplate, type CardStats } from '@/services/api/cards'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 import StudentCard from '@/components/cards/StudentCard.vue'
-import { generateCardPDF } from '@/utils/pdfGenerator'
+
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 
 import {
   Search,
@@ -16,12 +20,14 @@ import {
   Download,
   Eye,
   CheckCircle,
+  X,
   XCircle,
   ChevronLeft,
   ChevronRight,
   CreditCard,
   RotateCcw,
   Loader2,
+  Camera,
 } from 'lucide-vue-next'
 
 // ── Data ──
@@ -44,13 +50,39 @@ const showPreviewModal = ref(false)
 const previewStudent = ref<CardStudent | null>(null)
 const generatedCards = ref<Set<number>>(new Set())
 
+// ── Selected Student for Preview ──
+const selectedStudent = ref<CardStudent | null>(null)
+
+// ── Default Demo Student (shown when no student is selected) ──
+const defaultDemoStudent: CardStudent = {
+  id: 0,
+  student_id_no: 'PNC2027-050',
+  full_name: 'James Davis',
+  gender: 'Male',
+  photo_path: null,
+  dob: '2005-06-15',
+  province: 'Phnom Penh',
+  selection_batch_name: 'Batch 2027',
+  selection_batch_id: null,
+  enrollment_status: 'enrolled',
+  intake_year: 2025,
+  phone: '+855 12 345 678',
+  email: 'james.davis@example.com',
+  high_school: 'Sisowath High School',
+  qr_token: null,
+}
+
 // ── School Logo (persisted to localStorage) ──
 const schoolLogoUrl = ref<string | null>(localStorage.getItem('card_school_logo'))
 
 // ── Template Selection (persisted to localStorage) ──
+// ── Templates & Stats (from API) ──
+const dbTemplates = ref<CardTemplate[]>([])
+const cardStats = ref<CardStats | null>(null)
+
 const savedLayout = localStorage.getItem('card_template_preference')
-const selectedLayout = ref<'classic' | 'modern' | 'premium'>(
-  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium') ? savedLayout : 'classic'
+const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'>(
+  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium' || savedLayout === 'corporate' || savedLayout === 'corporate-blue' || savedLayout === 'corporate-yellow' || savedLayout === 'official') ? savedLayout : 'classic'
 )
 
 watch(selectedLayout, (val) => {
@@ -76,6 +108,30 @@ const templates = [
     description: 'Elegant dark design with gold accents',
     popular: false,
   },
+  {
+    id: 'corporate' as const,
+    name: 'Corporate',
+    description: 'Professional green branding design',
+    popular: false,
+  },
+  {
+    id: 'corporate-blue' as const,
+    name: 'Corporate Blue',
+    description: 'Professional blue branding design',
+    popular: false,
+  },
+  {
+    id: 'corporate-yellow' as const,
+    name: 'Corporate Yellow',
+    description: 'Professional yellow branding design',
+    popular: false,
+  },
+  {
+    id: 'official' as const,
+    name: 'Official',
+    description: 'Formal design with gold stripe',
+    popular: false,
+  },
 ] as const
 
 // ── Generation State ──
@@ -83,9 +139,6 @@ const isGenerating = ref(false)
 const isBatchGenerating = ref(false)
 const isReprinting = ref(false)
 const generationProgress = ref(0)
-
-// ── Dynamic card for generation ──
-const generatingStudentId = ref<number | null>(null)
 
 // ── Card side toggle ──
 const showCardBack = ref(false)
@@ -116,11 +169,24 @@ const hasSelectedStudents = computed(() => selectedStudentIds.value.size > 0)
 
 const selectedCount = computed(() => selectedStudentIds.value.size)
 
-// ── Demo Student for Live Preview ──
-const previewDemoStudent = computed<CardStudent | null>(() => {
-  if (students.value.length > 0) return students.value[0]
-  return null
+// ── Current Layout Key for display ──
+const currentLayoutKey = computed(() => selectedLayout.value)
+
+// ── Show Preview Card Back ──
+const showPreviewCardBack = computed(() => showCardBack.value)
+
+// ── Live Preview Student (default demo or selected) ──
+const livePreviewStudent = computed<CardStudent>(() => {
+  return selectedStudent.value || defaultDemoStudent
 })
+
+function selectStudent(student: CardStudent) {
+  if (selectedStudent.value?.id === student.id) {
+    selectedStudent.value = null
+  } else {
+    selectedStudent.value = student
+  }
+}
 
 // ── Functions ──
 async function loadBatches() {
@@ -162,7 +228,7 @@ async function loadStudents(page = 1) {
   } catch (err: unknown) {
     const apiErr = err as { response?: { status?: number } }
     if (apiErr?.response?.status !== 403) {
-      showErrorToast('Failed to load students.', 'Error')
+      showErrorToast(t('card_gen.loading_students'), t('users.toast_error'))
     }
     students.value = []
   } finally {
@@ -214,50 +280,39 @@ function toggleStudent(id: number) {
 // ── Card Generation ──
 async function handleGenerate(studentId: number) {
   isGenerating.value = true
-  generatingStudentId.value = studentId
-  // Wait for Vue to render the hidden card for this student
-  await nextTick()
-  // Small delay for DOM to settle and images to load
-  await new Promise(r => setTimeout(r, 150))
-
   try {
-    // Find the card element for this student
-    const cardElement = document.querySelector(`[data-student-card="${studentId}"]`) as HTMLElement
-    console.log('Card element found:', cardElement, 'for student ID:', studentId)
-
-    if (!cardElement) {
-      showErrorToast('Card element not found. Please try again.', 'Generation Failed')
-      return
-    }
-
-    // Generate PDF from the card element
-    console.log('Generating PDF from card element...')
-    const pdfBlob = await generateCardPDF(cardElement, students.value.find((s) => s.id === studentId)?.student_id_no || String(studentId))
-    console.log('PDF generated, size:', pdfBlob.size, 'type:', pdfBlob.type)
-
-    // Send PDF to backend
-    console.log('Sending PDF to backend...')
-    const result = await cardsApi.generate(studentId, pdfBlob)
-    console.log('Backend response:', result)
-
+    const result = await cardsApi.generate(studentId, undefined, selectedLayout.value)
     if (result.status === 'success') {
       generatedCards.value.add(studentId)
-      showSuccessToast(`Card generated for ${students.value.find((s) => s.id === studentId)?.full_name || 'student'}.`, 'Card Generated')
+      // Update the student with the QR token from the response
+      const student = students.value.find((s) => s.id === studentId)
+      if (student && result.qr_data) {
+        student.qr_token = result.qr_data
+      }
+      showSuccessToast(t('card_gen.gen_card_for', { name: students.value.find((s) => s.id === studentId)?.full_name || 'student' }), t('card_gen.card_generated'))
     } else {
-      showErrorToast(result.error || 'Failed to generate card.', 'Generation Failed')
+      showErrorToast(result.error || t('cards.toast_generate_failed'), t('cards.toast_generate_failed_title'))
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Card generation error:', error)
-    showErrorToast('Failed to generate card. Please try again.', 'Generation Failed')
+    // Try to extract meaningful error from axios error response
+    const err = error as { response?: { data?: { error?: { message?: string } | string; message?: string } }; message?: string }
+    const errData = err?.response?.data
+    const serverMsg =
+      (typeof errData?.error === 'object' && errData?.error !== null ? errData.error.message : null) ||
+      (typeof errData?.error === 'string' ? errData.error : null) ||
+      errData?.message ||
+      err?.message
+    const displayMsg = serverMsg || t('cards.toast_generate_failed')
+    showErrorToast(displayMsg, t('cards.toast_generate_failed_title'))
   } finally {
     isGenerating.value = false
-    generatingStudentId.value = null
   }
 }
 
 async function handleBatchGenerate() {
   if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
+    showErrorToast(t('card_gen.select_required'), t('cards.selection_required_title'))
     return
   }
 
@@ -265,27 +320,43 @@ async function handleBatchGenerate() {
   generationProgress.value = 0
   try {
     const ids = Array.from(selectedStudentIds.value)
-    const result = await cardsApi.batchGenerate(ids)
-
     let successCount = 0
-    result.results.forEach((r) => {
-      if (r.status === 'success') {
-        generatedCards.value.add(r.student_id)
-        successCount++
-      }
-    })
+    let errors: string[] = []
+    const total = ids.length
 
-    showSuccessToast(
-      `Successfully generated ${successCount} of ${ids.length} cards.`,
-      'Batch Generation Complete',
-    )
+    for (let i = 0; i < total; i++) {
+      const studentId = ids[i]
+      generationProgress.value = Math.round(((i + 1) / total) * 100)
+      try {
+        const result = await cardsApi.generate(studentId, undefined, selectedLayout.value)
+        if (result.status === 'success') {
+          generatedCards.value.add(studentId)
+          successCount++
+        } else {
+          errors.push(result.error || `Student #${studentId} failed`)
+        }
+      } catch (err) {
+        const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+        errors.push(apiErr?.response?.data?.message || apiErr?.message || `Student #${studentId} failed`)
+      }
+    }
+
+    if (successCount > 0) {
+      showSuccessToast(
+        t('card_gen.batch_gen_complete', { success: successCount, total }),
+        t('cards.toast_batch_generated_title'),
+      )
+    }
+    if (errors.length > 0) {
+      showErrorToast(`Failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? `... (${errors.length - 3} more)` : ''}`, 'Batch Generation Errors')
+    }
 
     selectedStudentIds.value.clear()
     generationProgress.value = 100
   } catch (err: unknown) {
     const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
-    const errorMessage = apiErr?.response?.data?.message || apiErr?.message || 'Failed to generate cards.'
-    showErrorToast(errorMessage, 'Batch Generation Failed')
+    const errorMessage = apiErr?.response?.data?.message || apiErr?.message || t('cards.toast_generate_failed')
+    showErrorToast(errorMessage, t('cards.toast_generate_failed_title'))
   } finally {
     isBatchGenerating.value = false
     generationProgress.value = 0
@@ -297,12 +368,12 @@ async function handleReprint(studentId: number) {
   try {
     const result = await cardsApi.reprint([studentId])
     if (result.results[0]?.status === 'success') {
-      showSuccessToast('Card queued for reprint.', 'Reprint Initiated')
+      showSuccessToast(t('cards.toast_reprint_initiated'), t('cards.toast_reprint_title'))
     } else {
-      showErrorToast(result.results[0]?.error || 'Failed to reprint card.', 'Reprint Failed')
+      showErrorToast(result.results[0]?.error || t('cards.toast_generate_failed'), 'Reprint Failed')
     }
   } catch {
-    showErrorToast('Failed to reprint card.', 'Reprint Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Reprint Failed')
   } finally {
     isReprinting.value = false
   }
@@ -310,7 +381,7 @@ async function handleReprint(studentId: number) {
 
 async function handleBatchReprint() {
   if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
+    showErrorToast(t('card_gen.select_required'), t('cards.selection_required_title'))
     return
   }
 
@@ -321,12 +392,12 @@ async function handleBatchReprint() {
 
     const successCount = result.results.filter((r) => r.status === 'success').length
     showSuccessToast(
-      `Queued ${successCount} of ${ids.length} cards for reprint.`,
-      'Batch Reprint Initiated',
+      t('card_gen.batch_reprint', { success: successCount, total: ids.length }),
+      t('cards.toast_batch_reprint_title'),
     )
     selectedStudentIds.value.clear()
   } catch {
-    showErrorToast('Failed to reprint cards.', 'Batch Reprint Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Batch Reprint Failed')
   } finally {
     isReprinting.value = false
   }
@@ -334,32 +405,31 @@ async function handleBatchReprint() {
 
 async function handleDownload(studentId: number) {
   try {
-    const blob = await cardsApi.downloadPdf(studentId)
-    console.log('Download blob size:', blob.size, 'type:', blob.type)
+    const blob = await cardsApi.downloadPdf(studentId, selectedLayout.value)
     const student = students.value.find((s) => s.id === studentId)
     const filename = `ID_Card_${student?.student_id_no || studentId}.pdf`
     downloadBlob(blob, filename)
-    showSuccessToast('Card PDF downloaded.', 'Download Complete')
+    showSuccessToast(t('card_gen.download_complete'), t('cards.toast_downloaded_title'))
   } catch (error) {
     console.error('Download error:', error)
-    showErrorToast('Failed to download card PDF.', 'Download Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Download Failed')
   }
 }
 
 async function handleBatchDownload() {
   if (selectedStudentIds.value.size === 0) {
-    showErrorToast('Please select at least one student.', 'Selection Required')
+    showErrorToast(t('card_gen.select_required'), t('cards.selection_required_title'))
     return
   }
 
   try {
     const ids = Array.from(selectedStudentIds.value)
-    const blob = await cardsApi.batchDownloadPdf(ids)
+    const blob = await cardsApi.batchDownloadPdf(ids, selectedLayout.value)
     downloadBlob(blob, `ID_Cards_Batch_${Date.now()}.pdf`)
-    showSuccessToast('Batch PDF downloaded successfully.', 'Download Complete')
+    showSuccessToast(t('card_gen.download_complete'), t('cards.toast_downloaded_title'))
     selectedStudentIds.value.clear()
   } catch {
-    showErrorToast('Failed to download batch PDF.', 'Download Failed')
+    showErrorToast(t('cards.toast_generate_failed'), 'Download Failed')
   }
 }
 
@@ -375,7 +445,7 @@ function closePreview() {
 }
 
 function handlePhotoUpload() {
-  showSuccessToast('Photo added to card preview.', 'Photo Updated')
+  showSuccessToast(t('card_gen.photo_updated'), 'Photo Updated')
 }
 
 function handleLogoUpload(file: File) {
@@ -384,7 +454,7 @@ function handleLogoUpload(file: File) {
     const dataUrl = e.target?.result as string
     schoolLogoUrl.value = dataUrl
     localStorage.setItem('card_school_logo', dataUrl)
-    showSuccessToast('School logo uploaded successfully.', 'Logo Updated')
+    showSuccessToast(t('card_gen.logo_updated'), 'Logo Updated')
   }
   reader.readAsDataURL(file)
 }
@@ -404,13 +474,10 @@ function downloadBlob(blob: Blob, filename: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = filename
-  a.style.display = 'none'
   document.body.appendChild(a)
   a.click()
-  setTimeout(() => {
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, 100)
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 function getStatusStyle(status: string) {
@@ -424,14 +491,7 @@ function getStatusStyle(status: string) {
   return styles[status] || styles.pending
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
+
 
 // ── Pagination ──
 function goToPage(page: number) {
@@ -458,15 +518,51 @@ const pageNumbers = computed(() => {
   return pages
 })
 
+// ── Clear Selection ──
+function clearSelectedStudent() {
+  if (!selectedStudent.value) return
+  const name = selectedStudent.value.full_name
+  selectedStudent.value = null
+  showSuccessToast(t('card_gen.select_hint'), 'Selection Cleared')
+}
+
+// ── API Data ──
+async function fetchTemplates() {
+  try {
+    dbTemplates.value = await cardsApi.getTemplates()
+  } catch {
+    dbTemplates.value = []
+  }
+}
+
+async function fetchStats() {
+  try {
+    cardStats.value = await cardsApi.getStats()
+  } catch {
+    cardStats.value = null
+  }
+}
+
+// ── Keyboard Shortcuts ──
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    clearSelectedStudent()
+  }
+}
+
 onMounted(() => {
   loadBatches()
   loadStudents()
+  fetchTemplates()
+  fetchStats()
+  document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   if (searchDebounce.value) {
     clearTimeout(searchDebounce.value)
   }
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -476,15 +572,15 @@ onUnmounted(() => {
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-          ID Card Generator
+          {{ t('card_gen.title') }}
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Generate, preview, and print student ID cards
+          {{ t('card_gen.subtitle') }}
           <span
             v-if="totalStudents > 0"
             class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
           >
-            {{ totalStudents }} students
+            {{ t('card_gen.students_count', { count: totalStudents }) }}
           </span>
         </p>
       </div>
@@ -496,7 +592,7 @@ onUnmounted(() => {
           ></span>
           <span class="capitalize font-semibold">{{ selectedLayout }}</span>
           <span class="text-gray-300 dark:text-gray-600">|</span>
-          <span class="text-gray-400">Template</span>
+          <span class="text-gray-400">{{ t('card_gen.template') }}</span>
         </div>
 
         <!-- Batch Actions -->
@@ -532,20 +628,28 @@ onUnmounted(() => {
     <!-- Stats Summary -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.total_students') }}</p>
         <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ totalStudents }}</p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Selected</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.selected') }}</p>
         <p class="text-lg font-bold text-emerald-600 mt-0.5">{{ selectedCount }}</p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Generated</p>
-        <p class="text-lg font-bold text-blue-600 mt-0.5">{{ generatedCards.size }}</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.generated') }}</p>
+        <p class="text-lg font-bold text-blue-600 mt-0.5">
+          {{ generatedCards.size }}
+          <span v-if="cardStats && cardStats.total_generated > generatedCards.size" class="text-[9px] font-normal text-gray-400 ml-1">
+            ({{ cardStats.total_generated }} total)
+          </span>
+        </p>
       </div>
       <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-2.5">
-        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Print</p>
-        <p class="text-lg font-bold mt-0.5" :class="generatedCards.size > 0 ? 'text-emerald-600' : 'text-gray-400'">{{ generatedCards.size > 0 ? 'Ready' : '—' }}</p>
+        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('card_gen.templates') }}</p>
+        <p class="text-lg font-bold mt-0.5" :class="dbTemplates.length > 0 ? 'text-emerald-600' : 'text-gray-400'">
+          {{ dbTemplates.length }}
+          <span class="text-[9px] font-normal text-gray-400 ml-1">{{ t('card_gen.available') }}</span>
+        </p>
       </div>
     </div>
 
@@ -553,7 +657,7 @@ onUnmounted(() => {
     <div class="rounded-lg bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-100 dark:border-gray-700">
         <CreditCard :size="14" class="text-gray-400" />
-        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Card Designer</h3>
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t('card_gen.card_designer') }}</h3>
         <div class="flex-1"></div>
         <!-- Front / Back Toggle -->
         <div class="flex items-center gap-0.5 bg-gray-200/70 dark:bg-gray-700/50 rounded-lg p-0.5 mr-2">
@@ -561,24 +665,23 @@ onUnmounted(() => {
             @click="showCardBack = false"
             class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
             :class="!showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-          >Front</button>
+          >{{ t('card_gen.front') }}</button>
           <button
             @click="showCardBack = true"
             class="px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-150 cursor-pointer"
             :class="showCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
-          >Back</button>
-        </div>
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 capitalize">{{ selectedLayout }}</span>
+          >{{ t('card_gen.back') }}</button>
+        </div>          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 capitalize">{{ currentLayoutKey }}</span>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 p-3">
         <!-- Preview Card -->
         <div class="flex-shrink-0 flex justify-center">
           <StudentCard
-            :student="previewDemoStudent"
-            :layout="selectedLayout"
+            :student="livePreviewStudent"
+            :layout="currentLayoutKey"
             size="sm"
-            :generated="previewDemoStudent ? generatedCards.has(previewDemoStudent.id) : false"
+            :generated="selectedStudent ? generatedCards.has(selectedStudent.id) : false"
             :showBack="showCardBack"
             :schoolLogo="schoolLogoUrl"
             @photo-upload="handlePhotoUpload"
@@ -610,17 +713,29 @@ onUnmounted(() => {
           </div>
 
           <!-- Student Info -->
-          <template v-if="previewDemoStudent">
-            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Student</p>
-            <p class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ previewDemoStudent.full_name }}</p>
-            <p class="text-[10px] font-mono text-gray-400">{{ previewDemoStudent.student_id_no }}</p>
+          <template v-if="selectedStudent">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Student</p>
+                <p class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ livePreviewStudent.full_name }}</p>
+                <p class="text-[10px] font-mono text-gray-400 truncate">{{ livePreviewStudent.student_id_no }}</p>
+              </div>
+              <button
+                @click="clearSelectedStudent()"
+                class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-semibold text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-150 cursor-pointer border border-transparent hover:border-red-200 dark:hover:border-red-500/20 mt-0.5"
+                title="Clear selection, show default card"
+              >
+                <X :size="12" />
+                Clear
+              </button>
+            </div>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
-                :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).bg, color: getStatusStyle(previewDemoStudent.enrollment_status).text }">
-                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(previewDemoStudent.enrollment_status).dot }"></span>
-                {{ previewDemoStudent.enrollment_status.charAt(0).toUpperCase() + previewDemoStudent.enrollment_status.slice(1) }}
+                :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).bg, color: getStatusStyle(livePreviewStudent.enrollment_status).text }">
+                <span class="w-1 h-1 rounded-full" :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).dot }"></span>
+                {{ livePreviewStudent.enrollment_status.charAt(0).toUpperCase() + livePreviewStudent.enrollment_status.slice(1) }}
               </span>
-              <span v-if="previewDemoStudent.selection_batch_name" class="text-[9px] text-gray-400">{{ previewDemoStudent.selection_batch_name }}</span>
+              <span v-if="livePreviewStudent.selection_batch_name" class="text-[9px] text-gray-400">{{ livePreviewStudent.selection_batch_name }}</span>
             </div>
           </template>
           <template v-else>
@@ -634,23 +749,23 @@ onUnmounted(() => {
 
           <!-- Action Buttons -->
           <div class="flex items-center gap-1 pt-1.5 mt-auto border-t border-gray-100 dark:border-gray-700/50">
-            <button v-if="previewDemoStudent" @click="openPreview(previewDemoStudent)"
+            <button v-if="selectedStudent" @click="openPreview(livePreviewStudent)"
               class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors cursor-pointer dark:text-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
               <Eye :size="11" />
               Details
             </button>
-            <button v-if="previewDemoStudent" @click="handleGenerate(previewDemoStudent.id)" :disabled="isGenerating"
+            <button v-if="selectedStudent" @click="handleGenerate(livePreviewStudent.id)" :disabled="isGenerating"
               class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors cursor-pointer dark:text-emerald-400 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
               <CreditCard :size="11" />
-              {{ generatedCards.has(previewDemoStudent.id) ? 'Regen' : 'Generate' }}
+              {{ generatedCards.has(livePreviewStudent.id) ? 'Regen' : 'Generate' }}
             </button>
-            <button v-if="previewDemoStudent" @click="handleDownload(previewDemoStudent.id)"
+            <button v-if="selectedStudent" @click="handleDownload(livePreviewStudent.id)"
               class="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-semibold text-gray-500 bg-gray-50 rounded hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-700">
               <Download :size="11" />
               PDF
             </button>
             <div class="flex-1"></div>
-            <span v-if="previewDemoStudent && generatedCards.has(previewDemoStudent.id)" class="inline-flex items-center gap-1 text-[8px] font-semibold text-emerald-600">
+            <span v-if="selectedStudent && generatedCards.has(selectedStudent.id)" class="inline-flex items-center gap-1 text-[8px] font-semibold text-emerald-600">
               <CheckCircle :size="10" />
               Generated
             </span>
@@ -715,14 +830,19 @@ onUnmounted(() => {
 
         <!-- Student Rows -->
         <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
-          <div v-for="(student, index) in students" :key="student.id" class="group px-3 md:px-3 py-2.5" :class="index % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.02]'">
+          <div v-for="(student, index) in students" :key="student.id" class="group px-3 md:px-3 py-2.5 cursor-pointer transition-all duration-150" :class="[
+              index % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50/50 dark:bg-white/[0.02]',
+              selectedStudent?.id === student.id ? 'ring-2 ring-blue-400 dark:ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'hover:bg-blue-50/30 dark:hover:bg-blue-900/10'
+            ]" @click="selectStudent(student)"
+          >
             <!-- Mobile -->
             <div class="md:hidden space-y-1.5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+                    <span v-else class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                   </div>
                   <div>
                     <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ student.full_name }}</p>
@@ -751,8 +871,9 @@ onUnmounted(() => {
                 <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
               </div>
               <div class="col-span-2 flex items-center gap-2">
-                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                  <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+                  <span v-else class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                 </div>
                 <p class="text-xs font-semibold text-gray-900 dark:text-white truncate">{{ student.full_name }}</p>
               </div>
@@ -769,8 +890,12 @@ onUnmounted(() => {
                   {{ student.enrollment_status.charAt(0).toUpperCase() + student.enrollment_status.slice(1) }}
                 </span>
               </div>
-              <div class="col-span-2">
-                <span v-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full"><CheckCircle :size="10" /> Generated</span>
+              <div class="col-span-2 flex items-center gap-1.5">
+                <span v-if="selectedStudent?.id === student.id" class="inline-flex items-center gap-1 text-[9px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/20 dark:text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-500/30">
+                  <Eye :size="10" />
+                  Previewing
+                </span>
+                <span v-else-if="generatedCards.has(student.id)" class="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full"><CheckCircle :size="10" /> Generated</span>
                 <span v-else class="text-[9px] text-gray-300 dark:text-gray-600">Not generated</span>
               </div>
               <div class="col-span-2 flex items-center justify-end gap-0.5">
@@ -829,18 +954,6 @@ onUnmounted(() => {
       </div>
     </transition>
 
-    <!-- Hidden card element for generation (offscreen, not visible to user) -->
-    <div v-if="generatingStudentId" class="fixed" style="left: -9999px; top: 0; z-index: -1; opacity: 0.999;">
-      <StudentCard
-        :student="students.find(s => s.id === generatingStudentId) || null"
-        :layout="selectedLayout"
-        size="sm"
-        :schoolLogo="schoolLogoUrl"
-        @photo-upload="handlePhotoUpload"
-        @logo-upload="handleLogoUpload"
-      />
-    </div>
-
     <!-- Preview Modal -->
     <Teleport to="body">
       <div v-if="showPreviewModal && previewStudent" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -848,17 +961,18 @@ onUnmounted(() => {
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-xl">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm font-bold text-white">{{ getInitials(previewStudent.full_name) }}</span>
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img v-if="livePreviewStudent.photo_path" :src="resolvePhotoUrl(livePreviewStudent.photo_path, livePreviewStudent.id)" :alt="livePreviewStudent.full_name" class="w-full h-full object-cover" />
+                <span v-else class="text-sm font-bold text-white">{{ getInitials(livePreviewStudent.full_name) }}</span>
               </div>
               <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ previewStudent.full_name }}</h3>
-                <p class="text-xs text-gray-400 font-mono">{{ previewStudent.student_id_no }}</p>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ livePreviewStudent.full_name }}</h3>
+                <p class="text-xs text-gray-400 font-mono">{{ livePreviewStudent.student_id_no }}</p>
               </div>
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                :style="{ backgroundColor: getStatusStyle(previewStudent.enrollment_status).bg, color: getStatusStyle(previewStudent.enrollment_status).text }">
-                <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(previewStudent.enrollment_status).dot }"></span>
-                {{ previewStudent.enrollment_status.charAt(0).toUpperCase() + previewStudent.enrollment_status.slice(1) }}
+                :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).bg, color: getStatusStyle(livePreviewStudent.enrollment_status).text }">
+                <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(livePreviewStudent.enrollment_status).dot }"></span>
+                {{ livePreviewStudent.enrollment_status.charAt(0).toUpperCase() + livePreviewStudent.enrollment_status.slice(1) }}
               </span>
             </div>
             <button @click="closePreview" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all cursor-pointer dark:hover:text-gray-300 dark:hover:bg-gray-700">
@@ -868,11 +982,25 @@ onUnmounted(() => {
 
           <div class="p-5 flex flex-col lg:flex-row gap-5">
             <div class="flex-shrink-0 flex flex-col items-center">
+              <!-- Front / Back Toggle -->
+              <div class="flex items-center gap-0.5 bg-gray-200/70 dark:bg-gray-700/50 rounded-lg p-0.5 mb-3">
+                <button
+                  @click="showCardBack = false"
+                  class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
+                  :class="!showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                >{{ t('card_gen.front') }}</button>
+                <button
+                  @click="showCardBack = true"
+                  class="px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 cursor-pointer"
+                  :class="showPreviewCardBack ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+                >{{ t('card_gen.back') }}</button>
+              </div>
               <StudentCard
-                :student="previewStudent"
-                :layout="selectedLayout"
+                :student="livePreviewStudent"
+                :layout="currentLayoutKey"
                 size="lg"
-                :generated="generatedCards.has(previewStudent.id)"
+                :generated="generatedCards.has(livePreviewStudent.id)"
+                :showBack="showPreviewCardBack"
                 :schoolLogo="schoolLogoUrl"
                 @photo-upload="handlePhotoUpload"
                 @logo-upload="handleLogoUpload"
@@ -884,48 +1012,48 @@ onUnmounted(() => {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Date of Birth</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.dob ? formatDate(previewStudent.dob) : '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.dob ? formatDate(livePreviewStudent.dob) : '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Gender</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.gender }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.gender }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Province</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.province || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.province || '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Batch</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.selection_batch_name || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.selection_batch_name || '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Intake Year</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.intake_year || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.intake_year || '—' }}</p>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/30">
                   <p class="text-xs font-medium text-gray-400 mb-0.5">Enrolled Date</p>
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ previewStudent.enrollment_status === 'enrolled' ? 'Enrolled' : '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ livePreviewStudent.enrollment_status === 'enrolled' ? 'Enrolled' : '—' }}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 rounded-b-xl">
-            <span v-if="generatedCards.has(previewStudent.id)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">
+            <span v-if="generatedCards.has(livePreviewStudent.id)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">
               <CheckCircle :size="14" />
               Card Generated
             </span>
-            <button @click="handleGenerate(previewStudent.id)" :disabled="isGenerating"
+            <button @click="handleGenerate(livePreviewStudent.id)" :disabled="isGenerating"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
               <CreditCard :size="15" />
-              {{ generatedCards.has(previewStudent.id) ? 'Regenerate Card' : 'Generate Card' }}
+              {{ generatedCards.has(livePreviewStudent.id) ? 'Regenerate Card' : 'Generate Card' }}
             </button>
-            <button @click="handleReprint(previewStudent.id)" :disabled="isReprinting"
+            <button @click="handleReprint(livePreviewStudent.id)" :disabled="isReprinting"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer dark:text-amber-400 dark:bg-amber-500/10 dark:hover:bg-amber-500/20">
               <RotateCcw :size="15" />
               Reprint
             </button>
-            <button @click="handleDownload(previewStudent.id)"
+            <button @click="handleDownload(livePreviewStudent.id)"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-150 cursor-pointer">
               <Download :size="15" />
               Download PDF

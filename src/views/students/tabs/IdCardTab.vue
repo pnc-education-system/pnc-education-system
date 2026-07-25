@@ -1,30 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Student } from '@/types'
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 import { Download, Printer, Share2, Shield, Check } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 const props = defineProps<{ student: Student }>()
 const downloadSuccess = ref(false)
 const printSuccess = ref(false)
 const shareSuccess = ref(false)
 
-function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function resolvePhotoUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (/^https?:\/\//i.test(path)) return path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
 }
 
 async function generateCardCanvas(): Promise<HTMLCanvasElement> {
@@ -94,14 +84,11 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   ctx.moveTo(28, midY)
   ctx.lineTo(width - 28, midY)
   ctx.stroke()
-
-  // ── Photo / Initials ──
   const photoSize = 70
   const photoX = 28
   const photoY = midY - 50
 
-  // If photo exists, try to draw it
-  const photoUrl = resolvePhotoUrl(s.photoPath)
+  const photoUrl = resolvePhotoUrl(s.photoPath, s.id)
   if (photoUrl) {
     try {
       const img = await loadImage(photoUrl)
@@ -112,14 +99,12 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
       ctx.drawImage(img, photoX, photoY, photoSize, photoSize)
       ctx.restore()
     } catch {
-      // Fallback to initials
-      drawInitials(ctx, photoX, photoY, photoSize, s.fullName)
+      drawInitials(ctx, photoX, photoY, photoSize, getInitials(s.fullName))
     }
   } else {
-    drawInitials(ctx, photoX, photoY, photoSize, s.fullName)
+    drawInitials(ctx, photoX, photoY, photoSize, getInitials(s.fullName))
   }
 
-  // ── Student info ──
   const infoX = photoX + photoSize + 20
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 18px Inter, sans-serif'
@@ -131,7 +116,6 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   ctx.font = '10px Inter, sans-serif'
   ctx.fillText(`${s.selectionBatchName || 'Batch B'} · Intake ${s.intakeYear || '2025'}`, infoX, photoY + 66)
 
-  // ── Details grid ──
   const gridY = midY + 20
   const col1X = 28
   const col2X = width / 2 + 10
@@ -150,8 +134,6 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   drawDetail(col2X, gridY, 'DOB', s.dob ? formatDate(s.dob) : '—')
   drawDetail(col1X, gridY + rowGap, 'Province', s.province || '—')
   drawDetail(col2X, gridY + rowGap, 'Batch', s.selectionBatchName || '—')
-
-  // ── Bottom line ──
   ctx.strokeStyle = 'rgba(255,255,255,0.1)'
   ctx.beginPath()
   ctx.moveTo(28, height - 38)
@@ -174,7 +156,7 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   return canvas
 }
 
-function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, name: string) {
+function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, initials: string) {
   ctx.fillStyle = 'rgba(255,255,255,0.15)'
   ctx.beginPath()
   ctx.roundRect(x, y, size, size, 10)
@@ -183,7 +165,7 @@ function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size:
   ctx.font = 'bold 26px Inter, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(getInitials(name), x + size / 2, y + size / 2)
+  ctx.fillText(initials, x + size / 2, y + size / 2)
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
 }
@@ -353,7 +335,7 @@ function printCard() {
           <div class="badge">🛡 STUDENT</div>
         </div>
         <div class="mid-section">
-          <div class="avatar">${s.photoPath ? '<img src="' + resolvePhotoUrl(s.photoPath) + '" alt="' + s.fullName + '" />' : getInitials(s.fullName)}</div>
+          <div class="avatar">${s.photoPath ? '<img src="' + resolvePhotoUrl(s.photoPath, s.id) + '" alt="' + s.fullName + '" />' : getInitials(s.fullName)}</div>
           <div class="info">
             <h3>${s.fullName}</h3>
             <div class="id">${s.studentIdNo}</div>
@@ -371,7 +353,7 @@ function printCard() {
           <div class="boxes"><div class="box"></div><div class="box"></div></div>
         </div>
       </div>
-      <script>
+      <scr${'ipt'}>
         window.onload = function() { window.print(); window.close(); }
       ${closeScript}
     </body>
@@ -399,11 +381,9 @@ async function shareCard() {
       shareSuccess.value = true
       setTimeout(() => { shareSuccess.value = false }, 2000)
     } else {
-      // Fallback: share via clipboard
       await navigator.clipboard.writeText(
         `ID Card - ${props.student.fullName}\nStudent ID: ${props.student.studentIdNo}\nBatch: ${props.student.selectionBatchName || '—'}`
       )
-      // Also try to copy the image
       try {
         const clipboardItem = new ClipboardItem({ 'image/png': blob })
         await navigator.clipboard.write([clipboardItem])
@@ -444,7 +424,7 @@ async function shareCard() {
 
           <div class="flex items-center gap-4 mt-4 mb-auto">
             <div class="w-[60px] h-[60px] rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 backdrop-blur-sm ring-2 ring-white/10 shadow-lg overflow-hidden">
-            <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath) ?? undefined" :alt="student.fullName" class="w-full h-full object-cover" />
+            <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath, student.id) ?? undefined" :alt="student.fullName" class="w-full h-full object-cover" />
             <span v-else class="text-xl font-bold text-white">{{ getInitials(student.fullName) }}</span>
           </div>
             <div class="min-w-0">
@@ -476,21 +456,21 @@ async function shareCard() {
           <Download v-if="!downloadSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
           <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
         </div>
-        <span class="text-xs font-semibold" :class="downloadSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ downloadSuccess ? 'Downloaded!' : 'Download' }}</span>
+        <span class="text-xs font-semibold" :class="downloadSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ downloadSuccess ? t('id_card_tab.downloaded') : t('id_card_tab.download') }}</span>
       </button>
       <button @click="printCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
         <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': printSuccess }">
           <Printer v-if="!printSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
           <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
         </div>
-        <span class="text-xs font-semibold" :class="printSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ printSuccess ? 'Printing...' : 'Print' }}</span>
+        <span class="text-xs font-semibold" :class="printSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ printSuccess ? t('id_card_tab.printing') : t('id_card_tab.print') }}</span>
       </button>
       <button @click="shareCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
         <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': shareSuccess }">
           <Share2 v-if="!shareSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
           <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
         </div>
-        <span class="text-xs font-semibold" :class="shareSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ shareSuccess ? 'Shared!' : 'Share' }}</span>
+        <span class="text-xs font-semibold" :class="shareSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ shareSuccess ? t('id_card_tab.shared') : t('id_card_tab.share') }}</span>
       </button>
     </div>
   </div>

@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { prefetchBatches } from '@/utils/batchesCache'
-
+//
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -130,6 +130,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'students.edit' },
   },
   {
+    path: '/qr/scan',
+    name: 'QRScan',
+    component: () => import('@/views/qr/QRScanView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/settings/SettingsView.vue'),
@@ -158,9 +164,15 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/cards/QRVerifyView.vue'),
     meta: { requiresAuth: true, permission: 'cards.generate' },
   },
+  {
+    path: '/cards/templates',
+    name: 'CardTemplates',
+    component: () => import('@/views/cards/TemplateManageView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
 
   {
-    path: '/verify/:studentId',
+    path: '/verify/:token',
     name: 'StudentVerify',
     component: () => import('@/views/cards/StudentVerifyView.vue'),
     meta: { requiresAuth: false },
@@ -189,7 +201,7 @@ const router = createRouter({
   routes,
 })
 
-const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
+const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword', 'StudentVerify']
 router.beforeEach((to) => {
   const authStore = useAuthStore()
 
@@ -197,7 +209,9 @@ router.beforeEach((to) => {
     return { name: 'Login' }
   }
 
-  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string)) {
+  // Redirect authenticated users away from auth pages (login, forgot-password, etc.)
+  // but NOT from the public student verify page — that should work for everyone
+  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string) && to.name !== 'StudentVerify') {
     return { name: 'Dashboard' }
   }
 

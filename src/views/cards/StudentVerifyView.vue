@@ -1,26 +1,127 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { cardsApi, type CardStudent } from '@/services/api/cards'
-import { CheckCircle, GraduationCap, MapPin, Calendar, User, Loader2, AlertCircle } from 'lucide-vue-next'
+import StudentCard from '@/components/cards/StudentCard.vue'
+import { Loader2, AlertCircle, ShieldCheck } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 const route = useRoute()
-const studentId = computed(() => (route.params.studentId as string) || '')
+const token = computed(() => (route.params.token as string) || '')
+
+// Extract student data from QR code URL query params (fallback when API fails)
+const qrFallbackData = computed((): Partial<CardStudent> | null => {
+  const q = route.query
+  if (!q.name) return null // No query params = no fallback
+  return {
+    id: 0,
+    student_id_no: token.value || '',
+    full_name: (q.name as string) || '',
+    gender: (q.gender as string) || '',
+    dob: (q.dob as string) || null,
+    province: (q.province as string) || '',
+    enrollment_status: (q.status as string) || 'Unknown',
+    intake_year: q.year ? Number(q.year) : null,
+    selection_batch_name: (q.batch as string) || '',
+  }
+})
 const student = ref<CardStudent | null>(null)
 const loading = ref(true)
 const error = ref('')
+const valid = ref(false)
+const cardVisible = ref(false)
 
-// Try to fetch full student data from the API
+const mounted = ref(false)
+
+onMounted(() => {
+  // Trigger entrance animation
+  nextTick(() => { mounted.value = true })
+  if (token.value) {
+    fetchStudent()
+  } else {
+    loading.value = false
+    error.value = t('student_verify.no_token')
+  }
+})
+
+// Whether the student has a generated ID card
+const hasCard = computed(() => !!student.value?.qr_token)
+
+// Friendly card status notice
+const cardNotice = computed(() => {
+  if (!student.value) return ''
+  if (!hasCard.value) {
+    return t('student_verify.card_coming_soon')
+  }
+  return ''
+})
+
+// Error header based on context
+const errorHeader = computed(() => {
+  if (!error.value) return t('student_verify.student_not_found')
+  if (error.value.toLowerCase().includes('token') || error.value.toLowerCase().includes('qr')) {
+    return t('student_verify.invalid_link')
+  }
+  if (error.value.toLowerCase().includes('not found')) {
+    return t('student_verify.student_not_found')
+  }
+  return t('student_verify.verification_failed')
+})
+
+// Fetch verified student data from the public API
 async function fetchStudent() {
   loading.value = true
   error.value = ''
+  cardVisible.value = false
   try {
-    const data = await cardsApi.getByStudentIdNo(studentId.value)
-    student.value = data
-  } catch {
-    // If API fails, we still show the query params data
+    // First try looking up by QR token
+    try {
+      const data = await cardsApi.verifyQrToken(token.value)
+      student.value = data as CardStudent
+      valid.value = true
+    } catch (qrErr: unknown) {
+      // Fallback: look up by student ID number (e.g. "STU-2025-0001")
+      try {
+        const data = await cardsApi.getByStudentIdNo(token.value)
+        student.value = data as CardStudent
+        valid.value = true
+      } catch (idErr: unknown) {
+        // Fallback: look up by numeric database ID (e.g. "/verify/1")
+        const numericId = Number(token.value)
+        if (!isNaN(numericId) && numericId > 0) {
+          const data = await cardsApi.verifyById(numericId)
+          student.value = data as CardStudent
+          valid.value = true
+        } else {
+          // Re-throw so outer catch handles it
+          throw idErr
+        }
+      }
+    }
+
+    // Animate card in after a tiny delay
+    setTimeout(() => {
+      cardVisible.value = true
+    }, 100)
+  } catch (err: unknown) {
+    // Fallback: try to use data embedded in the QR code URL query params
+    if (qrFallbackData.value) {
+      student.value = qrFallbackData.value as CardStudent
+      valid.value = true
+      // Card becomes visible with a warning banner
+      await nextTick()
+      setTimeout(() => {
+        cardVisible.value = true
+      }, 100)
+      return
+    }
+
     student.value = null
-    error.value = 'Could not load full details. Showing available information.'
+    valid.value = false
+    const axiosErr = err as { response?: { status?: number; data?: { message?: string } } }
+    error.value = axiosErr.response?.data?.message || (axiosErr.response?.status === 404 ? t('student_verify.student_not_found') : t('student_verify.no_token'))
   } finally {
     loading.value = false
   }
@@ -42,173 +143,94 @@ const initials = computed(() => {
   if (!name?.trim()) return 'ST'
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2)
 })
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
-}
-
-function getStatusStyle(status: string) {
-  const styles: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-    enrolled: { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6', label: 'Enrolled' },
-    pending: { bg: '#FFF7ED', text: '#C2410C', dot: '#F97316', label: 'Pending' },
-    graduated: { bg: '#F5F3FF', text: '#7C3AED', dot: '#8B5CF6', label: 'Graduated' },
-    rejected: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444', label: 'Rejected' },
-    dropped: { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444', label: 'Dropped' },
-  }
-  const s = status?.toLowerCase() || 'unknown'
-  return styles[s] || { bg: '#F3F4F6', text: '#6B7280', dot: '#9CA3AF', label: status || 'Unknown' }
-}
-
-onMounted(() => {
-  fetchStudent()
-})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-start justify-center p-4 sm:p-6">
-    <div class="w-full max-w-md">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-900 flex items-start justify-center p-4 sm:p-6 relative overflow-hidden">
+    <!-- Background decorative elements -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden">
+      <div class="absolute -top-32 -right-32 w-96 h-96 bg-blue-200/20 dark:bg-blue-500/5 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-500/5 rounded-full blur-3xl"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/10 to-indigo-100/10 dark:from-blue-500/3 dark:to-indigo-500/3 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="w-full max-w-md relative z-10">
       <!-- Header -->
-      <div class="text-center mb-6 mt-4 sm:mt-8">
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-3">
-          <CheckCircle :size="14" />
-          Student ID Verification
+      <div
+        class="text-center mb-6 mt-4 sm:mt-8 transition-all duration-700 ease-out"
+        :class="mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'"
+      >
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-3 backdrop-blur-sm border border-blue-200/50 dark:border-blue-500/20 shadow-sm">
+          <ShieldCheck :size="14" />
+          {{ t('student_verify.identity_verified') }}
         </div>
-        <h1 class="text-lg font-bold text-gray-900 dark:text-white">Identity Card</h1>
-        <p class="text-sm text-gray-400 mt-1">Passerelles Numériques Cambodge</p>
+        <h1 class="text-lg font-bold text-gray-900 dark:text-white">{{ t('student_verify.valid_card') }}</h1>
+        <p class="text-sm text-gray-400 mt-1">Passerellesnumeriques Cambodia</p>
       </div>
 
       <!-- Loading -->
       <div v-if="loading" class="flex flex-col items-center justify-center py-16">
         <Loader2 :size="32" class="text-blue-500 animate-spin mb-3" />
-        <p class="text-sm text-gray-400">Verifying student identity...</p>
+        <p class="text-sm text-gray-400">{{ t('student_verify.loading') }}</p>
       </div>
 
       <!-- Student Card Display -->
-      <div v-if="!loading" class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <!-- Top gradient bar -->
-        <div class="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600"></div>
-
-        <!-- Verified Badge -->
-        <div class="flex items-center justify-between px-5 pt-4 pb-2">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-              <span class="text-[10px] font-extrabold text-white tracking-wider">PNC</span>
-            </div>
-            <div>
-              <p class="text-[10px] font-extrabold text-gray-900 dark:text-white leading-tight">Passerelles Numériques</p>
-              <p class="text-[7px] font-semibold text-gray-400 tracking-widest uppercase">Cambodia</p>
-            </div>
-          </div>
-          <div v-if="student" class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold"
-            :style="{ backgroundColor: getStatusStyle(student.enrollment_status).bg, color: getStatusStyle(student.enrollment_status).text }">
-            <span class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: getStatusStyle(student.enrollment_status).dot }"></span>
-            {{ getStatusStyle(student.enrollment_status).label }}
+      <div
+        v-if="!loading && valid && student"
+        class="transition-all duration-500 ease-out"
+        :class="cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+      >
+        <!-- Card Notice Banner (no card or using URL fallback data) -->
+        <div v-if="cardNotice || student.id === 0" class="mx-0 mb-4 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-start gap-3 transition-all duration-300 hover:shadow-md">
+          <AlertCircle :size="18" class="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p class="text-xs font-semibold text-amber-800 dark:text-amber-300">
+              {{ student.id === 0 ? t('student_verify.card_not_generated') : t('student_verify.card_not_generated') }}
+            </p>
+            <p class="text-xs text-amber-600/80 dark:text-amber-400/70 mt-0.5">
+              {{ student.id === 0 ? t('student_verify.card_coming_soon') : cardNotice }}
+            </p>
           </div>
         </div>
 
-        <div class="px-5 pb-5">
-          <!-- Photo + Name -->
-          <div class="flex flex-col items-center mb-4 mt-1">
-            <!-- Photo with frame -->
-            <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md ring-4 ring-white dark:ring-gray-700 mb-3">
-              <span class="text-3xl font-extrabold text-white drop-shadow-sm">{{ initials }}</span>
-            </div>
-            <h2 class="text-xl font-bold text-center text-gray-900 dark:text-white">{{ queryData.name }}</h2>
-            <div class="flex items-center gap-2 mt-1">
-              <span class="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400 tracking-wider">{{ studentId }}</span>
-            </div>
-          </div>
-
-          <!-- Info Cards Grid -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-              <div class="flex items-center gap-1.5 mb-1">
-                <User :size="13" class="text-gray-400" />
-                <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Gender</p>
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.gender || '—' }}</p>
-            </div>
-            <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-              <div class="flex items-center gap-1.5 mb-1">
-                <GraduationCap :size="13" class="text-gray-400" />
-                <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Batch</p>
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.batch }}</p>
-            </div>
-            <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-              <div class="flex items-center gap-1.5 mb-1">
-                <Calendar :size="13" class="text-gray-400" />
-                <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Intake Year</p>
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.year || '—' }}</p>
-            </div>
-            <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-              <div class="flex items-center gap-1.5 mb-1">
-                <MapPin :size="13" class="text-gray-400" />
-                <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Province</p>
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ queryData.province || '—' }}</p>
-            </div>
-            <div v-if="queryData.dob" class="col-span-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-              <div class="flex items-center gap-1.5 mb-1">
-                <Calendar :size="13" class="text-gray-400" />
-                <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Date of Birth</p>
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatDate(queryData.dob) }}</p>
-            </div>
-          </div>
-
-          <!-- Additional details from API -->
-          <div v-if="student?.phone || student?.email || student?.high_school" class="border-t border-gray-100 dark:border-gray-700 pt-3 mb-3">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Contact &amp; Education</p>
-            <div class="space-y-2">
-              <div v-if="student.phone" class="flex items-center justify-between text-xs">
-                <span class="text-gray-400">Phone</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ student.phone }}</span>
-              </div>
-              <div v-if="student.email" class="flex items-center justify-between text-xs">
-                <span class="text-gray-400">Email</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ student.email }}</span>
-              </div>
-              <div v-if="student.high_school" class="flex items-center justify-between text-xs">
-                <span class="text-gray-400">High School</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ student.high_school }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Error banner -->
-          <div v-if="error" class="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20">
-            <AlertCircle :size="15" class="text-amber-500 flex-shrink-0 mt-0.5" />
-            <p class="text-xs text-amber-700 dark:text-amber-400">{{ error }}</p>
-          </div>
-
-          <!-- Footer -->
-          <div class="border-t border-gray-100 dark:border-gray-700 pt-3 mt-1">
-            <div class="flex items-center justify-between text-[9px]">
-              <span class="text-gray-400 font-semibold tracking-wide">Property of PNC</span>
-              <span class="text-gray-300 dark:text-gray-600">Verified · {{ new Date().toLocaleDateString() }}</span>
-            </div>
-          </div>
-        </div>
+        <!-- Student Card Component -->
+        <StudentCard
+          :student="student"
+          :generated="hasCard"
+          layout="classic"
+          size="lg"
+        />
       </div>
 
-      <!-- Error state (no data at all) -->
-      <div v-if="!loading && !queryData.name && !student" class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
-        <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-3">
+      <!-- Error state -->
+      <div
+        v-if="!loading && !valid"
+        class="bg-white dark:bg-gray-800/80 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 text-center transition-all duration-500"
+        :class="mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+      >
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-red-100 to-red-50 dark:from-red-500/10 dark:to-red-500/5 flex items-center justify-center mx-auto mb-3 shadow-sm">
           <AlertCircle :size="28" class="text-red-500" />
         </div>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Invalid Card</h2>
-        <p class="text-sm text-gray-400">This student ID could not be found. The link may be invalid or the student record has been removed.</p>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">{{ errorHeader }}</h2>
+        <p class="text-sm text-gray-400">{{ error || t('student_verify.student_not_found') }}</p>
       </div>
 
       <!-- Footer note -->
-      <p class="text-center text-[10px] text-gray-400 mt-6 mb-4">
-        This is an official student identity verification from Passerelles Numériques Cambodge.
+      <p class="text-center text-[10px] text-gray-400 mt-6 mb-4 transition-all duration-700" :class="mounted ? 'opacity-100' : 'opacity-0'">
+        Passerellesnumeriques Cambodia
       </p>
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes sv-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  animation: sv-gradient-shift 3s ease infinite;
+}
+</style>

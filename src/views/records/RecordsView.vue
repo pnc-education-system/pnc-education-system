@@ -467,12 +467,16 @@ function toggleRecordExpand(recordId: number) {
 function getApiErrorMessage(error: any, fallback: string): string {
   const data = error?.response?.data
   if (data) {
+    // Handle ApiErrorEnvelopeMiddleware format: { error: { code, message, errors } }
+    if (data.error?.message && typeof data.error.message === 'string') return data.error.message
+    // Handle direct format: { message: "..." }
     if (data.message && typeof data.message === 'string') return data.message
-    const errors = data.errors
-    if (errors && typeof errors === 'object') {
-      const firstKey = Object.keys(errors)[0]
+    // Handle field-level errors from envelope
+    const fieldErrors = data.error?.errors || data.errors
+    if (fieldErrors && typeof fieldErrors === 'object') {
+      const firstKey = Object.keys(fieldErrors)[0]
       if (firstKey) {
-        const msgs = errors[firstKey]
+        const msgs = fieldErrors[firstKey]
         const msg = Array.isArray(msgs) ? msgs[0] : msgs
         if (msg) return `${firstKey}: ${msg}`
       }

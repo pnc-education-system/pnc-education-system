@@ -12,15 +12,27 @@ export interface CardStudent {
   selection_batch_id?: number | null
   enrollment_status: string
   intake_year?: number | null
+  phone?: string | null
+  email?: string | null
+  high_school?: string | null
+  qr_token?: string | null
 }
 
 export interface CardTemplate {
   id: number
   name: string
+  layout_key: string | null
   layout_json: string
   is_default: boolean
   created_at: string
   updated_at: string
+}
+
+export interface CardStats {
+  total_generated: number
+  total_templates: number
+  total_students: number
+  by_template: Array<{ id: number; name: string; count: number }>
 }
 
 export interface CardGenerationResult {
@@ -66,15 +78,12 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number, pdfBlob: Blob): Promise<CardGenerationResult> {
-    const formData = new FormData()
-    formData.append('pdf', pdfBlob, `student-card-${studentId}.pdf`)
+  async generate(studentId: number, templateId?: number, layout?: string): Promise<CardGenerationResult> {
+    const params: Record<string, string> = {}
+    if (templateId) params.template_id = String(templateId)
+    if (layout) params.layout = layout
 
-    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, params)
     return data.data as CardGenerationResult
   },
 
@@ -97,8 +106,11 @@ export const cardsApi = {
   },
 
   /** Download card PDF */
-  async downloadPdf(studentId: number): Promise<Blob> {
+  async downloadPdf(studentId: number, layout?: string): Promise<Blob> {
+    const params: { layout?: string } = {}
+    if (layout) params.layout = layout
     const { data } = await axiosInstance.get(`/cards/download/${studentId}`, {
+      params,
       responseType: 'blob',
     })
     return data as Blob
@@ -114,7 +126,13 @@ export const cardsApi = {
 
   /** Get student details by student_id_no (public — used for QR verification) */
   async getByStudentIdNo(studentIdNo: string): Promise<CardStudent> {
-    const { data } = await axiosInstance.get(`/students/verify/${encodeURIComponent(studentIdNo)}`)
+    const { data } = await axiosInstance.get(`/student-cards/student/${encodeURIComponent(studentIdNo)}`)
+    return (data.data ?? data) as CardStudent
+  },
+
+  /** Verify student by numeric ID (public — used for QR verification) */
+  async verifyById(studentId: number): Promise<CardStudent> {
+    const { data } = await axiosInstance.get(`/students/verify/${studentId}`)
     return (data.data ?? data) as CardStudent
   },
 
@@ -130,6 +148,45 @@ export const cardsApi = {
   async getTemplates(): Promise<CardTemplate[]> {
     const { data } = await axiosInstance.get('/cards/templates')
     return data.data as CardTemplate[]
+  },
+
+  /** Get a single card template by ID */
+  async getTemplate(id: number): Promise<CardTemplate> {
+    const { data } = await axiosInstance.get(`/cards/templates/${id}`)
+    return data.data as CardTemplate
+  },
+
+  /** Create a new card template */
+  async createTemplate(payload: {
+    name: string
+    layout_key?: string
+    layout_json: string
+    is_default?: boolean
+  }): Promise<CardTemplate> {
+    const { data } = await axiosInstance.post('/cards/templates', payload)
+    return data.data as CardTemplate
+  },
+
+  /** Update a card template */
+  async updateTemplate(id: number, payload: {
+    name?: string
+    layout_key?: string
+    layout_json?: string
+    is_default?: boolean
+  }): Promise<CardTemplate> {
+    const { data } = await axiosInstance.put(`/cards/templates/${id}`, payload)
+    return data.data as CardTemplate
+  },
+
+  /** Delete a card template */
+  async deleteTemplate(id: number): Promise<void> {
+    await axiosInstance.delete(`/cards/templates/${id}`)
+  },
+
+  /** Get card generation stats */
+  async getStats(): Promise<CardStats> {
+    const { data } = await axiosInstance.get('/cards/stats')
+    return data.data as CardStats
   },
 
   /** Get students by batch for card generation */
@@ -155,9 +212,7 @@ export const cardsApi = {
     })
 
     const { data } = await axiosInstance.post('/cards/batch-upload-photos', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': undefined as unknown as string },
     })
     return data.data
   },

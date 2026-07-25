@@ -3,6 +3,7 @@ defineOptions({ name: 'EnrollmentsPage' })
 
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useEnrollmentsStore } from '@/stores/enrollments'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
@@ -25,6 +26,7 @@ import {
 } from 'lucide-vue-next'
 
 const router = useRouter()
+const { t } = useI18n()
 const store = useEnrollmentsStore()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
@@ -77,11 +79,11 @@ const programs = computed(() => {
 
 // ── Statistics ──
 const statsCards = computed(() => [
-  { label: 'Total Applications', value: store.totalEnrollments, color: 'text-gray-900', icon: FileText, bg: 'bg-gray-50 dark:bg-white/[0.04]' },
-  { label: 'Pending Review', value: store.pendingCount, color: 'text-orange-600', icon: Clock, bg: 'bg-orange-50 dark:bg-orange-500/10' },
-  { label: 'Approved', value: store.approvedCount, color: 'text-emerald-600', icon: UserCheck, bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-  { label: 'Enrolled', value: store.enrolledCount, color: 'text-blue-600', icon: GraduationCap, bg: 'bg-blue-50 dark:bg-blue-500/10' },
-  { label: 'Rejected', value: store.rejectedCount, color: 'text-red-600', icon: XCircle, bg: 'bg-red-50 dark:bg-red-500/10' },
+  { label: t('enrollment_management.total_applications'), value: store.totalEnrollments, color: 'text-gray-900', icon: FileText, bg: 'bg-gray-50 dark:bg-white/[0.04]' },
+  { label: t('enrollment_management.pending_review'), value: store.pendingCount, color: 'text-orange-600', icon: Clock, bg: 'bg-orange-50 dark:bg-orange-500/10' },
+  { label: t('approved'), value: store.approvedCount, color: 'text-emerald-600', icon: UserCheck, bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+  { label: t('dashboard.enrolled'), value: store.enrolledCount, color: 'text-blue-600', icon: GraduationCap, bg: 'bg-blue-50 dark:bg-blue-500/10' },
+  { label: t('rejected'), value: store.rejectedCount, color: 'text-red-600', icon: XCircle, bg: 'bg-red-50 dark:bg-red-500/10' },
 ])
 
 // ── Navigation ──
@@ -105,9 +107,9 @@ function cancelDelete() {
 async function executeDelete(id: string) {
   try {
     await store.remove(id)
-    showSuccessToast('Enrollment deleted successfully.', 'Deleted')
+    showSuccessToast(t('enrollment_management.toast_deleted'), t('enrollment_management.toast_deleted_title'))
   } catch {
-    showErrorToast('Failed to delete enrollment.', 'Error')
+    showErrorToast(t('enrollment_management.toast_delete_failed'), t('records.toast_error'))
   }
   deleteConfirmId.value = null
 }
@@ -127,9 +129,9 @@ async function executeStatusChange() {
   if (!statusChangeId.value) return
   try {
     await store.updateStatus(statusChangeId.value, statusChangeTarget.value)
-    showSuccessToast(`Enrollment ${statusChangeTarget.value} successfully.`, 'Status Updated')
+    showSuccessToast(t('enrollment_management.toast_status_updated', { status: statusChangeTarget.value }), t('enrollment_management.toast_status_title'))
   } catch {
-    showErrorToast('Failed to update status.', 'Error')
+    showErrorToast(t('enrollment_management.toast_status_failed'), t('records.toast_error'))
   }
   statusChangeId.value = null
   statusChangeTarget.value = 'pending'
@@ -150,7 +152,7 @@ function getInitials(name: string): string {
 
 async function refreshData() {
   await store.fetchAll()
-  showSuccessToast('Data refreshed.', 'Refreshed')
+  showSuccessToast(t('enrollment_management.toast_refreshed'), t('enrollment_management.toast_refreshed_title'))
 }
 </script>
 
@@ -159,16 +161,16 @@ async function refreshData() {
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">Enrollment Management</h1>
+        <h1 class="text-2xl font-semibold text-[#111827] dark:text-white tracking-tight">{{ t('enrollment_management.title') }}</h1>
         <p class="text-sm text-[#6B7280] dark:text-gray-400 mt-1">
-          Manage student enrollment applications, review submissions, and update statuses.
+          {{ t('enrollment_management.subtitle') }}
         </p>
       </div>
       <div class="flex items-center gap-3">
         <button
           @click="refreshData"
           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#374151] bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800"
-          title="Refresh data"
+          :title="t('enrollment_management.refresh_data')"
         >
         <button
           v-if="canManage"
@@ -176,7 +178,7 @@ async function refreshData() {
           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
         >
           <Plus :size="16" />
-          New Enrollment
+          {{ t('enrollment_management.new_enrollment') }}
         </button>
       </div>
     </div>
@@ -205,7 +207,7 @@ async function refreshData() {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search by student name, ID, or program..."
+          :placeholder="t('enrollment_management.search_placeholder')"
           class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#111827] dark:text-gray-200 placeholder-[#9CA3AF] dark:placeholder-gray-500 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
@@ -214,17 +216,17 @@ async function refreshData() {
           v-model="statusFilter"
           class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="enrolled">Enrolled</option>
-          <option value="rejected">Rejected</option>
+          <option value="all">{{ t('enrollment_management.all_status') }}</option>
+          <option value="pending">{{ t('pending') }}</option>
+          <option value="approved">{{ t('approved') }}</option>
+          <option value="enrolled">{{ t('dashboard.enrolled') }}</option>
+          <option value="rejected">{{ t('rejected') }}</option>
         </select>
         <button
           @click="showFilters = !showFilters"
           class="px-3 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-[#6B7280] hover:text-[#374151] hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer dark:hover:bg-gray-800"
           :class="{ 'border-blue-400 text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400': showFilters }"
-          title="More filters"
+          :title="t('enrollment_management.more_filters')"
         >
           <SlidersHorizontal :size="18" />
         </button>
@@ -245,17 +247,17 @@ async function refreshData() {
           v-model="programFilter"
           class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
-          <option value="">All Programs</option>
+          <option value="">{{ t('enrollment_management.all_programs') }}</option>
           <option v-for="program in programs" :key="program" :value="program">{{ program }}</option>
         </select>
         <select
           v-model="batchFilter"
           class="px-4 py-2.5 bg-white dark:bg-gray-800/50 border border-[#E5E7EB] dark:border-gray-700 rounded-xl text-sm text-[#374151] dark:text-gray-200 outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
         >
-          <option value="">All Batches</option>
-          <option value="Morning">Morning</option>
-          <option value="Afternoon">Afternoon</option>
-          <option value="Evening">Evening</option>
+          <option value="">{{ t('enrollment_management.all_batches') }}</option>
+          <option value="Morning">{{ t('enrollment_management.morning') }}</option>
+          <option value="Afternoon">{{ t('enrollment_management.afternoon') }}</option>
+          <option value="Evening">{{ t('enrollment_management.evening') }}</option>
         </select>
       </div>
     </transition>
@@ -264,12 +266,12 @@ async function refreshData() {
     <div class="rounded-[14px] bg-white dark:bg-[#131B2E] border border-[#E5E7EB] dark:border-gray-800 overflow-hidden" style="box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);">
       <!-- Table Header (Desktop) -->
       <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-[#F8FAFC] dark:bg-white/[0.02] border-b border-[#E5E7EB] dark:border-gray-800">
-        <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Student</span>
-        <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Student ID</span>
-        <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Program</span>
+        <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('recent_requests.student') }}</span>
+        <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('recent_requests.id') }}</span>
+        <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('recent_requests.program') }}</span>
         <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Batch</span>
         <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Status</span>
-        <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase text-right">Actions</span>
+        <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase text-right">{{ t('students.table_actions') }}</span>
       </div>
 
       <!-- Enrollments -->
@@ -311,7 +313,7 @@ async function refreshData() {
                 v-if="enrollment.status === 'pending' && canManage"
                 @click="confirmStatusChange(enrollment.id, 'approved')"
                 class="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer dark:hover:bg-emerald-500/10"
-                title="Approve"
+                :title="t('students.action_approve')"
               >
                 <CheckCircle2 :size="16" />
               </button>
@@ -319,7 +321,7 @@ async function refreshData() {
                 v-if="enrollment.status === 'approved' && canManage"
                 @click="confirmStatusChange(enrollment.id, 'enrolled')"
                 class="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer dark:hover:bg-blue-500/10"
-                title="Mark as Enrolled"
+                :title="t('students.action_enroll')"
               >
                 <GraduationCap :size="16" />
               </button>
@@ -327,7 +329,7 @@ async function refreshData() {
                 v-if="enrollment.status === 'pending' && canManage"
                 @click="confirmStatusChange(enrollment.id, 'rejected')"
                 class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors cursor-pointer dark:hover:bg-red-500/10"
-                title="Reject"
+                :title="t('students.action_reject')"
               >
                 <Ban :size="16" />
               </button>
@@ -394,7 +396,7 @@ async function refreshData() {
                 v-if="enrollment.status === 'approved' && canManage"
                 @click="confirmStatusChange(enrollment.id, 'enrolled')"
                 class="p-2 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer dark:hover:bg-blue-500/10"
-                title="Mark as Enrolled"
+                :title="t('students.action_enroll')"
               >
                 <UserPlus :size="16" />
               </button>
