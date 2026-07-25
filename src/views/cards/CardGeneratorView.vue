@@ -11,6 +11,8 @@ import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selecti
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 import StudentCard from '@/components/cards/StudentCard.vue'
 
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
+
 import {
   Search,
   Filter,
@@ -25,6 +27,7 @@ import {
   CreditCard,
   RotateCcw,
   Loader2,
+  Camera,
 } from 'lucide-vue-next'
 
 // ── Data ──
@@ -78,8 +81,8 @@ const dbTemplates = ref<CardTemplate[]>([])
 const cardStats = ref<CardStats | null>(null)
 
 const savedLayout = localStorage.getItem('card_template_preference')
-const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official' | 'minimal' | 'creative' | 'tech'>(
-  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium' || savedLayout === 'corporate' || savedLayout === 'corporate-blue' || savedLayout === 'corporate-yellow' || savedLayout === 'official' || savedLayout === 'minimal' || savedLayout === 'creative' || savedLayout === 'tech') ? savedLayout : 'classic'
+const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'>(
+  (savedLayout === 'classic' || savedLayout === 'modern' || savedLayout === 'premium' || savedLayout === 'corporate' || savedLayout === 'corporate-blue' || savedLayout === 'corporate-yellow' || savedLayout === 'official') ? savedLayout : 'classic'
 )
 
 watch(selectedLayout, (val) => {
@@ -127,24 +130,6 @@ const templates = [
     id: 'official' as const,
     name: 'Official',
     description: 'Formal design with gold stripe',
-    popular: false,
-  },
-  {
-    id: 'minimal' as const,
-    name: 'Minimal',
-    description: 'Clean and simple gray design',
-    popular: false,
-  },
-  {
-    id: 'creative' as const,
-    name: 'Creative',
-    description: 'Vibrant purple gradient design',
-    popular: false,
-  },
-  {
-    id: 'tech' as const,
-    name: 'Tech',
-    description: 'Dark theme with cyan accents',
     popular: false,
   },
 ] as const
@@ -296,7 +281,7 @@ function toggleStudent(id: number) {
 async function handleGenerate(studentId: number) {
   isGenerating.value = true
   try {
-    const result = await cardsApi.generate(studentId)
+    const result = await cardsApi.generate(studentId, undefined, selectedLayout.value)
     if (result.status === 'success') {
       generatedCards.value.add(studentId)
       // Update the student with the QR token from the response
@@ -312,10 +297,11 @@ async function handleGenerate(studentId: number) {
     console.error('Card generation error:', error)
     // Try to extract meaningful error from axios error response
     const err = error as { response?: { data?: { error?: { message?: string } | string; message?: string } }; message?: string }
+    const errData = err?.response?.data
     const serverMsg =
-      err?.response?.data?.error?.message ||
-      (typeof err?.response?.data?.error === 'string' ? err?.response?.data?.error : null) ||
-      err?.response?.data?.message ||
+      (typeof errData?.error === 'object' && errData?.error !== null ? errData.error.message : null) ||
+      (typeof errData?.error === 'string' ? errData.error : null) ||
+      errData?.message ||
       err?.message
     const displayMsg = serverMsg || t('cards.toast_generate_failed')
     showErrorToast(displayMsg, t('cards.toast_generate_failed_title'))
@@ -334,20 +320,36 @@ async function handleBatchGenerate() {
   generationProgress.value = 0
   try {
     const ids = Array.from(selectedStudentIds.value)
-    const result = await cardsApi.batchGenerate(ids)
-
     let successCount = 0
-    result.results.forEach((r) => {
-      if (r.status === 'success') {
-        generatedCards.value.add(r.student_id)
-        successCount++
-      }
-    })
+    let errors: string[] = []
+    const total = ids.length
 
-    showSuccessToast(
-      t('card_gen.batch_gen_complete', { success: successCount, total: ids.length }),
-      t('cards.toast_batch_generated_title'),
-    )
+    for (let i = 0; i < total; i++) {
+      const studentId = ids[i]
+      generationProgress.value = Math.round(((i + 1) / total) * 100)
+      try {
+        const result = await cardsApi.generate(studentId, undefined, selectedLayout.value)
+        if (result.status === 'success') {
+          generatedCards.value.add(studentId)
+          successCount++
+        } else {
+          errors.push(result.error || `Student #${studentId} failed`)
+        }
+      } catch (err) {
+        const apiErr = err as { response?: { data?: { message?: string } }; message?: string }
+        errors.push(apiErr?.response?.data?.message || apiErr?.message || `Student #${studentId} failed`)
+      }
+    }
+
+    if (successCount > 0) {
+      showSuccessToast(
+        t('card_gen.batch_gen_complete', { success: successCount, total }),
+        t('cards.toast_batch_generated_title'),
+      )
+    }
+    if (errors.length > 0) {
+      showErrorToast(`Failed: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? `... (${errors.length - 3} more)` : ''}`, 'Batch Generation Errors')
+    }
 
     selectedStudentIds.value.clear()
     generationProgress.value = 100
@@ -403,7 +405,7 @@ async function handleBatchReprint() {
 
 async function handleDownload(studentId: number) {
   try {
-    const blob = await cardsApi.downloadPdf(studentId)
+    const blob = await cardsApi.downloadPdf(studentId, selectedLayout.value)
     const student = students.value.find((s) => s.id === studentId)
     const filename = `ID_Card_${student?.student_id_no || studentId}.pdf`
     downloadBlob(blob, filename)
@@ -422,7 +424,7 @@ async function handleBatchDownload() {
 
   try {
     const ids = Array.from(selectedStudentIds.value)
-    const blob = await cardsApi.batchDownloadPdf(ids)
+    const blob = await cardsApi.batchDownloadPdf(ids, selectedLayout.value)
     downloadBlob(blob, `ID_Cards_Batch_${Date.now()}.pdf`)
     showSuccessToast(t('card_gen.download_complete'), t('cards.toast_downloaded_title'))
     selectedStudentIds.value.clear()
@@ -489,14 +491,7 @@ function getStatusStyle(status: string) {
   return styles[status] || styles.pending
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
+
 
 // ── Pagination ──
 function goToPage(page: number) {
@@ -845,8 +840,9 @@ onUnmounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                  <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+                    <span v-else class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                   </div>
                   <div>
                     <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ student.full_name }}</p>
@@ -875,8 +871,9 @@ onUnmounted(() => {
                 <input type="checkbox" :checked="selectedStudentIds.has(student.id)" @change="toggleStudent(student.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
               </div>
               <div class="col-span-2 flex items-center gap-2">
-                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                  <span class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
+                <div class="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <img v-if="student.photo_path" :src="resolvePhotoUrl(student.photo_path, student.id)" :alt="student.full_name" class="w-full h-full object-cover" />
+                  <span v-else class="text-[9px] font-bold text-white">{{ getInitials(student.full_name) }}</span>
                 </div>
                 <p class="text-xs font-semibold text-gray-900 dark:text-white truncate">{{ student.full_name }}</p>
               </div>
@@ -964,8 +961,9 @@ onUnmounted(() => {
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-xl">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm font-bold text-white">{{ getInitials(livePreviewStudent.full_name) }}</span>
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img v-if="livePreviewStudent.photo_path" :src="resolvePhotoUrl(livePreviewStudent.photo_path, livePreviewStudent.id)" :alt="livePreviewStudent.full_name" class="w-full h-full object-cover" />
+                <span v-else class="text-sm font-bold text-white">{{ getInitials(livePreviewStudent.full_name) }}</span>
               </div>
               <div>
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ livePreviewStudent.full_name }}</h3>

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Student } from '@/types'
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 import { Download, Printer, Share2, Shield, Check } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -11,23 +12,9 @@ const downloadSuccess = ref(false)
 const printSuccess = ref(false)
 const shareSuccess = ref(false)
 
-function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function resolvePhotoUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (/^https?:\/\//i.test(path)) return path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
 }
 
 async function generateCardCanvas(): Promise<HTMLCanvasElement> {
@@ -101,7 +88,7 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   const photoX = 28
   const photoY = midY - 50
 
-  const photoUrl = resolvePhotoUrl(s.photoPath)
+  const photoUrl = resolvePhotoUrl(s.photoPath, s.id)
   if (photoUrl) {
     try {
       const img = await loadImage(photoUrl)
@@ -112,10 +99,10 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
       ctx.drawImage(img, photoX, photoY, photoSize, photoSize)
       ctx.restore()
     } catch {
-      drawInitials(ctx, photoX, photoY, photoSize, s.fullName)
+      drawInitials(ctx, photoX, photoY, photoSize, getInitials(s.fullName))
     }
   } else {
-    drawInitials(ctx, photoX, photoY, photoSize, s.fullName)
+    drawInitials(ctx, photoX, photoY, photoSize, getInitials(s.fullName))
   }
 
   const infoX = photoX + photoSize + 20
@@ -169,7 +156,7 @@ async function generateCardCanvas(): Promise<HTMLCanvasElement> {
   return canvas
 }
 
-function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, name: string) {
+function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, initials: string) {
   ctx.fillStyle = 'rgba(255,255,255,0.15)'
   ctx.beginPath()
   ctx.roundRect(x, y, size, size, 10)
@@ -178,7 +165,7 @@ function drawInitials(ctx: CanvasRenderingContext2D, x: number, y: number, size:
   ctx.font = 'bold 26px Inter, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(getInitials(name), x + size / 2, y + size / 2)
+  ctx.fillText(initials, x + size / 2, y + size / 2)
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
 }
@@ -348,7 +335,7 @@ function printCard() {
           <div class="badge">🛡 STUDENT</div>
         </div>
         <div class="mid-section">
-          <div class="avatar">${s.photoPath ? '<img src="' + resolvePhotoUrl(s.photoPath) + '" alt="' + s.fullName + '" />' : getInitials(s.fullName)}</div>
+          <div class="avatar">${s.photoPath ? '<img src="' + resolvePhotoUrl(s.photoPath, s.id) + '" alt="' + s.fullName + '" />' : getInitials(s.fullName)}</div>
           <div class="info">
             <h3>${s.fullName}</h3>
             <div class="id">${s.studentIdNo}</div>
@@ -437,7 +424,7 @@ async function shareCard() {
 
           <div class="flex items-center gap-4 mt-4 mb-auto">
             <div class="w-[60px] h-[60px] rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 backdrop-blur-sm ring-2 ring-white/10 shadow-lg overflow-hidden">
-            <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath) ?? undefined" :alt="student.fullName" class="w-full h-full object-cover" />
+            <img v-if="student.photoPath" :src="resolvePhotoUrl(student.photoPath, student.id) ?? undefined" :alt="student.fullName" class="w-full h-full object-cover" />
             <span v-else class="text-xl font-bold text-white">{{ getInitials(student.fullName) }}</span>
           </div>
             <div class="min-w-0">

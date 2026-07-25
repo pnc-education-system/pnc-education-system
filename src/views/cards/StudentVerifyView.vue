@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { cardsApi, type CardStudent } from '@/services/api/cards'
 import StudentCard from '@/components/cards/StudentCard.vue'
-import { Loader2, AlertCircle, ShieldCheck } from 'lucide-vue-next'
+import { Loader2, AlertCircle, ShieldCheck, User } from 'lucide-vue-next'
 
 const { t } = useI18n()
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 const token = computed(() => (route.params.token as string) || '')
 
 // Extract student data from QR code URL query params (fallback when API fails)
@@ -105,6 +108,13 @@ async function fetchStudent() {
     setTimeout(() => {
       cardVisible.value = true
     }, 100)
+
+    // If user is logged in, redirect to student profile page
+    if (authStore.isAuthenticated && student.value && student.value.id > 0) {
+      setTimeout(() => {
+        router.push(`/students/${student.value!.id}/profile`)
+      }, 500)
+    }
   } catch (err: unknown) {
     // Fallback: try to use data embedded in the QR code URL query params
     if (qrFallbackData.value) {
@@ -200,6 +210,26 @@ const initials = computed(() => {
           layout="classic"
           size="lg"
         />
+
+        <!-- View Full Profile Button -->
+        <div v-if="student.id > 0" class="mt-4">
+          <button
+            v-if="authStore.isAuthenticated"
+            @click="router.push(`/students/${student.id}/profile`)"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md active:scale-95 cursor-pointer"
+          >
+            <User :size="16" />
+            View Full Profile
+          </button>
+          <button
+            v-else
+            @click="router.push(`/login?redirect=/students/${student.id}/profile`)"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md active:scale-95 cursor-pointer"
+          >
+            <User :size="16" />
+            Login to View Full Profile
+          </button>
+        </div>
       </div>
 
       <!-- Error state -->

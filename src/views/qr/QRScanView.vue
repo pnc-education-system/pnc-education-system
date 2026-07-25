@@ -71,8 +71,8 @@ async function verifyQRToken(token: string) {
     if (student && student.id) {
       showSuccessToast(t('qr_scan.toast_success'), t('qr_scan.toast_success_title'))
       
-      // Navigate to student profile edit page
-      router.push(`/students/${student.id}/edit`)
+      // Navigate to student profile page
+      router.push(`/students/${student.id}/profile`)
     } else {
       throw new Error('Invalid response from server')
     }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, shallowRef, onMounted, onUnmounted, type Component } from 'vue'
+import { ref, computed, shallowRef, onMounted, onUnmounted, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStudentsStore } from '@/stores/students'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
 import { studentsApi } from '@/services/api'
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 import type { Student, BackendStudent } from '@/types'
 import {
   Camera,
@@ -40,7 +41,7 @@ const maxPhotoSizeBytes = 10 * 1024 * 1024 // 10 MB
 
 const displayPhotoUrl = computed(() => {
   if (photoPreviewUrl.value) return photoPreviewUrl.value
-  if (student.value?.photoPath) return resolvePhotoUrl(student.value.photoPath)
+  if (student.value?.photoPath) return resolvePhotoUrl(student.value.photoPath, student.value.id)
   return null
 })
 
@@ -150,11 +151,21 @@ async function loadStudent() {
   } finally { loading.value = false }
 }
 
-onMounted(() => { loadStudent() })
+// ── Auto-switch to tab from query param ──
+watch(() => route.query.tab, (tabValue) => {
+  if (tabValue && tabs.some(t => t.id === tabValue)) {
+    switchTab(tabValue as TabId)
+  }
+})
 
-function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
+onMounted(() => {
+  loadStudent()
+  // Check if there's a tab query param to auto-switch
+  const tabParam = route.query.tab as string | undefined
+  if (tabParam && tabs.some(t => t.id === tabParam)) {
+    switchTab(tabParam as TabId)
+  }
+})
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
@@ -247,21 +258,7 @@ async function uploadPhoto(file: File) {
   }
 }
 
-function resolvePhotoUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (/^https?:\/\//i.test(path)) return path
 
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-
-  if (path.startsWith('/storage/')) {
-    return `${apiOrigin}${path}`
-  }
-  if (path.startsWith('storage/')) {
-    return `${apiOrigin}/${path}`
-  }
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
-}
 
 const { showErrorToast } = useToast()
 

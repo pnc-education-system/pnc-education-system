@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Search, ScanLine, CheckCircle, ExternalLink, Copy, Info } from 'lucide-vue-next'
+import { Search, ScanLine, CheckCircle, ExternalLink, Copy, Info, User } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { cardsApi, type CardStudent } from '@/services/api/cards'
 
 const { t } = useI18n()
 
+const router = useRouter()
 const { showSuccessToast, showErrorToast } = useToast()
 
 const studentIdInput = ref('')
@@ -146,6 +148,10 @@ function copyLink() {
     navigator.clipboard.writeText(generatedVerifyLink.value)
     showSuccessToast('Verification link copied to clipboard.', 'Copied')
   }
+}
+
+function viewProfile(studentId: number) {
+  router.push(`/students/${studentId}/profile`)
 }
 
 function getStatusStyle(status: string) {
@@ -298,6 +304,17 @@ function getStatusStyle(status: string) {
                   <div v-if="verifyResult.student.dob" class="pt-2 border-t border-emerald-100 dark:border-emerald-500/10">
                     <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ t('qr_verify.dob') }}</p>
                     <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ new Date(verifyResult.student.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
+                  </div>
+
+                  <!-- View Profile Button -->
+                  <div class="pt-3 border-t border-emerald-100 dark:border-emerald-500/10">
+                    <button
+                      @click="viewProfile(verifyResult.student!.id)"
+                      class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-sm active:scale-95 cursor-pointer"
+                    >
+                      <User :size="16" />
+                      View Full Profile
+                    </button>
                   </div>
                 </div>
 

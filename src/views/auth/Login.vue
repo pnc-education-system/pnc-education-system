@@ -2,7 +2,7 @@
 defineOptions({ name: 'LoginPage' })
 
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
@@ -22,6 +22,7 @@ const loginSigningIn = computed(() => t('login.signing_in'))
 const loginSecurityNote = computed(() => t('login.security_note'))
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const form = ref<LoginCredentials>({
@@ -101,7 +102,8 @@ async function handleLogin() {
     authStore.setUser(response.user)
     authStore.setPermissions(response.permissions)
 
-    router.push('/dashboard')
+    const redirectTo = (route.query.redirect as string) || '/dashboard'
+    router.push(redirectTo)
   } catch (err: unknown) {
     // Log the full error details to help diagnose 401 issues
     console.error('[Login] Request failed:', err)

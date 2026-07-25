@@ -78,9 +78,10 @@ export const cardsApi = {
   },
 
   /** Generate a single student ID card */
-  async generate(studentId: number, templateId?: number): Promise<CardGenerationResult> {
-    const params: { template_id?: string } = {}
+  async generate(studentId: number, templateId?: number, layout?: string): Promise<CardGenerationResult> {
+    const params: Record<string, string> = {}
     if (templateId) params.template_id = String(templateId)
+    if (layout) params.layout = layout
 
     const { data } = await axiosInstance.post(`/cards/generate/${studentId}`, params)
     return data.data as CardGenerationResult
@@ -105,8 +106,11 @@ export const cardsApi = {
   },
 
   /** Download card PDF */
-  async downloadPdf(studentId: number): Promise<Blob> {
+  async downloadPdf(studentId: number, layout?: string): Promise<Blob> {
+    const params: { layout?: string } = {}
+    if (layout) params.layout = layout
     const { data } = await axiosInstance.get(`/cards/download/${studentId}`, {
+      params,
       responseType: 'blob',
     })
     return data as Blob
