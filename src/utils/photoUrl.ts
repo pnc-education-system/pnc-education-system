@@ -19,9 +19,11 @@ export function resolvePhotoUrl(
   if (!path) return null
 
   // Prefer API photo route when we have a student ID (reliable in all environments)
+  // Add cache-busting timestamp so the browser fetches the latest photo after upload
   if (studentId != null) {
     const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-    return `${apiBase}/photos/${studentId}`
+    const cacheBuster = Date.now()
+    return `${apiBase}/photos/${studentId}?t=${cacheBuster}`
   }
 
   // Already a full URL → return directly

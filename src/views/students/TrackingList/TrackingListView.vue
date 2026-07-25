@@ -321,8 +321,9 @@ function navigateToImport() {
 
 function navigateToRecords(student: Student) {
   router.push({
-    name: 'Records',
-    query: { student_id: student.id },
+    name: 'StudentProfile',
+    params: { id: student.id },
+    query: { tab: 'records' },
   })
 }
 

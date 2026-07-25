@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { recordsApi, type CreateStudentRecordPayload, type UpdateStudentRecordPayload } from '@/services/api/records'
 import { studentsApi } from '@/services/api/students'
 import { useAuthStore } from '@/stores/auth'
+import { resolvePhotoUrl } from '@/utils/photoUrl'
 import type { BackendStudent, StudentRecord, StudentAttachment } from '@/types'
 import {
   FileText,
@@ -79,6 +80,13 @@ const editingRecord = ref<StudentRecord | null>(null)
 const showAttachmentUpload = ref(false)
 const uploadingForRecordId = ref<number | null>(null)
 const expandedRecords = ref<Set<number>>(new Set())
+
+// ── Confirm Delete Modal ──
+const showConfirmDelete = ref(false)
+const confirmDeleteMessage = ref('')
+const confirmDeleteIsRecord = ref(false)
+const confirmDeleteTarget = ref<StudentRecord | StudentAttachment | null>(null)
+const isConfirmDeleting = ref(false)
 
 // ── File Preview State ──
 const showFilePreview = ref(false)
@@ -830,8 +838,14 @@ function removeLocalAttachment(attachment: StudentAttachment) {
   attachments.value = attachments.value.filter((a: StudentAttachment) => a.id !== attachment.id)
 }
 
-async function deleteRecord(record: StudentRecord) {
-  if (!confirm('Are you sure you want to delete this record? This action cannot be undone.')) return
+function confirmDeleteRecord(record: StudentRecord) {
+  confirmDeleteMessage.value = `Are you sure you want to delete "${record.title}"? This action cannot be undone.`
+  confirmDeleteIsRecord.value = true
+  confirmDeleteTarget.value = record
+  showConfirmDelete.value = true
+}
+
+async function executeDeleteRecord(record: StudentRecord) {
   if (!RECORDS_API_ENABLED) {
     if (record.attachments) {
       for (const att of record.attachments) {
@@ -851,6 +865,22 @@ async function deleteRecord(record: StudentRecord) {
     const message = getApiErrorMessage(error, 'Failed to delete record.')
     showErrorToast(message, t('records.toast_error'))
   }
+}
+
+function confirmDeleteAttachment(attachment: StudentAttachment) {
+  confirmDeleteMessage.value = `Are you sure you want to delete "${attachment.file_name}"? This action cannot be undone.`
+  confirmDeleteIsRecord.value = false
+  confirmDeleteTarget.value = attachment
+  showConfirmDelete.value = true
+}
+
+async function executeDeleteAttachment(attachment: StudentAttachment) {
+  if (!RECORDS_API_ENABLED) { removeLocalAttachment(attachment); showSuccessToast(t('records.toast_attachment_deleted'), t('records.toast_attachment_deleted_title')); return }
+  try {
+    await recordsApi.deleteAttachment(selectedStudentId.value!, attachment.id)
+    showSuccessToast(t('records.toast_attachment_deleted'), t('records.toast_attachment_deleted_title'))
+    loadRecords()
+  } catch (error: any) { const message = getApiErrorMessage(error, 'Failed to delete attachment.'); showErrorToast(message, t('records.toast_error')) }
 }
 
 // ── Attachments ──
@@ -907,14 +937,24 @@ async function submitAttachmentUpload() {
   } finally { isUploading.value = false }
 }
 
-async function deleteAttachment(attachment: StudentAttachment) {
-  if (!confirm('Are you sure you want to delete this attachment?')) return
-  if (!RECORDS_API_ENABLED) { removeLocalAttachment(attachment); showSuccessToast(t('records.toast_attachment_deleted'), t('records.toast_attachment_deleted_title')); return }
+function closeConfirmDelete() {
+  showConfirmDelete.value = false
+  confirmDeleteTarget.value = null
+}
+
+async function executeConfirmDelete() {
+  if (!confirmDeleteTarget.value) return
+  isConfirmDeleting.value = true
   try {
-    await recordsApi.deleteAttachment(selectedStudentId.value!, attachment.id)
-    showSuccessToast(t('records.toast_attachment_deleted'), t('records.toast_attachment_deleted_title'))
-    loadRecords()
-  } catch (error: any) { const message = getApiErrorMessage(error, 'Failed to delete attachment.'); showErrorToast(message, t('records.toast_error')) }
+    if (confirmDeleteIsRecord.value) {
+      await executeDeleteRecord(confirmDeleteTarget.value as StudentRecord)
+    } else {
+      await executeDeleteAttachment(confirmDeleteTarget.value as StudentAttachment)
+    }
+    closeConfirmDelete()
+  } finally {
+    isConfirmDeleting.value = false
+  }
 }
 
 function getInitials(name: string): string {
@@ -1005,77 +1045,23 @@ onMounted(async () => {
 
       <!-- ==================== 2. STUDENT INFORMATION CARD ==================== -->
       <template v-if="selectedStudentId">
-        <div v-if="selectedStudent" class="bg-white dark:bg-[#0F1729] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-          <div class="p-4 lg:p-5">
-            <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
-              <!-- Left: Student Details -->
-              <div class="flex-1">
-                <div class="flex items-start gap-3">
-                  <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20">
-                    <span class="text-base font-bold text-white">{{ getInitials(selectedStudent.full_name) }}</span>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <h2 class="text-base font-bold text-gray-900 dark:text-white">{{ selectedStudent.full_name }}</h2>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                        Active
-                      </span>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-2">
-                      <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        <Hash :size="12" class="text-gray-400 shrink-0" />
-                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ selectedStudent.student_id_no }}</span>
-                      </div>
-                      <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        <Layers :size="12" class="text-gray-400 shrink-0" />
-                        <span>Batch: <span class="font-medium text-gray-700 dark:text-gray-300">{{ selectedStudent.selection_batch_name || '—' }}</span></span>
-                      </div>
-                      <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        <GraduationCap :size="12" class="text-gray-400 shrink-0" />
-                        <span>Program: <span class="font-medium text-gray-700 dark:text-gray-300">Web Development</span></span>
-                      </div>
-                      <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        <Phone :size="12" class="text-gray-400 shrink-0" />
-                        <span>{{ selectedStudent.phone || '—' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Right: 4 Stat Cards -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
-                <div class="bg-blue-50/60 dark:bg-blue-500/5 rounded-xl p-3 border border-blue-100/50 dark:border-blue-500/10 min-w-[90px]">
-                  <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center mb-1.5">
-                    <FileText :size="13" class="text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <p class="text-base font-bold text-gray-900 dark:text-white">{{ totalRecords }}</p>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400">Total Records</p>
-                </div>
-                <div class="bg-amber-50/60 dark:bg-amber-500/5 rounded-xl p-3 border border-amber-100/50 dark:border-amber-500/10 min-w-[90px]">
-                  <div class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center mb-1.5">
-                    <PaperclipIcon :size="13" class="text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <p class="text-base font-bold text-gray-900 dark:text-white">{{ totalAttachments }}</p>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400">Attachments</p>
-                </div>
-                <div class="bg-purple-50/60 dark:bg-purple-500/5 rounded-xl p-3 border border-purple-100/50 dark:border-purple-500/10 min-w-[90px]">
-                  <div class="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center mb-1.5">
-                    <RefreshCw :size="13" class="text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <p class="text-[10px] font-bold text-gray-900 dark:text-white truncate">{{ lastUpdatedDate }}</p>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400">Last Updated</p>
-                </div>
-                <div class="bg-emerald-50/60 dark:bg-emerald-500/5 rounded-xl p-3 border border-emerald-100/50 dark:border-emerald-500/10 min-w-[90px]">
-                  <div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mb-1.5">
-                    <Activity :size="13" class="text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p class="text-base font-bold text-gray-900 dark:text-white">{{ recentActivity }}</p>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400">7d Activity</p>
-                </div>
-              </div>
-            </div>
+        <!-- Student Info Bar -->
+        <div
+          v-if="selectedStudent"
+          class="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20"
+        >
+          <div class="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img
+              v-if="selectedStudent.photo_path"
+              :src="resolvePhotoUrl(selectedStudent.photo_path, selectedStudent.id)"
+              :alt="selectedStudent.full_name"
+              class="w-full h-full object-cover"
+            />
+            <span v-else class="text-xs font-bold text-white">{{ getInitials(selectedStudent.full_name) }}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedStudent.full_name }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedStudent.student_id_no }} · {{ selectedStudent.selection_batch_name || '—' }}</p>
           </div>
         </div>
 
@@ -1431,7 +1417,7 @@ onMounted(async () => {
                                   </button>
                                   <button
                                     v-if="canManage"
-                                    @click.stop="deleteRecord(item.record!)"
+                                    @click.stop="confirmDeleteRecord(item.record!)"
                                     class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/30 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer"
                                   >
                                     <Trash2 :size="11" />
@@ -1493,7 +1479,7 @@ onMounted(async () => {
                                       <div class="flex items-center gap-1 opacity-60 group-hover/card:opacity-100 transition-all duration-200 shrink-0" @click.stop>
                                         <button @click="openFilePreview(att)" class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-500/20 dark:hover:text-blue-400 transition-all cursor-pointer" title="Preview"><Eye :size="11" /></button>
                                         <a :href="getAttachmentUrl(att)" target="_blank" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/50 dark:hover:text-gray-300 transition-all cursor-pointer" title="Open"><ExternalLink :size="11" /></a>
-                                        <button v-if="canManage" @click="deleteAttachment(att)" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-all cursor-pointer" title="Delete"><Trash2 :size="11" /></button>
+                                        <button v-if="canManage" @click="confirmDeleteAttachment(att)" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-all cursor-pointer" title="Delete"><Trash2 :size="11" /></button>
                                       </div>
                                     </div>
                                   </div>
@@ -1535,7 +1521,7 @@ onMounted(async () => {
                             <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-all duration-200 shrink-0" @click.stop>
                               <button @click="openFilePreview(item.attachment!)" class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:text-blue-400 transition-all cursor-pointer" title="Preview"><Eye :size="11" /></button>
                               <a :href="getAttachmentUrl(item.attachment)" target="_blank" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/50 dark:hover:text-gray-300 transition-all cursor-pointer" title="Open"><ExternalLink :size="11" /></a>
-                              <button v-if="canManage" @click="deleteAttachment(item.attachment)" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-all cursor-pointer" title="Delete"><Trash2 :size="11" /></button>
+                              <button v-if="canManage" @click="confirmDeleteAttachment(item.attachment)" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-all cursor-pointer" title="Delete"><Trash2 :size="11" /></button>
                             </div>
                           </div>
                         </div>
@@ -1747,6 +1733,41 @@ onMounted(async () => {
           </div>
         </div>
       </transition>
+    </Teleport>
+
+    <!-- ==================== CONFIRM DELETE MODAL ==================== -->
+    <Teleport to="body">
+      <div v-if="showConfirmDelete" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="closeConfirmDelete"></div>
+        <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle :size="20" class="text-red-500" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">Confirm Delete</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ confirmDeleteMessage }}</p>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <button
+              @click="closeConfirmDelete"
+              :disabled="isConfirmDeleting"
+              class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              @click="executeConfirmDelete"
+              :disabled="isConfirmDeleting"
+              class="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-all duration-200 cursor-pointer disabled:opacity-50 inline-flex items-center gap-2"
+            >
+              <Loader2 v-if="isConfirmDeleting" :size="14" class="animate-spin" />
+              {{ isConfirmDeleting ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </div>
 </template>
