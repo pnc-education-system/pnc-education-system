@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 import { recordsApi } from '@/services/api/records'
 import type { Student, StudentRecord } from '@/types'
-import { FileText, AlertTriangle, Award, MessageSquare, Calendar, Loader2 } from 'lucide-vue-next'
+import { FileText, AlertTriangle, Award, MessageSquare, Calendar, Loader2, Pencil } from 'lucide-vue-next'
 
 const props = defineProps<{ student: Student }>()
-const { t } = useI18n()
+const router = useRouter()
+const authStore = useAuthStore()
 const { showErrorToast } = useToast()
+
+const canManage = computed(() => authStore.hasPermission('records.manage') || authStore.hasPermission('students.edit'))
+
+function editRecord(record: StudentRecord) {
+  router.push({
+    name: 'Records',
+    query: { student_id: String(props.student.id), edit_id: String(record.id) },
+  })
+}
 
 const records = ref<StudentRecord[]>([])
 const isLoading = ref(false)
@@ -71,16 +82,26 @@ watch(() => props.student.id, loadRecords)
             :class="getRecordStyle(record.record_type).gradient">
             <component :is="getRecordStyle(record.record_type).icon" :size="17" />
           </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between gap-3">
+          <div class="flex-1 min-w-0">              <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <h4 class="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">{{ record.title }}</h4>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">{{ record.description }}</p>
               </div>
-              <span class="flex-shrink-0 flex items-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/30 px-2.5 py-1 rounded-full whitespace-nowrap mt-0.5">
-                <Calendar :size="11" />
-                {{ formatDate(record.recorded_at || record.created_at) }}
-              </span>
+              <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+                <!-- Edit Icon -->
+                <button
+                  v-if="canManage"
+                  @click.stop="editRecord(record)"
+                  class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/30 hover:bg-amber-50 dark:hover:bg-amber-500/15 hover:text-amber-600 dark:hover:text-amber-400 border border-transparent hover:border-amber-200 dark:hover:border-amber-500/30 transition-all duration-200 cursor-pointer"
+                  title="Edit record"
+                >
+                  <Pencil :size="13" />
+                </button>
+                <span class="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/30 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  <Calendar :size="11" />
+                  {{ formatDate(record.recorded_at || record.created_at) }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
