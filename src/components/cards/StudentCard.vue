@@ -302,6 +302,11 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
 
           <div v-if="showActions && student" class="flex items-center justify-center gap-1.5 px-3 pb-2 pt-1.5 border-t border-gray-100">
             <button @click="emit('preview', student.id)" class="px-2 py-0.5 rounded text-[8px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer">Preview</button>
+          </div>
+        </div>
+
+        <!-- ── MODERN ── -->
+        <div v-if="layout === 'modern'"
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
           :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
@@ -464,7 +469,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               <div class="bg-gray-900 rounded p-0.5 border border-amber-400/15 shrink-0" :style="{ width: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px', height: size === 'sm' ? '38px' : size === 'lg' ? '54px' : '46px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-800 rounded">
-                  <Loader2 class="w-3 h-3 text-amber-500 animate-spin" />
+                  <Loader2 class="w-3 h-3 text-amber-500 animate-spin"></Loader2>
                 </div>
               </div>
             </div>
@@ -583,7 +588,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               <div class="bg-white rounded-lg p-1 border-2 border-blue-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin"></Loader2>
                 </div>
               </div>
             </div>
@@ -658,7 +663,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               <div class="bg-white rounded-lg p-1 border-2 border-yellow-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin"></Loader2>
                 </div>
               </div>
             </div>
@@ -1112,7 +1117,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               <div class="bg-white rounded-lg p-1 border-2 border-[#1B3FA0] shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
                 <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
-                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin" />
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin"></Loader2>
                 </div>
               </div>
             </div>
