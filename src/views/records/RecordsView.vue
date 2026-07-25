@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { recordsApi, type CreateStudentRecordPayload, type UpdateStudentRecordPayload } from '@/services/api/records'
 import { studentsApi } from '@/services/api/students'
 import { useAuthStore } from '@/stores/auth'
+import { resolvePhotoUrl } from '@/utils/photoUrl'
 import type { BackendStudent, StudentRecord, StudentAttachment } from '@/types'
 import {
   FileText,
@@ -857,8 +858,14 @@ onMounted(async () => {
           v-if="selectedStudent"
           class="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20"
         >
-          <div class="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <span class="text-xs font-bold text-white">{{ getInitials(selectedStudent.full_name) }}</span>
+          <div class="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img
+              v-if="selectedStudent.photo_path"
+              :src="resolvePhotoUrl(selectedStudent.photo_path, selectedStudent.id)"
+              :alt="selectedStudent.full_name"
+              class="w-full h-full object-cover"
+            />
+            <span v-else class="text-xs font-bold text-white">{{ getInitials(selectedStudent.full_name) }}</span>
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedStudent.full_name }}</p>

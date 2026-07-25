@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, shallowRef, onMounted, onUnmounted, type Component } from 'vue'
+import { ref, computed, shallowRef, onMounted, onUnmounted, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStudentsStore } from '@/stores/students'
 import { useAuthStore } from '@/stores/auth'
@@ -151,7 +151,21 @@ async function loadStudent() {
   } finally { loading.value = false }
 }
 
-onMounted(() => { loadStudent() })
+// ── Auto-switch to tab from query param ──
+watch(() => route.query.tab, (tabValue) => {
+  if (tabValue && tabs.some(t => t.id === tabValue)) {
+    switchTab(tabValue as TabId)
+  }
+})
+
+onMounted(() => {
+  loadStudent()
+  // Check if there's a tab query param to auto-switch
+  const tabParam = route.query.tab as string | undefined
+  if (tabParam && tabs.some(t => t.id === tabParam)) {
+    switchTab(tabParam as TabId)
+  }
+})
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'

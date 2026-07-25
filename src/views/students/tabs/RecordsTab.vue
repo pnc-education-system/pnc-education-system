@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 import { recordsApi } from '@/services/api/records'
 import type { Student, StudentRecord } from '@/types'
-import { FileText, AlertTriangle, Award, MessageSquare, Calendar, Loader2 } from 'lucide-vue-next'
+import { FileText, AlertTriangle, Award, MessageSquare, Calendar, Loader2, Plus, ExternalLink } from 'lucide-vue-next'
 
+const router = useRouter()
 const props = defineProps<{ student: Student }>()
 const { t } = useI18n()
 const { showErrorToast } = useToast()
+const authStore = useAuthStore()
 
 const records = ref<StudentRecord[]>([])
 const isLoading = ref(false)
+const canManage = authStore.hasPermission('records.manage') || authStore.hasPermission('students.edit')
 
 const typeIconMap: Record<string, { icon: any; gradient: string; borderHover: string }> = {
   academic: { icon: FileText, gradient: 'from-blue-500 to-blue-600', borderHover: 'hover:border-blue-200 dark:hover:border-blue-500/30' },
@@ -26,6 +31,13 @@ function getRecordStyle(type: string) {
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function navigateToRecordsPage() {
+  router.push({
+    name: 'Records',
+    query: { student_id: props.student.id },
+  })
 }
 
 async function loadRecords() {
@@ -56,6 +68,21 @@ watch(() => props.student.id, loadRecords)
 
 <template>
   <div class="space-y-3.5">
+    <!-- Header with Add Record button -->
+    <div class="flex items-center justify-between mb-2">
+      <h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        {{ t('records.title') || 'Records' }}
+      </h4>
+      <button
+        v-if="canManage"
+        @click="navigateToRecordsPage"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
+      >
+        <Plus :size="13" />
+        {{ t('records.add_record_btn') || 'Add Record' }}
+      </button>
+    </div>
+
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-16">
       <Loader2 :size="24" class="text-blue-500 animate-spin" />
@@ -92,6 +119,14 @@ watch(() => props.student.id, loadRecords)
         </div>
         <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">{{ t('records.no_records') }}</p>
         <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ t('records.no_records_hint') }}</p>
+        <button
+          v-if="canManage"
+          @click="navigateToRecordsPage"
+          class="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
+        >
+          <ExternalLink :size="13" />
+          Manage Records
+        </button>
       </div>
     </template>
   </div>
