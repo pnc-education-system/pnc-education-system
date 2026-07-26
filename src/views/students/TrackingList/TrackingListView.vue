@@ -472,16 +472,6 @@ function getInitials(name: string): string {
   return getInitialsUtil(name)
 }
 
-function resolvePhotoUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (/^https?:\/\//i.test(path)) return path
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
-  const apiOrigin = new URL(apiBase).origin
-  if (path.startsWith('/storage/')) return `${apiOrigin}${path}`
-  if (path.startsWith('storage/')) return `${apiOrigin}/${path}`
-  return `${apiOrigin}/storage/${path.replace(/^\/+/, '')}`
-}
-
 function goToPage(page: number) {
   if (page < 1 || page > store.lastPage) return
   loadStudents(page)
