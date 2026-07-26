@@ -516,7 +516,40 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
               </div>
             </div>
 
-            <p class="text-center text-amber-400/20 text-[7px] font-medium">Passerelles Numériques · {{ student?.intake_year || '—' }}</p>
+            <!-- Name -->
+            <p class="font-bold text-gray-900 text-center truncate w-full px-2" :class="size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'">
+              {{ displayFullName }}
+            </p>
+
+            <!-- ID -->
+            <p class="font-mono font-semibold text-green-600 text-center tracking-wide" :class="size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'">
+              {{ displayStudentId }}
+            </p>
+
+            <!-- Status & Pills -->
+            <div class="flex items-center gap-1.5 flex-wrap justify-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[9px] font-semibold bg-green-100 text-green-700 border border-green-200">
+                {{ displayStatus }}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">{{ displayBatchName }}</span>
+              <span v-if="displayIntakeYear !== 'N/A'" class="px-2 py-0.5 rounded text-[9px] font-medium text-gray-600 bg-gray-100 border border-gray-200">Intake: {{ displayIntakeYear }}</span>
+            </div>
+
+            <div class="flex-1 min-h-[4px]"></div>
+
+            <!-- QR -->
+            <div class="flex items-center justify-between w-full px-1">
+              <div class="flex-1 min-w-0 pr-2">
+                <p class="text-[8px] text-gray-500 font-semibold">Scan to verify</p>
+                <p class="text-[8px] text-gray-600 font-mono truncate">{{ displayStudentId }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-1 border-2 border-green-500 shrink-0 shadow-sm" :style="{ width: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px', height: size === 'sm' ? '40px' : size === 'lg' ? '56px' : '48px' }">
+                <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR" class="w-full h-full object-contain" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                  <Loader2 class="w-3 h-3 text-gray-300 animate-spin"></Loader2>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

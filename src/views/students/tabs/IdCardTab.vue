@@ -2,11 +2,10 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Student as AppStudent } from '@/types'
-import type { Student as CardStudent, CardTheme } from '@/types/card'
-import { themeColors } from '@/types/card'
+import type { CardStudent } from '@/services/api/cards'
 import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
-import { Download, Printer, Share2, Check, Palette } from 'lucide-vue-next'
-import IDCard from '@/components/card/IDCard.vue'
+import { Download, Printer, Share2, Check, CreditCard, RotateCcw } from 'lucide-vue-next'
+import StudentCard from '@/components/cards/StudentCard.vue'
 
 const { t } = useI18n()
 
@@ -16,33 +15,39 @@ const printSuccess = ref(false)
 const shareSuccess = ref(false)
 const cardContainerRef = ref<HTMLElement | null>(null)
 
-// Card theme state
-const selectedTheme = ref<CardTheme>('blue')
+// Card layout state (matching batch card generator)
+const selectedLayout = ref<'classic' | 'modern' | 'premium' | 'corporate' | 'corporate-blue' | 'corporate-yellow' | 'official'>('classic')
+const showCardBack = ref(false)
 
-const themeOptions: { id: CardTheme; name: string; colors: { primary: string; secondary: string } }[] = [
-  { id: 'blue', name: 'Blue', colors: { primary: '#1e3a8a', secondary: '#3b82f6' } },
-  { id: 'green', name: 'Green', colors: { primary: '#166534', secondary: '#22c55e' } },
-  { id: 'purple', name: 'Purple', colors: { primary: '#7c3aed', secondary: '#a855f7' } },
-  { id: 'orange', name: 'Orange', colors: { primary: '#c2410c', secondary: '#f97316' } },
-  { id: 'dark', name: 'Dark', colors: { primary: '#1f2937', secondary: '#374151' } },
+const layoutOptions = [
+  { id: 'classic' as const, name: 'Classic' },
+  { id: 'modern' as const, name: 'Modern' },
+  { id: 'premium' as const, name: 'Premium' },
+  { id: 'corporate' as const, name: 'Corp' },
+  { id: 'corporate-blue' as const, name: 'Corp Blue' },
+  { id: 'corporate-yellow' as const, name: 'Corp Yellow' },
+  { id: 'official' as const, name: 'Official' },
 ]
 
-// Map app Student to card Student
+// Map AppStudent to CardStudent (API format)
 const cardStudent = computed<CardStudent>(() => {
   const s = props.student
   return {
-    id: s.id,
-    name: s.fullName,
-    avatar: s.photoPath ? (resolvePhotoUrl(s.photoPath, s.id) ?? undefined) : undefined,
-    studentId: s.studentIdNo,
-    batch: s.selectionBatchName || `Batch ${s.intakeYear || ''}`,
-    year: s.intakeYear || new Date().getFullYear().toString(),
-    status: mapStatus(s.status),
-    school: 'Passerellesnumeriques Cambodia',
-    logo: '',
-    emergencyContact: '',
-    website: 'https://pnc.edu.kh',
-    address: s.province || 'Phnom Penh, Cambodia',
+    id: Number(s.id),
+    student_id_no: s.studentIdNo,
+    full_name: s.fullName,
+    gender: s.gender,
+    photo_path: s.photoPath || null,
+    dob: s.dob || null,
+    province: s.province || null,
+    selection_batch_name: s.selectionBatchName || null,
+    selection_batch_id: s.selectionBatchId || null,
+    enrollment_status: s.status,
+    intake_year: s.intakeYear ? Number(s.intakeYear) : null,
+    phone: s.phone || null,
+    email: s.email || null,
+    high_school: s.highSchool || null,
+    qr_token: null,
   }
 })
 
@@ -91,7 +96,6 @@ async function downloadCard() {
 
 async function printCard() {
   const s = props.student
-  const colors = themeColors[selectedTheme.value]
   const photoUrl = s.photoPath ? resolvePhotoUrl(s.photoPath, s.id) : null
   const initials = getInitials(s.fullName)
   const batch = s.selectionBatchName || `Batch ${s.intakeYear || ''}`
@@ -128,7 +132,7 @@ async function printCard() {
           position: relative;
         }
         .card-header {
-          background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+          background: linear-gradient(135deg, #1e3a5f, #2563eb);
           padding: 12px 16px;
           display: flex;
           align-items: center;
@@ -162,12 +166,12 @@ async function printCard() {
           width: 80px;
           height: 80px;
           border-radius: 50%;
-          border: 4px solid ${colors.primary};
+          border: 4px solid #1e3a5f;
           overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+          background: linear-gradient(135deg, #1e3a5f, #2563eb);
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .avatar-initials { font-size: 32px; font-weight: bold; color: white; }
@@ -179,12 +183,12 @@ async function printCard() {
           border-radius: 999px;
           font-size: 10px;
           font-weight: bold;
-          border: 1px solid ${colors.secondary}88;
-          background: ${colors.secondary}22;
-          color: ${colors.primary};
+          border: 1px solid #2563eb88;
+          background: #2563eb22;
+          color: #1e3a5f;
         }
         .student-name { font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 4px; }
-        .student-id { font-size: 12px; font-weight: 600; color: ${colors.secondary}; margin-bottom: 12px; }
+        .student-id { font-size: 12px; font-weight: 600; color: #2563eb; margin-bottom: 12px; }
         .detail-pills { display: flex; gap: 8px; margin-bottom: 12px; }
         .pill { padding: 4px 12px; border-radius: 999px; font-size: 11px; background: #f1f5f9; color: #1e293b; }
         .qrcode {
@@ -195,7 +199,7 @@ async function printCard() {
           background: white;
           border-radius: 8px;
           padding: 4px;
-          border: 2px solid ${colors.secondary};
+          border: 2px solid #2563eb;
         }
         .qrcode-inner {
           width: 100%;
@@ -209,7 +213,7 @@ async function printCard() {
         .qrcode-inner svg { width: 40px; height: 40px; color: #9ca3af; }
         .scan-text { font-size: 10px; color: #9ca3af; }
         .card-footer {
-          background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});
+          background: linear-gradient(135deg, #1e3a5f, #2563eb);
           padding: 8px 16px;
           text-align: center;
         }
@@ -315,86 +319,119 @@ async function shareCard() {
     }
   }
 }
+
+function getLayoutColor(layout: string): string {
+  const colors: Record<string, string> = {
+    classic: 'bg-blue-500',
+    modern: 'bg-indigo-500',
+    premium: 'bg-amber-500',
+    corporate: 'bg-green-500',
+    'corporate-blue': 'bg-blue-500',
+    'corporate-yellow': 'bg-yellow-500',
+    official: 'bg-blue-700',
+  }
+  return colors[layout] || 'bg-blue-500'
+}
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- ID Card Preview using the shared IDCard component -->
-    <div ref="cardContainerRef" class="flex justify-center">
-      <IDCard
-        :student="cardStudent"
-        template="classic"
-        :theme="selectedTheme"
-        background="white"
-        :showQRCode="true"
-        :showAcademicYear="true"
-        :showBatch="true"
-        :showStatus="true"
-        :showFooter="true"
-      />
-    </div>
+  <div class="space-y-6">
+    <!-- Side-by-side layout: Card on left, controls on right -->
+    <div class="flex flex-col lg:flex-row gap-6 items-start justify-center">
+      <!-- Left: Card Preview -->
+      <div ref="cardContainerRef" class="flex-shrink-0 mx-auto lg:mx-0">
+        <StudentCard
+          :student="cardStudent"
+          :layout="selectedLayout"
+          size="md"
+          :showBack="showCardBack"
+        />
+      </div>
 
-    <!-- Theme Selector -->
-    <div class="max-w-sm mx-auto">
-      <div class="bg-white dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-        <div class="flex items-center gap-2 mb-3">
-          <Palette :size="16" class="text-gray-400 dark:text-gray-500" />
-          <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Card Theme</span>
-        </div>
-        <div class="flex gap-2">
-          <button
-            v-for="theme in themeOptions"
-            :key="theme.id"
-            @click="selectedTheme = theme.id"
-            class="flex-1 flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 transition-all duration-200"
-            :class="selectedTheme === theme.id
-              ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800/40 bg-blue-50/50 dark:bg-blue-500/5'
-              : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'"
-          >
-            <div class="flex gap-1">
-              <div
-                class="w-4 h-4 rounded-full ring-1 ring-white/30"
-                :style="{ backgroundColor: theme.colors.primary }"
-              ></div>
-              <div
-                class="w-4 h-4 rounded-full ring-1 ring-white/30"
-                :style="{ backgroundColor: theme.colors.secondary }"
-              ></div>
-            </div>
-            <span
-              class="text-[10px] font-semibold"
-              :class="selectedTheme === theme.id ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'"
+      <!-- Right: Controls Panel -->
+      <div class="flex-1 w-full lg:max-w-sm space-y-4">
+        <!-- Template Selector -->
+        <div class="bg-white dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <CreditCard :size="15" class="text-gray-400 dark:text-gray-500" />
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Template</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            <button
+              v-for="layout in layoutOptions"
+              :key="layout.id"
+              @click="selectedLayout = layout.id"
+              class="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer"
+              :class="selectedLayout === layout.id
+                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 shadow-sm'
+                : 'bg-transparent border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50'"
             >
-              {{ theme.name }}
-            </span>
-          </button>
+              <span class="w-2 h-2 rounded-full shrink-0" :class="getLayoutColor(layout.id)"></span>
+              <span class="font-semibold truncate">{{ layout.name }}</span>
+              <span v-if="selectedLayout === layout.id" class="text-blue-600 dark:text-blue-400 ml-auto">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Front/Back Toggle + Actions -->
+        <div class="bg-white dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
+          <!-- Side toggle -->
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <RotateCcw :size="15" class="text-gray-400 dark:text-gray-500" />
+              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Card Side</span>
+            </div>
+            <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800/50 rounded-lg p-0.5 w-full">
+              <button
+                @click="showCardBack = false"
+                class="flex-1 px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer"
+                :class="!showCardBack
+                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+              >
+                Front
+              </button>
+              <button
+                @click="showCardBack = true"
+                class="flex-1 px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer"
+                :class="showCardBack
+                  ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="border-t border-gray-100 dark:border-gray-700"></div>
+
+          <!-- Action buttons -->
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <Download :size="15" class="text-gray-400 dark:text-gray-500" />
+              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <button @click="downloadCard" class="group flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 cursor-pointer" :class="{ 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700': downloadSuccess }">
+                <Download v-if="!downloadSuccess" :size="16" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-200" />
+                <Check v-else :size="16" class="text-green-500 dark:text-green-400 transition-transform duration-200" />
+                <span class="text-[10px] font-semibold" :class="downloadSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'">{{ downloadSuccess ? t('id_card_tab.downloaded') : t('id_card_tab.download') }}</span>
+              </button>
+              <button @click="printCard" class="group flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 cursor-pointer" :class="{ 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700': printSuccess }">
+                <Printer v-if="!printSuccess" :size="16" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-200" />
+                <Check v-else :size="16" class="text-green-500 dark:text-green-400 transition-transform duration-200" />
+                <span class="text-[10px] font-semibold" :class="printSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'">{{ printSuccess ? t('id_card_tab.printing') : t('id_card_tab.print') }}</span>
+              </button>
+              <button @click="shareCard" class="group flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 cursor-pointer" :class="{ 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700': shareSuccess }">
+                <Share2 v-if="!shareSuccess" :size="16" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-200" />
+                <Check v-else :size="16" class="text-green-500 dark:text-green-400 transition-transform duration-200" />
+                <span class="text-[10px] font-semibold" :class="shareSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'">{{ shareSuccess ? t('id_card_tab.shared') : t('id_card_tab.share') }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="grid grid-cols-3 gap-3 sm:gap-4 max-w-sm mx-auto">
-      <button @click="downloadCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
-        <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': downloadSuccess }">
-          <Download v-if="!downloadSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
-          <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
-        </div>
-        <span class="text-xs font-semibold" :class="downloadSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ downloadSuccess ? t('id_card_tab.downloaded') : t('id_card_tab.download') }}</span>
-      </button>
-      <button @click="printCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
-        <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': printSuccess }">
-          <Printer v-if="!printSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
-          <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
-        </div>
-        <span class="text-xs font-semibold" :class="printSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ printSuccess ? t('id_card_tab.printing') : t('id_card_tab.print') }}</span>
-      </button>
-      <button @click="shareCard" class="group flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl bg-white dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:border-gray-200 dark:hover:border-gray-600 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
-        <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center group-hover:bg-gray-100 dark:group-hover:bg-gray-600/50 transition-all duration-300 shadow-sm" :class="{ 'bg-green-50 dark:bg-green-900/30': shareSuccess }">
-          <Share2 v-if="!shareSuccess" :size="18" class="text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform duration-300" />
-          <Check v-else :size="18" class="text-green-500 dark:text-green-400 scale-110 transition-transform duration-300" />
-        </div>
-        <span class="text-xs font-semibold" :class="shareSuccess ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'">{{ shareSuccess ? t('id_card_tab.shared') : t('id_card_tab.share') }}</span>
-      </button>
     </div>
   </div>
 </template>
