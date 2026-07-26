@@ -119,6 +119,10 @@ async function fetchStudents() {
     return
   }
 
+  // Clear selection when batch or filter changes
+  selectedStudents.value = new Set()
+  selectAll.value = false
+
   try {
     console.log('Fetching students for batch:', selectedBatch.value, 'filter:', selectedFilter.value)
     const filter = selectedFilter.value === 'all' ? undefined : selectedFilter.value
@@ -181,20 +185,35 @@ async function handleGenerate() {
     return
   }
 
-  const studentsToGenerate = selectedStudents.value.size > 0
-    ? selectedStudents.value
-    : new Set(eligibleStudents.value.map(s => s.id))
-
-  if (studentsToGenerate.size === 0) {
-    showErrorToast(t('batch_gen.toast_no_students'), t('batch_gen.toast_no_students_title'))
+  if (selectedStudents.value.size === 0) {
+    showErrorToast(t('cards.selection_required'), t('cards.selection_required_title'))
     return
   }
+
+  const studentsToGenerate = selectedStudents.value
 
   isGenerating.value = true
   generationProgress.value = 0
   generationTotal.value = studentsToGenerate.size
 
   try {
+    // ── Dispatch backend queue job (populates the jobs table) ──
+    try {
+      const batchRequest = {
+        selection_batch_id: selectedBatch.value,
+        template_id: selectedTemplate.value,
+      }
+      await cardsApi.batchGenerate(batchRequest)
+      console.log('Batch card job dispatched to queue')
+      showSuccessToast(
+        t('batch_gen.toast_job_dispatched'),
+        t('batch_gen.toast_job_dispatched_title')
+      )
+    } catch (apiError) {
+      // Graceful degradation: if the backend is unreachable, still generate client-side
+      console.warn('Failed to dispatch batch job to backend, falling back to client-side generation:', apiError)
+    }
+
     const studentIds = Array.from(studentsToGenerate)
     const layout = selectedLayout.value
     console.log('Generating batch PDF for', studentIds.length, 'students, layout:', layout)

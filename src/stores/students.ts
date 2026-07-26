@@ -79,17 +79,12 @@ export const useStudentsStore = defineStore('students', () => {
     return students.value.find(s => s.id === id)
   }
 
-  async function updateStatus(id: string, status: StudentStatus, note?: string): Promise<boolean> {
+  async function updateStatus(id: string, status: StudentStatus, note?: string): Promise<void> {
     const index = students.value.findIndex(s => s.id === id)
-    if (index === -1) return false
+    if (index === -1) throw new Error('Student not found in local store')
 
-    try {
-      const backend = await studentsApi.updateStatus(Number(id), status, note)
-      students.value[index] = mapBackendStudent(backend)
-      return true
-    } catch {
-      return false
-    }
+    const backend = await studentsApi.updateStatus(Number(id), status, note)
+    students.value[index] = mapBackendStudent(backend)
   }
 
   return {

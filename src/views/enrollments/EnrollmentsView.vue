@@ -130,8 +130,10 @@ async function executeStatusChange() {
   try {
     await store.updateStatus(statusChangeId.value, statusChangeTarget.value)
     showSuccessToast(t('enrollment_management.toast_status_updated', { status: statusChangeTarget.value }), t('enrollment_management.toast_status_title'))
-  } catch {
-    showErrorToast(t('enrollment_management.toast_status_failed'), t('records.toast_error'))
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || t('enrollment_management.toast_status_failed')
+    showErrorToast(errorMessage, t('records.toast_error'))
   }
   statusChangeId.value = null
   statusChangeTarget.value = 'pending'

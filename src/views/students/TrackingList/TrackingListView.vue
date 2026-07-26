@@ -294,11 +294,13 @@ function cancelStatusChange() {
 
 async function executeStatusChange() {
   if (!statusChangeId.value) return
-  const success = await store.updateStatus(statusChangeId.value, statusChangeTarget.value, statusChangeNote.value)
-  if (success) {
+  try {
+    await store.updateStatus(statusChangeId.value, statusChangeTarget.value, statusChangeNote.value)
     showSuccessToast(`Student status updated to ${statusChangeTarget.value} successfully.`, 'Status Updated')
-  } else {
-    showErrorToast('Failed to update student status.', 'Error')
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = apiError?.response?.data?.message || apiError?.message || 'Failed to update student status.'
+    showErrorToast(errorMessage, 'Error')
   }
   statusChangeId.value = null
   statusChangeTarget.value = 'enrolled'

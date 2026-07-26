@@ -107,10 +107,9 @@ export const cardsApi = {
 
   /** Download card PDF */
   async downloadPdf(studentId: number, layout?: string): Promise<Blob> {
-    const params: { layout?: string } = {}
-    if (layout) params.layout = layout
-    const { data } = await axiosInstance.get(`/cards/download/${studentId}`, {
-      params,
+    const body: { layout?: string } = {}
+    if (layout) body.layout = layout
+    const { data } = await axiosInstance.post(`/cards/download/${studentId}`, body, {
       responseType: 'blob',
     })
     return data as Blob

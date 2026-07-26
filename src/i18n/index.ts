@@ -1025,6 +1025,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'batch_gen.status_not_enrolled': 'not enrolled - skipped',
     'batch_gen.status_ready': 'ready',
     'batch_gen.progress_label': '{current} / {total}',
+    'batch_gen.toast_job_dispatched': 'Batch card generation job has been queued on the server.',
+    'batch_gen.toast_job_dispatched_title': 'Job Dispatched',
   },  kh: {
     // Dashboard
     'dashboard.title': 'ផ្ទាំងគ្រប់គ្រង',
@@ -2041,6 +2043,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'batch_gen.status_not_enrolled': 'មិនទាន់ចុះឈ្មោះ - បានរំលង',
     'batch_gen.status_ready': 'រួចរាល់',
     'batch_gen.progress_label': '{current} / {total}',
+    'batch_gen.toast_job_dispatched': 'ការងារបង្កើតប័ណ្ណជាក្រុមត្រូវបានដាក់ចូលក្នុងជួររួចរាល់។',
+    'batch_gen.toast_job_dispatched_title': 'ការងារត្រូវបានដាក់ជួរ',
   },
 }
 

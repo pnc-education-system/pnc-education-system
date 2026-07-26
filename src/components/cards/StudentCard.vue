@@ -222,6 +222,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
           :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :data-student-card="student?.id"
         >
           <!-- Header bar -->
           <div class="bg-[#1e3a5f] px-3.5 py-2">
@@ -310,6 +311,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300 shadow-md' : 'border-gray-200 dark:border-gray-600 shadow'"
           :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :data-student-card="student?.id"
         >
           <!-- Top gradient band -->
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-7">
@@ -394,6 +396,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           class="relative w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300 shadow-md' : 'border-gray-200/60 dark:border-gray-600/60 shadow'"
           :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
+          :data-student-card="student?.id"
         >
           <!-- Gold line -->
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
@@ -784,6 +787,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
           :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :data-student-card-back="student?.id"
         >
           <div class="bg-[#1e3a5f] px-3.5 py-2.5">
             <div class="flex items-center gap-2">
@@ -842,6 +846,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-emerald-300' : 'border-gray-200 dark:border-gray-600'"
           :style="{ background: '#fff', fontFamily: 'Inter, sans-serif' }"
+          :data-student-card-back="student?.id"
         >
           <div class="bg-gradient-to-r from-[#0f2847] to-[#2563eb] px-3.5 pt-2.5 pb-3">
             <div class="flex items-center gap-2">
@@ -900,6 +905,7 @@ watch(() => props.showBack, (val) => { isFlipped.value = val })
           class="w-full h-full rounded-xl border select-none flex flex-col overflow-hidden"
           :class="generated ? 'border-amber-300' : 'border-gray-200/60 dark:border-gray-600/60'"
           :style="{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #0f172a 100%)', fontFamily: 'Inter, sans-serif' }"
+          :data-student-card-back="student?.id"
         >
           <div class="h-[3px] bg-gradient-to-r from-amber-500/40 via-amber-400 to-amber-500/40"></div>
           <div class="px-3.5 pt-2.5 pb-2">
