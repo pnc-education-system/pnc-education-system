@@ -381,6 +381,22 @@ const onCardClick = () => {
         <span>{{ t('sidebar.records') }}</span>
       </button>
 
+      <!-- Reports -->
+      <button
+        @click="navigate('/reports')"
+        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+        :class="isActive('/reports')
+          ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+      >
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <polyline points="12 15 12 3" />
+        </svg>
+        <span>{{ t('sidebar.reports') }}</span>
+      </button>
+
       <!-- Admin Dropdown -->
       <div class="relative">
         <button
