@@ -11,6 +11,7 @@ import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batc
 import { useToast } from '@/composables/useToast'
 import * as XLSX from 'xlsx'
 import { generatePDFFromElement } from '@/utils/pdfGenerator'
+import { resolvePhotoUrl } from '@/utils/photoUrl'
 import {
   FileText,
   Users,
@@ -131,6 +132,18 @@ interface ReportRow {
   [key: string]: string | number | null | undefined
 }
 
+interface CardStudentDetail {
+  fullName: string
+  studentIdNo: string
+  batch: string
+  status: string
+  photoUrl: string | null
+  intakeYear?: string | null
+}
+
+// Stores card student details for generating visual ID cards in PDF
+let cardsStudentDetails = ref<CardStudentDetail[]>([])
+
 // ── Fallback Demo Data (when real API data is unavailable) ──
 function getFallbackData(type: ReportType): ReportRow[] {
   const now = new Date().toISOString()
@@ -153,9 +166,9 @@ function getFallbackData(type: ReportType): ReportRow[] {
       ]
     case 'cards':
       return [
-        { 'Student ID': 'STU-2025-0001', 'Full Name': 'Sokha Chea', 'Batch': 'Intake 2025', 'Status': 'Enrolled', 'Card Generated': 'Yes' },
-        { 'Student ID': 'STU-2025-0003', 'Full Name': 'Rithy Prak', 'Batch': 'Intake 2025', 'Status': 'Enrolled', 'Card Generated': 'Pending' },
-        { 'Student ID': 'STU-2025-0005', 'Full Name': 'Maly Heng', 'Batch': 'Intake 2025', 'Status': 'Enrolled', 'Card Generated': 'Yes' },
+        { 'Student ID': 'STU-2025-0001', 'Full Name': 'Sokha Chea', 'Batch': 'Intake 2025', 'Status': 'Enrolled', 'Has Photo': 'Yes', 'Card Generated': 'Yes', 'Province': 'Phnom Penh' },
+        { 'Student ID': 'STU-2025-0003', 'Full Name': 'Rithy Prak', 'Batch': 'Intake 2025', 'Status': 'Approved', 'Has Photo': 'No', 'Card Generated': 'Pending', 'Province': 'Battambang' },
+        { 'Student ID': 'STU-2025-0005', 'Full Name': 'Maly Heng', 'Batch': 'Intake 2025', 'Status': 'Enrolled', 'Has Photo': 'Yes', 'Card Generated': 'Yes', 'Province': 'Takeo' },
       ]
     case 'evaluation':
       return [
@@ -211,16 +224,30 @@ async function fetchReportData(type: ReportType): Promise<ReportRow[]> {
             'Phone': s.phone || '—',
             'Email': s.email || '—',
           }))
-        case 'cards':
-          return studentsStore.students
-            .filter(s => s.status === 'enrolled')
-            .map(s => ({
-              'Student ID': s.studentIdNo,
-              'Full Name': s.fullName,
-              'Batch': s.selectionBatchName || '—',
-              'Status': 'Enrolled',
-              'Card Generated': s.photoPath ? 'Yes' : 'Pending',
-            }))
+        case 'cards': {
+          const filtered = studentsStore.students
+            .filter(s => s.status === 'enrolled' || s.status === 'pending' || s.status === 'approved')
+          
+          // Store card details for visual ID card generation
+          cardsStudentDetails.value = filtered.map(s => ({
+            fullName: s.fullName,
+            studentIdNo: s.studentIdNo,
+            batch: s.selectionBatchName || '—',
+            status: s.status.charAt(0).toUpperCase() + s.status.slice(1),
+            photoUrl: s.photoPath ? resolvePhotoUrl(s.photoPath, s.id) : null,
+            intakeYear: s.intakeYear || null,
+          }))
+          
+          return filtered.map(s => ({
+            'Student ID': s.studentIdNo,
+            'Full Name': s.fullName,
+            'Batch': s.selectionBatchName || '—',
+            'Status': s.status.charAt(0).toUpperCase() + s.status.slice(1),
+            'Has Photo': s.photoPath ? 'Yes' : 'No',
+            'Card Generated': s.photoPath ? 'Yes' : 'Pending',
+            'Province': s.province || '—',
+          }))
+        }
         case 'evaluation':
           return studentsStore.students.map(s => ({
             'Student ID': s.studentIdNo,
@@ -252,10 +279,189 @@ async function fetchReportData(type: ReportType): Promise<ReportRow[]> {
   return getFallbackData(type)
 }
 
+// ── Generate Visual ID Card Front HTML — matches Classic template exactly ──
+function generateCardFrontHTML(student: CardStudentDetail): string {
+  const initials = student.fullName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'ST'
+  
+  const photoHtml = student.photoUrl
+    ? `<img src="${student.photoUrl}" alt="${student.fullName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" onerror="this.style.display='none'" />`
+    : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #60A5FA, #2563EB); border-radius: 50%;">
+        <span style="color: white; font-weight: 700; font-size: 18px;">${initials}</span>
+       </div>`
+
+  const intakeYear = student.intakeYear || new Date().getFullYear().toString()
+  const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+    'Enrolled': { bg: '#ECFDF5', text: '#059669', dot: '#10B981' },
+    'Pending': { bg: '#FFFBEB', text: '#D97706', dot: '#F59E0B' },
+    'Approved': { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
+    'Rejected': { bg: '#FEF2F2', text: '#DC2626', dot: '#EF4444' },
+    'Inactive': { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
+  }
+  const st = statusStyles[student.status] || statusStyles['Pending']
+
+  return `
+    <div style="display: inline-flex; flex-direction: column; width: 230px; min-height: 310px; background: #ffffff; border-radius: 12px; border: 1px solid #d1d5db; overflow: hidden; page-break-inside: avoid; vertical-align: top; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+      <!-- ══ Header bar (matches StudentCard classic) ══ -->
+      <div style="background: #1e3a5f; padding: 8px 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <span style="color: white; font-size: 8px; font-weight: 800; letter-spacing: 0.5px;">PNC</span>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="color: white; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Passerellesnumeriques Cambodia</div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 7px;">Cambodia</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ Body ══ -->
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 10px 8px; gap: 3px;">
+        <!-- Photo -->
+        <div style="width: 62px; height: 62px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; flex-shrink: 0; margin-bottom: 4px;">
+          ${photoHtml}
+        </div>
+
+        <!-- Status badge (matches StudentCard: inline-flex with dot) -->
+        <div style="text-align: center; margin-bottom: 2px;">
+          <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: 8px; font-weight: 600; background: ${st.bg}; color: ${st.text};">
+            <span style="width: 4px; height: 4px; border-radius: 50%; background: ${st.dot}; display: inline-block;"></span>
+            ${student.status}
+          </span>
+        </div>
+
+        <!-- Name (font-bold text-gray-800) -->
+        <div style="text-align: center; padding: 0 4px; width: 100%;">
+          <div style="font-size: 12px; font-weight: 700; color: #1F2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${student.fullName}</div>
+        </div>
+
+        <!-- Student ID (font-mono font-semibold text-blue-500) -->
+        <div style="text-align: center; padding: 0 4px;">
+          <div style="font-family: 'Courier New', monospace; font-size: 10px; font-weight: 600; color: #3B82F6; letter-spacing: 0.5px;">${student.studentIdNo}</div>
+        </div>
+
+        <!-- Status + Batch + Year (matches inline-flex items-center gap-1.5) -->
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 2px;">
+          <span style="font-size: 8px; color: #9CA3AF; font-weight: 500;">${student.batch}</span>
+          <span style="font-size: 8px; color: #D1D5DB;">·</span>
+          <span style="font-size: 8px; color: #9CA3AF; font-weight: 500;">${intakeYear}</span>
+        </div>
+
+        <!-- Spacer + QR-like section (matches: flex justify-between w-full) -->
+        <div style="flex: 1; min-height: 4px;"></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0 2px; margin-top: auto;">
+          <div style="flex: 1; min-width: 0; padding-right: 4px;">
+            <div style="font-size: 6px; color: #9CA3AF; font-weight: 600;">Scan to verify</div>
+            <div style="font-size: 6px; color: #D1D5DB; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${student.studentIdNo}</div>
+          </div>
+          <!-- QR placeholder -->
+          <div style="width: 34px; height: 34px; border-radius: 4px; border: 1px solid #f0f0f0; background: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#D1D5DB">
+              <path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm13-2h1v1h-1v-1zm-3 0h1v1h-1v-1zm-1 1h1v1h-1v-1zm2 0h1v1h-1v-1zm1 1h1v1h-1v-1zm-3 0h1v1h-1v-1zm1 1h1v1h-1v-1zm2 0h1v1h-1v-1zm1 1h1v1h-1v-1zm-3 0h1v1h-1v-1zm1 1h1v1h-1v-1zm2 0h1v1h-1v-1zm1 1h1v1h-1v-1z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Footer (matches: text-center text-gray-300) -->
+        <div style="text-align: center; margin-top: 4px;">
+          <span style="font-size: 6px; color: #D1D5DB; font-weight: 500;">Passerelles Numériques · ${intakeYear}</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+// ── Generate Visual ID Card Back HTML — matches Classic template exactly ──
+function generateCardBackHTML(student: CardStudentDetail): string {
+  const intakeYear = student.intakeYear || new Date().getFullYear().toString()
+  const intakeNext = (parseInt(intakeYear) + 2).toString()
+  
+  return `
+    <div style="display: inline-flex; flex-direction: column; width: 230px; min-height: 310px; background: #ffffff; border-radius: 12px; border: 1px solid #d1d5db; overflow: hidden; page-break-inside: avoid; vertical-align: top; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+      <!-- ══ Header bar (same as front) ══ -->
+      <div style="background: #1e3a5f; padding: 8px 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <span style="color: white; font-size: 8px; font-weight: 800; letter-spacing: 0.5px;">PNC</span>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="color: white; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Passerellesnumeriques Cambodia</div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 7px;">Education for a Better Future</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ Body ══ -->
+      <div style="flex: 1; display: flex; flex-direction: column; padding: 10px 12px;">
+        <!-- About Us -->
+        <div style="margin-bottom: 6px;">
+          <div style="font-size: 7px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">About Us</div>
+          <div style="background: #F9FAFB; border-radius: 6px; border: 1px solid #F3F4F6; padding: 6px 8px;">
+            <p style="font-size: 6.5px; line-height: 1.5; color: #4B5563; margin: 0; text-align: justify;">
+              <strong>Passerellesnumeriques Cambodia</strong> is a French non-profit organization, created in 2005, which intends to enable the most underprivileged young people access to higher education and skilled employment in the promising sector of information technology.
+            </p>
+          </div>
+        </div>
+
+        <!-- Education Manager (matches: text-blue-600 uppercase, name in bold) -->
+        <div style="text-align: center; margin-bottom: 8px;">
+          <div style="font-size: 7px; font-weight: 600; color: #2563EB; text-transform: uppercase; letter-spacing: 0.5px;">Education Manager</div>
+          <div style="font-size: 10px; font-weight: 700; color: #111827; margin-top: 1px;">SIM HUL</div>
+        </div>
+
+        <!-- Card Details (matches: label + value rows) -->
+        <div style="margin-bottom: 6px;">
+          <div style="font-size: 7px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Card Details</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 7px;">
+            <tr>
+              <td style="padding: 3px 4px; color: #6B7280; font-weight: 600; width: 45%; border-bottom: 1px solid #F3F4F6;">Card No</td>
+              <td style="padding: 3px 4px; color: #111827; font-weight: 600; border-bottom: 1px solid #F3F4F6;">${student.studentIdNo.slice(-8)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 4px; color: #6B7280; font-weight: 600; border-bottom: 1px solid #F3F4F6;">Issue Date</td>
+              <td style="padding: 3px 4px; color: #111827; font-weight: 600; border-bottom: 1px solid #F3F4F6;">October 1, ${intakeYear}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 4px; color: #6B7280; font-weight: 600;">Expired Date</td>
+              <td style="padding: 3px 4px; color: #111827; font-weight: 600;">October 1, ${intakeNext}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Spacer -->
+        <div style="flex: 1; min-height: 4px;"></div>
+
+        <!-- Student Signature (matches border-bottom with name) -->
+        <div style="margin-top: auto;">
+          <div style="font-size: 7px; color: #6B7280; font-weight: 500; margin-bottom: 2px;">Student Signature</div>
+          <div style="border-bottom: 1.5px solid #D1D5DB; padding-bottom: 3px;">
+            <span style="font-size: 8px; font-style: italic; color: #6B7280;">${student.fullName}</span>
+          </div>
+        </div>
+
+        <!-- Website -->
+        <div style="text-align: center; margin-top: 3px;">
+          <span style="font-size: 6px; color: #2563EB; font-weight: 600;">www.passerellesnumeriques.org</span>
+        </div>
+      </div>
+
+      <!-- ══ Footer ══ -->
+      <div style="background: #F9FAFB; padding: 5px; text-align: center; border-top: 1px solid #E5E7EB;">
+        <span style="font-size: 6px; color: #9CA3AF;">Passerelles Numériques Cambodge · Student ID Card</span>
+      </div>
+    </div>
+  `
+}
+
 function generateReportHTML(type: ReportType, data: ReportRow[]): string {
   const title = getReportDisplayName(type)
   const now = new Date().toLocaleString()
 
+  // Generate data table rows
   let rows = data.map(row => {
     const cells = Object.values(row)
       .map(val => `<td style="padding: 6px 10px; border: 1px solid #ddd; font-size: 11px;">${val ?? ''}</td>`)
@@ -267,6 +473,53 @@ function generateReportHTML(type: ReportType, data: ReportRow[]): string {
     .map(h => `<th style="padding: 8px 10px; border: 1px solid #ddd; background: #355C8C; color: white; font-size: 11px; text-align: left; font-weight: 600;">${h}</th>`)
     .join('')
 
+  // For 'cards' report type: generate visual ID cards (front + back side by side)
+  let cardsSection = ''
+  if (type === 'cards' && cardsStudentDetails.value.length > 0) {
+    const cardsHtml = cardsStudentDetails.value.map(s => {
+      const front = generateCardFrontHTML(s)
+      const back = generateCardBackHTML(s)
+      return `
+        <div style="display: inline-block; margin: 6px; page-break-inside: avoid; vertical-align: top; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px; background: #fafafa;">
+          <div style="font-size: 7px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #e5e7eb;">
+            ${s.fullName} · ${s.studentIdNo}
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            ${front}
+            ${back}
+          </div>
+        </div>
+      `
+    }).join('\n')
+    cardsSection = `
+      <div style="margin-top: 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;">
+          ${cardsHtml}
+        </div>
+      </div>
+    `
+  }
+
+  // For 'cards' type: show ONLY visual ID cards (no data table)
+  // For other types: show the data table only
+  if (type === 'cards') {
+    return `
+      <div style="font-family: Inter, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto;">
+        <div style="text-align: center; margin-bottom: 16px; border-bottom: 2px solid #355C8C; padding-bottom: 12px;">
+          <h1 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 4px;">PNC Education System</h1>
+          <h2 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 6px;">${title}</h2>
+          <p style="font-size: 10px; color: #6B7280; margin: 0;">Generated: ${now}</p>
+          <p style="font-size: 10px; color: #6B7280; margin: 2px 0 0;">Total Cards: ${data.length}</p>
+        </div>
+        ${cardsSection}
+        <div style="margin-top: 16px; padding-top: 8px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 9px; color: #9CA3AF;">
+          PNC Education System Management · Generated Card Report
+        </div>
+      </div>
+    `
+  }
+
+  // For other report types: show standard data table
   return `
     <div style="font-family: Inter, sans-serif; padding: 30px; max-width: 1000px; margin: 0 auto;">
       <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #355C8C; padding-bottom: 16px;">
@@ -337,9 +590,7 @@ async function generatePdf(type: ReportType, data: ReportRow[]): Promise<Blob> {
   } finally {
     document.body.removeChild(container)
   }
-}
-
-// ── Navigate to Card Generator page instead of downloading data report ──
+}  // ── Navigate to Card Generator page (separate from report generation) ──
 function navigateToCardGenerator() {
   const { route } = reportTypeRoutes.cards
   const query: Record<string, string> = {}
@@ -352,12 +603,6 @@ function navigateToCardGenerator() {
 
 async function handleGenerateAndDownload() {
   const type = selectedReportType.value
-
-  // For 'cards' type, navigate to Card Generator page instead of downloading
-  if (type === 'cards') {
-    navigateToCardGenerator()
-    return
-  }
 
   if (generationState.value === 'generating') return
 
@@ -719,7 +964,7 @@ onUnmounted(() => {
 
           <!-- Generate & Download Button -->
           <button
-            v-if="generationState === 'idle'"
+            v-if="generationState === 'idle' && selectedReportType !== 'cards'"
             @click="handleGenerateAndDownload"
             class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl transition-all duration-200 cursor-pointer shadow-sm shadow-blue-500/25 hover:shadow-md hover:shadow-blue-500/30 active:scale-[0.98]"
           >
@@ -727,7 +972,33 @@ onUnmounted(() => {
             {{ t('reports.generate_download') }}
           </button>
 
+          <!-- Cards-specific: Two-button layout: Generate Report + View Generator -->
+          <template v-if="generationState === 'idle' && selectedReportType === 'cards'">
+            <button
+              @click="handleGenerateAndDownload"
+              class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl transition-all duration-200 cursor-pointer shadow-sm shadow-blue-500/25 hover:shadow-md hover:shadow-blue-500/30 active:scale-[0.98] mb-3"
+            >
+              <Download :size="18" />
+              {{ t('reports.generate_download') }}
+            </button>
+            <button
+              @click="navigateToCardGenerator"
+              class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-800/50 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all duration-200 cursor-pointer"
+            >
+              <ArrowUpRight :size="18" />
+              {{ t('reports.view_page') }}
+            </button>
+          </template>
+
           <!-- Download After Success -->
+          <button
+            v-if="generationState === 'success' && selectedReportType === 'cards'"
+            @click="navigateToCardGenerator"
+            class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-800/50 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all duration-200 cursor-pointer mb-3"
+          >
+            <ArrowUpRight :size="18" />
+            {{ t('reports.view_page') }}
+          </button>
           <button
             v-if="generationState === 'success'"
             @click="resetGeneration"
