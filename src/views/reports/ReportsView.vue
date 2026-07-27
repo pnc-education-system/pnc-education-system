@@ -8,6 +8,8 @@ import { useStudentsStore } from '@/stores/students'
 import { useEnrollmentsStore } from '@/stores/enrollments'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
+import axiosInstance from '@/services/axios'
+import { reportsApi, mapReportTypeToBackend } from '@/services/api/reports'
 import { useToast } from '@/composables/useToast'
 import * as XLSX from 'xlsx'
 import { generatePDFFromElement } from '@/utils/pdfGenerator'
@@ -601,6 +603,70 @@ function navigateToCardGenerator() {
   router.push({ path: route, query })
 }
 
+/**
+ * Try to generate the report via the backend API.
+ * Returns true if successful, false if it should fall back to client-side generation.
+ */
+async function generateViaBackendApi(type: ReportType, fmt: 'xlsx' | 'pdf'): Promise<boolean> {
+  try {
+    progress.value = 15
+
+    const backendType = mapReportTypeToBackend(type)
+    const filters: {
+      batch_id?: number
+      status?: string
+    } = {}
+
+    if (selectedBatchId.value) {
+      filters.batch_id = selectedBatchId.value
+    }
+    if (selectedStatus.value && selectedStatus.value !== 'All') {
+      filters.status = selectedStatus.value
+    }
+
+    progress.value = 30
+
+    const filterParam = Object.keys(filters).length > 0 ? filters : undefined
+    const fileNameBase = getReportDisplayName(type).replace(/\s+/g, '_')
+
+    if (fmt === 'pdf') {
+      // Use the direct PDF download endpoint (streams to browser)
+      const blob = await reportsApi.downloadPdf({
+        type: backendType,
+        filters: filterParam,
+      })
+      progress.value = 80
+
+      downloadFileName.value = `${fileNameBase}_${new Date().toISOString().split('T')[0]}.pdf`
+      triggerDownload(blob, downloadFileName.value)
+    } else {
+      // For Excel: generate via backend, fetch the blob through axios, then download
+      const result = await reportsApi.generate({
+        type: backendType,
+        format: 'excel',
+        filters: filterParam,
+      })
+      progress.value = 70
+
+      if (result.url) {
+        downloadFileName.value = result.filename || `${fileNameBase}_${new Date().toISOString().split('T')[0]}.xlsx`
+        // Fetch the blob through axios (preserves auth headers) so we don't navigate away from the SPA
+        const response = await axiosInstance.get(result.url, { responseType: 'blob' })
+        const blob = response.data as Blob
+        triggerDownload(blob, downloadFileName.value)
+      } else {
+        throw new Error('Backend did not return a download URL')
+      }
+    }
+
+    progress.value = 100
+    return true
+  } catch (err) {
+    console.warn('[Reports] Backend API failed, falling back to client-side generation:', err)
+    return false
+  }
+}
+
 async function handleGenerateAndDownload() {
   const type = selectedReportType.value
 
@@ -621,29 +687,34 @@ async function handleGenerateAndDownload() {
     const fmt = exportFormat.value
     const fileNameBase = getReportDisplayName(type).replace(/\s+/g, '_')
 
-    // Simulate progress while fetching
-    progress.value = 10
+    // Try backend API first
+    const backendSuccess = await generateViaBackendApi(type, fmt)
 
-    // Fetch the data
-    const data = await fetchReportData(type)
-    progress.value = 40
+    if (!backendSuccess) {
+      // Fall back to client-side generation
+      progress.value = 10
 
-    // Generate the file
-    let blob: Blob
-    const ext = fmt === 'xlsx' ? 'xlsx' : 'pdf'
+      // Fetch the data
+      const data = await fetchReportData(type)
+      progress.value = 40
 
-    if (fmt === 'xlsx') {
-      blob = await generateExcel(type, data)
-    } else {
-      blob = await generatePdf(type, data)
+      // Generate the file
+      let blob: Blob
+      const ext = fmt === 'xlsx' ? 'xlsx' : 'pdf'
+
+      if (fmt === 'xlsx') {
+        blob = await generateExcel(type, data)
+      } else {
+        blob = await generatePdf(type, data)
+      }
+      progress.value = 80
+
+      downloadFileName.value = `${fileNameBase}_${new Date().toISOString().split('T')[0]}.${ext}`
+
+      // Trigger download
+      triggerDownload(blob, downloadFileName.value)
+      progress.value = 100
     }
-    progress.value = 80
-
-    downloadFileName.value = `${fileNameBase}_${new Date().toISOString().split('T')[0]}.${ext}`
-
-    // Trigger download
-    triggerDownload(blob, downloadFileName.value)
-    progress.value = 100
 
     // Stop timer
     if (generationTimer.value) {

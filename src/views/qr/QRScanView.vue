@@ -113,7 +113,8 @@ async function verifyQRToken(token: string) {
 }
 
 function onCameraInitError(error: unknown) {
-  console.error('Camera init error:', error)    cameraError.value = t('qr_scan.camera_init_error')
+  console.error('Camera init error:', error)
+  cameraError.value = t('qr_scan.camera_init_error')
   isScanning.value = false
 }
 
