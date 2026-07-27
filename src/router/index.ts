@@ -124,6 +124,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'records.view' },
   },
   {
+    path: '/reports',
+    name: 'Reports',
+    component: () => import('@/views/reports/ReportsView.vue'),
+    meta: { requiresAuth: true, permission: 'reports.view' },
+  },
+  {
     path: '/students/:id/edit',
     name: 'StudentEdit',
     component: () => import('@/views/students/StudentFormView.vue'),
@@ -188,6 +194,12 @@ const routes: RouteRecordRaw[] = [
     name: 'StudentProfile',
     component: () => import('@/views/students/StudentProfilePage.vue'),
     meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/evaluation/self',
+    name: 'SelfEvaluation',
+    component: () => import('@/views/evaluation/SelfEvaluation.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/',

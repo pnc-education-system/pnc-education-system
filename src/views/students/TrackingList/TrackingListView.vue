@@ -31,6 +31,7 @@ import {
   Filter,
   RefreshCw,
   Pencil,
+  ClipboardCheck,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -325,6 +326,14 @@ function navigateToRecords(student: Student) {
     name: 'StudentProfile',
     params: { id: student.id },
     query: { tab: 'records' },
+  })
+}
+
+function navigateToEvaluation(student: Student) {
+  router.push({
+    name: 'StudentProfile',
+    params: { id: student.id },
+    query: { tab: 'evaluation' },
   })
 }
 
@@ -630,44 +639,51 @@ function goToPage(page: number) {
                 <span>{{ student.selectionBatchName || '—' }}</span>
                 <span v-if="student.intakeYear">· {{ student.intakeYear }}</span>
               </div>
-              <div class="flex items-center justify-end gap-2 pt-1">
+              <div class="flex items-center justify-end gap-1 pt-1">
                 <button
                   @click="openDetail(student)"
-                  class="group relative p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+                  class="group relative p-1 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
                   :title="t('students.action_view')"
                 >
-                  <Eye :size="16" class="transition-transform group-hover:scale-110" />
+                  <Eye :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   @click="navigateToRecords(student)"
-                  class="group relative p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-all duration-200 cursor-pointer dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
+                  class="group relative p-1 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-all duration-200 cursor-pointer dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
                   title="View Records"
                 >
-                  <FileText :size="16" class="transition-transform group-hover:scale-110" />
+                  <FileText :size="14" class="transition-transform group-hover:scale-110" />
+                </button>
+                <button
+                  @click="navigateToEvaluation(student)"
+                  class="group relative p-1 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                  title="Evaluate"
+                >
+                  <ClipboardCheck :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="canManage"
                   @click="openEdit(student)"
-                  class="group relative p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
+                  class="group relative p-1 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
                   :title="t('students.action_edit')"
                 >
-                  <Pencil :size="16" class="transition-transform group-hover:scale-110" />
+                  <Pencil :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
                   @click="confirmStatusChange(student.id, 'enrolled')"
-                  class="group relative p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                  class="group relative p-1 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
                   title="Enroll"
                 >
-                  <UserCheck :size="16" class="transition-transform group-hover:scale-110" />
+                  <UserCheck :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
                   @click="confirmStatusChange(student.id, 'rejected')"
-                  class="group relative p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                  class="group relative p-1 rounded-lg text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
                   title="Reject"
                 >
-                  <XCircle :size="16" class="transition-transform group-hover:scale-110" />
+                  <XCircle :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
               </div>
             </div>
@@ -729,44 +745,51 @@ function goToPage(page: number) {
               </div>
 
               <!-- Action -->
-              <div class="col-span-2 flex items-center justify-end gap-2">
+              <div class="col-span-2 flex items-center justify-end gap-1">
                 <button
                   @click="openDetail(student)"
-                  class="group relative p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+                  class="group relative p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 cursor-pointer dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
                   :title="t('students.action_view')"
                 >
-                  <Eye :size="16" class="transition-transform group-hover:scale-110" />
+                  <Eye :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   @click="navigateToRecords(student)"
-                  class="group relative p-2 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-all duration-200 cursor-pointer dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
+                  class="group relative p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-all duration-200 cursor-pointer dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
                   title="View Records"
                 >
-                  <FileText :size="16" class="transition-transform group-hover:scale-110" />
+                  <FileText :size="14" class="transition-transform group-hover:scale-110" />
+                </button>
+                <button
+                  @click="navigateToEvaluation(student)"
+                  class="group relative p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                  title="Evaluate"
+                >
+                  <ClipboardCheck :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="canManage"
                   @click="openEdit(student)"
-                  class="group relative p-2 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
+                  class="group relative p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 transition-all duration-200 cursor-pointer dark:hover:bg-amber-500/10 dark:text-amber-400"
                   :title="t('students.action_edit')"
                 >
-                  <Pencil :size="16" class="transition-transform group-hover:scale-110" />
+                  <Pencil :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
                   @click="confirmStatusChange(student.id, 'enrolled')"
-                  class="group relative p-2 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                  class="group relative p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-all duration-200 cursor-pointer dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
                   title="Enroll"
                 >
-                  <UserCheck :size="16" class="transition-transform group-hover:scale-110" />
+                  <UserCheck :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
                 <button
                   v-if="student.status === 'pending' && canManage"
                   @click="confirmStatusChange(student.id, 'rejected')"
-                  class="group relative p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                  class="group relative p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer dark:hover:bg-red-500/10 dark:hover:text-red-400"
                   title="Reject"
                 >
-                  <XCircle :size="16" class="transition-transform group-hover:scale-110" />
+                  <XCircle :size="14" class="transition-transform group-hover:scale-110" />
                 </button>
               </div>
             </div>

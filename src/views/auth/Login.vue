@@ -55,10 +55,24 @@ function validateForm(): boolean {
   return valid
 }
 
+interface BackendErrorPayload {
+  message?: string
+  errors?: Record<string, string[]>
+}
+
+interface BackendErrorResponse {
+  error?: BackendErrorPayload
+  message?: string
+  errors?: Record<string, string[]>
+}
+
 function getFriendlyErrorMessage(err: unknown): string {
-  const apiErr = err as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } }
+  const apiErr = err as { response?: { status?: number; data?: unknown } }
   const status = apiErr.response?.status
-  const backendMessage = (apiErr.response?.data?.message || '').toLowerCase()
+  const body = (apiErr.response?.data ?? {}) as BackendErrorResponse
+
+  // Extract message from either envelope { error: { message } } or flat { message } format
+  const backendMessage = (body.error?.message || body.message || '').toLowerCase()
 
   if (status === 401) {
     if (backendMessage.includes('inactive')) {
@@ -68,11 +82,11 @@ function getFriendlyErrorMessage(err: unknown): string {
   }
 
   if (status === 422) {
-    const errors = apiErr.response?.data?.errors
-    if (errors) {
+    const unwrappedErrors = body.error?.errors || body.errors
+    if (unwrappedErrors) {
       fieldErrors.value = {
-        email: errors.email?.[0],
-        password: errors.password?.[0],
+        email: unwrappedErrors.email?.[0],
+        password: unwrappedErrors.password?.[0],
       }
     }
     return t('login.error.correct_fields')

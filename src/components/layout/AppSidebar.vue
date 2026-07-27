@@ -381,6 +381,36 @@ const onCardClick = () => {
         <span>{{ t('sidebar.records') }}</span>
       </button>
 
+      <!-- Reports -->
+      <button
+        @click="navigate('/reports')"
+        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+        :class="isActive('/reports')
+          ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+      >
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <polyline points="12 15 12 3" />
+        </svg>
+        <span>{{ t('sidebar.reports') }}</span>
+      </button>
+
+      <!-- Self Evaluation -->
+      <button
+        @click="navigate('/evaluation/self')"
+        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+        :class="isActive('/evaluation/self')
+          ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+      >
+        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+        </svg>
+        <span>Self Evaluation</span>
+      </button>
+
       <!-- Admin Dropdown -->
       <div class="relative">
         <button
