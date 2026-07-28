@@ -78,6 +78,47 @@ export interface StudentEvaluation {
   answers: StudentEvaluationAnswer[]
 }
 
+// ── Evaluation history types ──
+export interface PeriodOverPeriod {
+  previous_total: number
+  change: string
+  change_percent: string
+}
+
+export interface EvaluationHistoryItem {
+  id: number
+  student_id: number
+  evaluation_form_id: number
+  evaluation_period: string | null
+  total_score: number
+  status: string
+  submitted_at: string | null
+  reviewed_by: number | null
+  reviewer_name: string | null
+  evaluation_form: {
+    id: number
+    name: string
+  } | null
+  period_over_period: PeriodOverPeriod | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface TrendSummary {
+  average_score: number
+  improvement_rate: string
+  best_period: string | null
+  best_score: number | null
+  total_evaluations: number
+}
+
+export interface EvaluationHistoryResponse {
+  student_id: number
+  student_name: string
+  evaluations: EvaluationHistoryItem[]
+  trend_summary: TrendSummary
+}
+
 export const evaluationApi = {
   /**
    * Get all evaluations for a student.
@@ -104,6 +145,15 @@ export const evaluationApi = {
     const { data } = await axiosInstance.get(`/evaluation-templates/${id}`)
     const result = data?.data ?? data
     return (result ?? null) as EvaluationTemplate | null
+  },
+
+  /**
+   * Get evaluation history for a student with period-over-period comparison.
+   */
+  async getHistory(studentId: number): Promise<EvaluationHistoryResponse> {
+    const { data } = await axiosInstance.get(`/students/${studentId}/evaluations/history`)
+    const result = data?.data ?? data
+    return result as EvaluationHistoryResponse
   },
 
   /**

@@ -23,6 +23,7 @@ import {
   Plus,
   CalendarDays,
   Clock,
+  TrendingUp,
 } from 'lucide-vue-next'
 
 // Chart.js
@@ -101,6 +102,10 @@ async function refreshData() {
 
 function goToAddEvaluation() {
   router.push(`/evaluation/self?studentId=${props.student.id}`)
+}
+
+function goToTrend() {
+  router.push(`/students/${props.student.id}/evaluations/trend`)
 }
 
 // ── On mount ──
@@ -271,13 +276,22 @@ function scoreTextColor(s: number): string {
               · {{ latestEvaluation.submitted_at ? new Date(latestEvaluation.submitted_at).toLocaleDateString() : '' }}
             </span>
           </div>
-          <button
-            @click="goToAddEvaluation"
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 active:scale-[0.97] cursor-pointer"
-          >
-            <Plus :size="12" />
-            {{ t('evaluation_tab.add') }}
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button
+              @click="goToTrend"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all duration-200 active:scale-[0.97] cursor-pointer"
+            >
+              <TrendingUp :size="12" />
+              {{ t('evaluation_tab.view_trend') }}
+            </button>
+            <button
+              @click="goToAddEvaluation"
+              class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-200 active:scale-[0.97] cursor-pointer"
+            >
+              <Plus :size="12" />
+              {{ t('evaluation_tab.add') }}
+            </button>
+          </div>
         </div>
 
         <!-- History pills -->

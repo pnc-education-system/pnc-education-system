@@ -15,6 +15,7 @@ const studentsDropdown = ref(false)
 const enrollmentDropdown = ref(false)
 const adminDropdown = ref(false)
 const cardDropdown = ref(false)
+const evalDropdown = ref(false)
 
 const canManageEnrollments = computed(() => authStore.hasPermission('enrollment.manage'))
 const { t } = useI18n()
@@ -53,6 +54,10 @@ const onAdminClick = () => {
 
 const onCardClick = () => {
   cardDropdown.value = !cardDropdown.value
+}
+
+const onEvalClick = () => {
+  evalDropdown.value = !evalDropdown.value
 }
 </script>
 
@@ -381,6 +386,72 @@ const onCardClick = () => {
         <span>{{ t('sidebar.records') }}</span>
       </button>
 
+      <!-- Evaluation dropdown -->
+      <div class="relative">
+        <button
+          @click="onEvalClick"
+          class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+          :class="route.path.startsWith('/evaluation') || evalDropdown
+            ? 'bg-blue-500/10 text-blue-400 shadow-sm'
+            : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+        >
+          <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+          </svg>
+          <span class="flex-1">{{ t('sidebar.evaluation') }}</span>
+          <svg
+            class="w-3.5 h-3.5 text-slate-500 transition-transform duration-200"
+            :class="{ 'rotate-180': evalDropdown }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        <transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="evalDropdown"
+            class="ml-3 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3"
+          >
+            <button
+              @click="navigate('/evaluation/self')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/evaluation/self'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
+              </svg>
+              <span>{{ t('sidebar.self_evaluation') }}</span>
+            </button>
+            <button
+              @click="navigate('/evaluation/trend')"
+              class="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer text-left"
+              :class="route.path === '/evaluation/trend'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              <span>{{ t('sidebar.evaluation_trend') }}</span>
+            </button>
+          </div>
+        </transition>
+      </div>
+
       <!-- Reports -->
       <button
         @click="navigate('/reports')"
@@ -395,20 +466,6 @@ const onCardClick = () => {
           <polyline points="12 15 12 3" />
         </svg>
         <span>{{ t('sidebar.reports') }}</span>
-      </button>
-
-      <!-- Self Evaluation -->
-      <button
-        @click="navigate('/evaluation/self')"
-        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-left"
-        :class="isActive('/evaluation/self')
-          ? 'bg-blue-500/10 text-blue-400 shadow-sm'
-          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'"
-      >
-        <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-        </svg>
-        <span>Self Evaluation</span>
       </button>
 
       <!-- Admin Dropdown -->

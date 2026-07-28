@@ -202,6 +202,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/evaluation/trend',
+    name: 'EvaluationTrendRoot',
+    component: () => import('@/views/evaluation/EvaluationTrendView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/:studentId/evaluations/trend',
+    name: 'EvaluationTrend',
+    component: () => import('@/views/evaluation/EvaluationTrendView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
     path: '/',
     redirect: '/dashboard',
   },

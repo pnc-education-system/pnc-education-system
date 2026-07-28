@@ -9,5 +9,6 @@ import { selectionBatchesApi } from './selectionBatches'
 import { recordsApi } from './records'
 import { cardsApi } from './cards'
 import { evaluationApi } from './evaluation'
+import { reportsApi } from './reports'
 
-export { authApi, usersApi, rolesApi, profileApi, enrollmentsApi, importsApi, selectionBatchesApi, studentsApi, recordsApi, cardsApi, evaluationApi }
+export { authApi, usersApi, rolesApi, profileApi, enrollmentsApi, importsApi, selectionBatchesApi, studentsApi, recordsApi, cardsApi, evaluationApi, reportsApi }
