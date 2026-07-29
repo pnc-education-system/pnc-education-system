@@ -4,6 +4,7 @@ defineOptions({ name: 'CardGeneratorPage' })
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 
 const { t } = useI18n()
 import { cardsApi, type CardStudent, type CardTemplate, type CardStats } from '@/services/api/cards'
@@ -550,11 +551,17 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+const { start: startPolling } = usePolling(() => {
+  loadStudents(currentPage.value)
+  fetchStats()
+}, 10_000)
+
 onMounted(() => {
   loadBatches()
   loadStudents()
   fetchTemplates()
   fetchStats()
+  startPolling()
   document.addEventListener('keydown', handleKeydown)
 })
 

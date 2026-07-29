@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { usePolling } from '@/composables/usePolling'
 import { importsApi, type ImportLog, type ImportsMeta } from '@/services/api/imports'
 
 const { t } = useI18n()
@@ -38,6 +39,8 @@ const fetchImports = async (page = 1) => {
 
 const onFilterChange = () => fetchImports(1)
 
+const { start: startPolling } = usePolling(() => fetchImports(meta.value.current_page), 10_000)
+
 // ── Download ───────────────────────────────────────────────────────────────
 const handleDownload = async (imp: ImportLog) => {
   downloadingId.value = imp.id
@@ -59,7 +62,10 @@ const pages = computed(() => {
   return arr
 })
 
-onMounted(() => fetchImports())
+onMounted(() => {
+  fetchImports()
+  startPolling()
+})
 </script>
 
 <template>

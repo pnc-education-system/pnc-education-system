@@ -6,6 +6,7 @@ import { useUsersStore } from '@/stores/users'
 import { useRolesStore } from '@/stores/roles'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 
 const { t } = useI18n()
 
@@ -42,9 +43,15 @@ const rolesStore = useRolesStore()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
 
+const { start: startPolling } = usePolling(() => {
+  usersStore.fetchAll()
+  rolesStore.fetchAll()
+}, 10_000)
+
 onMounted(() => {
   usersStore.fetchAll()
   rolesStore.fetchAll()
+  startPolling()
 })
 
 const searchQuery = ref('')

@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 import { useEnrollmentsStore } from '@/stores/enrollments'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 import type { EnrollmentStatus } from '@/types'
 
 import {
@@ -31,8 +32,11 @@ const store = useEnrollmentsStore()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
 
+const { start: startPolling } = usePolling(() => store.fetchAll(), 10_000)
+
 onMounted(() => {
   store.fetchAll()
+  startPolling()
 })
 
 // ── Filters ──
@@ -271,8 +275,8 @@ async function refreshData() {
         <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('recent_requests.student') }}</span>
         <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('recent_requests.id') }}</span>
         <span class="col-span-3 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('recent_requests.program') }}</span>
-        <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Batch</span>
-        <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">Status</span>
+        <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('enrollment_management.table_batch') }}</span>
+        <span class="col-span-1 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase">{{ t('students.table_status') }}</span>
         <span class="col-span-2 text-[11px] font-semibold tracking-[0.08em] text-[#6B7280] dark:text-gray-400 uppercase text-right">{{ t('students.table_actions') }}</span>
       </div>
 
@@ -339,7 +343,7 @@ async function refreshData() {
                 v-if="canManage"
                 @click="navigateToEdit(enrollment.id)"
                 class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer dark:hover:bg-blue-500/10"
-                title="Edit"
+                :title="t('enrollment_management.edit_tooltip')"
               >
                 <Edit :size="16" />
               </button>
@@ -347,7 +351,7 @@ async function refreshData() {
                 v-if="canManage"
                 @click="confirmDelete(enrollment.id)"
                 class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer dark:hover:bg-red-500/10"
-                title="Delete"
+                :title="t('enrollment_management.delete_tooltip')"
               >
                 <Trash2 :size="16" />
               </button>
@@ -390,7 +394,7 @@ async function refreshData() {
                 v-if="enrollment.status === 'pending' && canManage"
                 @click="confirmStatusChange(enrollment.id, 'approved')"
                 class="p-2 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer dark:hover:bg-emerald-500/10"
-                title="Approve"
+                :title="t('enrollment_management.approve_tooltip')"
               >
                 <UserCheck :size="16" />
               </button>
@@ -406,7 +410,7 @@ async function refreshData() {
                 v-if="enrollment.status === 'pending' && canManage"
                 @click="confirmStatusChange(enrollment.id, 'rejected')"
                 class="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors cursor-pointer dark:hover:bg-red-500/10"
-                title="Reject"
+                :title="t('enrollment_management.reject_tooltip')"
               >
                 <XCircle :size="16" />
               </button>
@@ -414,7 +418,7 @@ async function refreshData() {
                 v-if="canManage"
                 @click="navigateToEdit(enrollment.id)"
                 class="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer dark:hover:bg-blue-500/10"
-                title="Edit"
+                :title="t('enrollment_management.edit_tooltip')"
               >
                 <Edit :size="16" />
               </button>
@@ -422,7 +426,7 @@ async function refreshData() {
                 v-if="canManage"
                 @click="confirmDelete(enrollment.id)"
                 class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer dark:hover:bg-red-500/10"
-                title="Delete"
+                :title="t('enrollment_management.delete_tooltip')"
               >
                 <Trash2 :size="16" />
               </button>
@@ -437,10 +441,10 @@ async function refreshData() {
               <FileText :size="32" class="text-[#9CA3AF] dark:text-gray-600" />
             </div>
             <p class="text-sm font-medium text-[#6B7280] dark:text-gray-400">
-              {{ searchQuery || statusFilter !== 'all' ? 'No enrollments match your filters' : 'No enrollments yet' }}
+              {{ searchQuery || statusFilter !== 'all' ? t('enrollment_management.empty_filtered_title') : t('enrollment_management.empty_all_title') }}
             </p>
             <p class="text-xs text-[#9CA3AF] dark:text-gray-500">
-              {{ searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filters' : 'Create your first enrollment to get started' }}
+              {{ searchQuery || statusFilter !== 'all' ? t('enrollment_management.empty_filtered_hint') : t('enrollment_management.empty_all_hint') }}
             </p>
             <button
               v-if="!searchQuery && statusFilter === 'all' && canManage"
@@ -448,7 +452,7 @@ async function refreshData() {
               class="mt-2 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               <Plus :size="16" />
-              New Enrollment
+              {{ t('enrollment_management.new_enrollment') }}
             </button>
           </div>
         </div>
@@ -460,22 +464,22 @@ async function refreshData() {
       <div v-if="deleteConfirmId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="cancelDelete"></div>
         <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
-          <h3 class="text-lg font-bold text-[#111827] dark:text-white">Confirm Delete</h3>
+          <h3 class="text-lg font-bold text-[#111827] dark:text-white">{{ t('enrollment_management.confirm_delete_title') }}</h3>
           <p class="text-sm text-[#6B7280] mt-2 dark:text-gray-400">
-            Are you sure you want to delete this enrollment? This action cannot be undone.
+            {{ t('enrollment_management.confirm_delete_message') }}
           </p>
           <div class="flex items-center justify-end gap-3 mt-6">
             <button
               @click="cancelDelete"
               class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
             >
-              Cancel
+              {{ t('enrollment_management.modal_cancel') }}
             </button>
             <button
               @click="executeDelete(deleteConfirmId)"
               class="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors cursor-pointer"
             >
-              Delete
+              {{ t('enrollment_management.modal_delete') }}
             </button>
           </div>
         </div>
@@ -487,9 +491,9 @@ async function refreshData() {
       <div v-if="statusChangeId" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="cancelStatusChange"></div>
         <div class="relative bg-white dark:bg-[#131B2E] rounded-2xl shadow-xl max-w-sm w-full p-6">
-          <h3 class="text-lg font-bold text-[#111827] dark:text-white">Confirm Status Change</h3>
+          <h3 class="text-lg font-bold text-[#111827] dark:text-white">{{ t('enrollment_management.confirm_status_title') }}</h3>
           <p class="text-sm text-[#6B7280] mt-2 dark:text-gray-400">
-            Are you sure you want to change this enrollment status to
+            {{ t('enrollment_management.confirm_status_message') }}
             <strong class="text-[#374151] dark:text-gray-200 capitalize">{{ statusChangeTarget }}</strong>?
           </p>
           <div class="flex items-center justify-end gap-3 mt-6">
@@ -497,7 +501,7 @@ async function refreshData() {
               @click="cancelStatusChange"
               class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F8FAFC] rounded-xl hover:bg-[#F1F5F9] transition-colors cursor-pointer dark:bg-gray-700 dark:text-gray-300"
             >
-              Cancel
+              {{ t('enrollment_management.modal_cancel') }}
             </button>
             <button
               @click="executeStatusChange"
@@ -508,7 +512,7 @@ async function refreshData() {
                   ? 'bg-blue-500 hover:bg-blue-600'
                   : 'bg-emerald-500 hover:bg-emerald-600'"
             >
-              Confirm
+              {{ t('enrollment_management.modal_confirm') }}
             </button>
           </div>
         </div>

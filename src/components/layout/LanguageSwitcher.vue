@@ -57,13 +57,26 @@ onUnmounted(() => {
   <div ref="dropdownRef" class="relative" @keydown="handleEscape">
     <button
       @click="toggleDropdown"
-      class="relative w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
+      class="relative flex items-center gap-1.5 px-2.5 h-9 lg:h-10 rounded-xl bg-gray-50 border border-gray-200/80 text-gray-500 cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700/80 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
       :title="activeLocale === 'en' ? 'Switch Language' : 'ប្តូរភាសា'"
       aria-label="Select language"
       aria-haspopup="listbox"
       :aria-expanded="showDropdown"
     >
-      <Globe :size="18" />
+      <Globe :size="16" />
+      <span class="text-xs font-semibold tracking-wide uppercase">{{ activeLocale }}</span>
+      <svg
+        class="w-3 h-3 text-gray-400 transition-transform duration-200"
+        :class="{ 'rotate-180': showDropdown }"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
     </button>
     <transition
       enter-active-class="transition-all duration-200 ease-out"

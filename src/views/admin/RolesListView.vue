@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { useRolesStore } from '@/stores/roles'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 
 import { ALL_PERMISSION_GROUPS } from '@/types'
 
@@ -16,8 +17,13 @@ const rolesStore = useRolesStore()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
 
+const { start: startPolling } = usePolling(() => {
+  rolesStore.fetchAll()
+}, 10_000)
+
 onMounted(() => {
   rolesStore.fetchAll()
+  startPolling()
 })
 
 const searchQuery = ref('')

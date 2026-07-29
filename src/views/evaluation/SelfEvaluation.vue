@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'SelfEvaluation' })
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
@@ -10,6 +10,7 @@ import { evaluationApi } from '@/services/api/evaluation'
 import { studentsApi } from '@/services/api'
 import type { EvaluationTemplate, TemplateQuestion, StudentEvaluation, StudentEvaluationCategory } from '@/services/api/evaluation'
 import type { Student } from '@/types'
+import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 
 // Chart.js
 import { Radar } from 'vue-chartjs'
@@ -31,7 +32,6 @@ import {
   Save,
   Send,
   Clock,
-  User as UserIcon,
   GraduationCap,
   MessageSquareText,
   Lightbulb,
@@ -46,10 +46,23 @@ import {
   CheckCircle2,
   Zap,
   ChevronRight as ChevronRightIcon,
+  ArrowLeft,
 } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const router = useRouter()
+
+function goBack() {
+  if (studentId.value > 0) {
+    router.push({
+      name: 'StudentProfile',
+      params: { id: studentId.value },
+      query: { tab: 'evaluation' },
+    })
+  } else {
+    router.push('/students')
+  }
+}
 const route = useRoute()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
@@ -92,6 +105,7 @@ const overallComment = ref('')
 const isSubmitting = ref(false)
 const isSavingDraft = ref(false)
 const submitSuccess = ref(false)
+const photoError = ref(false)
 const loading = ref(true)
 const hasPreviousEval = ref(false)
 
@@ -237,6 +251,20 @@ const avgPct = computed(() => Math.round((avgScore.value / 5) * 100))
 
 const commentCharCount = computed(() => overallComment.value.length)
 const commentMaxChars = 500
+
+const studentPhotoUrl = computed(() => {
+  if (student.value?.photoPath) {
+    return resolvePhotoUrl(student.value.photoPath, student.value.id)
+  }
+  return null
+})
+
+const studentInitials = computed(() => {
+  return getInitials(student.value?.fullName || 'Student')
+})
+
+// Reset photo error when the student changes
+watch(student, () => { photoError.value = false })
 
 // ── Radar Chart Data ──
 const chartData = computed(() => ({
@@ -455,7 +483,13 @@ const legend = [
           {{ hasPreviousEval ? t('self_eval.desc_update') : t('self_eval.desc_new') }}
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2">          <button
+          @click="goBack"
+          class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#E5E7EB] dark:border-gray-700/80 bg-white dark:bg-gray-800/50 text-sm font-medium text-[#374151] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-pointer shadow-sm hover:shadow active:scale-[0.97]"
+        >
+          <ArrowLeft :size="15" />
+          {{ studentId > 0 ? t('student_profile.back_to_students') : t('students.title') }}
+        </button>
         <span
           class="text-xs text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-3 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1.5"
         >
@@ -485,10 +519,21 @@ const legend = [
     >
       <div class="flex flex-row justify-between items-center gap-3">
         <div class="flex items-center gap-3">
-          <div
-            class="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md"
-          >
-            <UserIcon :size="18" />
+          <!-- Avatar / Photo -->
+          <div class="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
+            <img
+              v-if="studentPhotoUrl && !photoError"
+              :src="studentPhotoUrl"
+              :alt="student?.fullName || 'Student'"
+              class="w-full h-full object-cover"
+              @error="photoError = true"
+            />
+            <div
+              v-else
+              class="w-full h-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br from-blue-500 to-indigo-600"
+            >
+              {{ studentInitials }}
+            </div>
             <div
               class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#131B2E] flex items-center justify-center"
             >

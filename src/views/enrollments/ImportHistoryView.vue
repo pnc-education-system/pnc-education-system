@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { importsApi } from '@/services/api/imports'
 import type { ImportLog } from '@/services/api/imports'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 
 defineOptions({ name: 'ImportHistoryView' })
 
@@ -19,7 +20,12 @@ const lastPage = ref(1)
 const total = ref(0)
 const statusFilter = ref<string>('all')
 
-onMounted(() => fetchHistory())
+const { start: startPolling } = usePolling(() => fetchHistory(currentPage.value), 10_000)
+
+onMounted(() => {
+  fetchHistory()
+  startPolling()
+})
 
 async function fetchHistory(page = 1) {
   isLoading.value = true
@@ -30,7 +36,7 @@ async function fetchHistory(page = 1) {
     lastPage.value = result.meta.last_page
     total.value = result.meta.total
   } catch {
-    showErrorToast(t('import_history.load_failed'), 'Load Failed')
+    showErrorToast(t('import_history.load_failed'), t('import_history.toast_load_failed'))
   } finally {
     isLoading.value = false
   }
@@ -45,9 +51,9 @@ async function downloadErrors(log: ImportLog) {
   downloadingId.value = log.id
   try {
     await importsApi.downloadErrors(log.id, log.file_name)
-    showSuccessToast('Error report downloaded', t('import_history.downloaded_title'))
+    showSuccessToast(t('import_history.toast_downloaded'), t('import_history.downloaded_title'))
   } catch {
-    showErrorToast(t('import_views.download_failed'), 'Download Failed')
+    showErrorToast(t('import_views.download_failed'), t('import_history.toast_download_failed'))
   } finally {
     downloadingId.value = null
   }
@@ -64,10 +70,10 @@ function formatWhen(iso: string): string {
 }
 
 const statusConfig: Record<string, { label: string; dot: string; bg: string; text: string }> = {
-  Completed: { label: 'Completed', dot: 'bg-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-  Failed:    { label: 'Failed',    dot: 'bg-red-500',     bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-700 dark:text-red-400' },
-  Processing:{ label: 'Processing',dot: 'bg-yellow-500',  bg: 'bg-yellow-50 dark:bg-yellow-500/10',   text: 'text-yellow-700 dark:text-yellow-400' },
-  Pending:   { label: 'Pending',   dot: 'bg-gray-400',    bg: 'bg-gray-100 dark:bg-gray-700',         text: 'text-gray-600 dark:text-gray-400' },
+  Completed: { label: t('import_history.status_completed'), dot: 'bg-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
+  Failed:    { label: t('import_history.status_failed'),    dot: 'bg-red-500',     bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-700 dark:text-red-400' },
+  Processing:{ label: t('import_history.status_processing'),dot: 'bg-yellow-500',  bg: 'bg-yellow-50 dark:bg-yellow-500/10',   text: 'text-yellow-700 dark:text-yellow-400' },
+  Pending:   { label: t('import_history.status_pending'),   dot: 'bg-gray-400',    bg: 'bg-gray-100 dark:bg-gray-700',         text: 'text-gray-600 dark:text-gray-400' },
 }
 
 function getStatus(status: string): (typeof statusConfig)['Pending'] {
@@ -89,11 +95,11 @@ function getStatus(status: string): (typeof statusConfig)['Pending'] {
           @change="onStatusFilterChange"
           class="px-3 py-2 text-sm border border-[#E5E7EB] dark:border-gray-700 rounded-lg bg-white dark:bg-[#131B2E] text-[#374151] dark:text-gray-300 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all"
         >
-          <option value="all">All Status</option>
-          <option value="Completed">Completed</option>
-          <option value="Failed">Failed</option>
-          <option value="Processing">Processing</option>
-          <option value="Pending">Pending</option>
+          <option value="all">{{ t('import_history.status_all') }}</option>
+          <option value="Completed">{{ t('import_history.status_completed') }}</option>
+          <option value="Failed">{{ t('import_history.status_failed') }}</option>
+          <option value="Processing">{{ t('import_history.status_processing') }}</option>
+          <option value="Pending">{{ t('import_history.status_pending') }}</option>
         </select>
         <button
           v-if="false"
@@ -117,7 +123,7 @@ function getStatus(status: string): (typeof statusConfig)['Pending'] {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
-        <span class="text-sm text-[#6B7280]">Loading...</span>
+        <span class="text-sm text-[#6B7280]">{{ t('import_history.loading_text') }}</span>
       </div>
 
       <!-- Table -->

@@ -22,18 +22,18 @@ const isDownloading = ref(false)
 
 // Field name mapping for user-friendly display
 const fieldLabels: Record<string, string> = {
-  student_id_no: 'Student ID',
-  full_name: 'Full Name',
-  gender: 'Gender',
-  dob: 'Date of Birth',
-  phone: 'Phone Number',
-  email: 'Email',
-  province: 'Province',
-  high_school: 'High School',
-  selection_batch_id: 'Selection Batch',
-  enrollment_status: 'Enrollment Status',
-  intake_year: 'Intake Year',
-  system: 'System',
+  student_id_no: t('import_views.field_student_id'),
+  full_name: t('import_views.field_full_name'),
+  gender: t('import_views.field_gender'),
+  dob: t('import_views.field_dob'),
+  phone: t('import_views.field_phone'),
+  email: t('import_views.field_email'),
+  province: t('import_views.field_province'),
+  high_school: t('import_views.field_high_school'),
+  selection_batch_id: t('import_views.field_selection_batch'),
+  enrollment_status: t('import_views.field_enrollment_status'),
+  intake_year: t('import_views.field_intake_year'),
+  system: t('import_views.field_system'),
 }
 
 function friendlyField(field: string): string {
@@ -112,7 +112,7 @@ watch(errorRows, () => { errorPage.value = 1 })
 async function onCommit() {
   if (!preview.value) return
   if (!selectedBatch.value) {
-    showErrorToast(t('import_views.batch_required'), 'Batch Required')
+    showErrorToast(t('import_views.batch_required'), t('import_views.toast_batch_required'))
     return
   }
 
@@ -148,7 +148,7 @@ async function onDownloadErrors() {
   try {
     await importsApi.downloadErrors(preview.value.import_log_id, preview.value.file_name)
   } catch {
-    showErrorToast(t('import_views.download_failed'), 'Download Failed')
+    showErrorToast(t('import_views.download_failed'), t('import_views.toast_download_failed'))
   } finally {
     isDownloading.value = false
   }
@@ -238,14 +238,12 @@ onBeforeRouteLeave(() => {
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-[#E5E7EB] dark:border-gray-800">
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">
-                    Student ID No
-                  </th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Full Name</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Gender</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">DOB</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Batch</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Year</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_student_id') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_full_name') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_gender') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_dob') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_batch') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_year') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#F3F4F6] dark:divide-gray-800">
@@ -279,7 +277,7 @@ onBeforeRouteLeave(() => {
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m15 18-6-6 6-6" />
                 </svg>
-                Previous
+                {{ t('import_views.pagination_previous') }}
               </button>
               <span class="text-xs text-[#6B7280] dark:text-gray-400 px-1">
                 {{ validPage }} / {{ validTotalPages }}
@@ -290,7 +288,7 @@ onBeforeRouteLeave(() => {
                 class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] transition-all duration-200 dark:border-gray-700"
                 :class="validPage >= validTotalPages ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-white cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
               >
-                Next
+                {{ t('import_views.pagination_next') }}
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m9 18 6-6-6-6" />
                 </svg>
@@ -312,10 +310,10 @@ onBeforeRouteLeave(() => {
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-red-200 dark:border-red-800">
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider w-12">#</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Student ID No</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Full Name</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Errors</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider w-12">{{ t('import_views.col_hash') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_student_id') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_full_name') }}</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">{{ t('import_views.col_errors') }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-red-100 dark:divide-red-900/30">
@@ -354,7 +352,7 @@ onBeforeRouteLeave(() => {
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m15 18-6-6 6-6" />
                 </svg>
-                Previous
+                {{ t('import_views.pagination_previous') }}
               </button>
               <span class="text-xs text-[#6B7280] dark:text-gray-400 px-1">
                 {{ errorPage }} / {{ errorTotalPages }}
@@ -365,7 +363,7 @@ onBeforeRouteLeave(() => {
                 class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 transition-all duration-200 dark:border-red-800"
                 :class="errorPage >= errorTotalPages ? 'text-[#D1D5DB] cursor-not-allowed dark:text-gray-600' : 'text-[#374151] hover:bg-white cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800'"
               >
-                Next
+                {{ t('import_views.pagination_next') }}
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m9 18 6-6-6-6" />
                 </svg>

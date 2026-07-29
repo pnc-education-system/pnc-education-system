@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
-import { ref, computed, inject, type Ref } from 'vue'
+import { ref, computed, inject, watch, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -27,10 +27,6 @@ const canGenerateCards = computed(() => authStore.hasPermission('cards.generate'
 const navigate = (path: string) => {
   router.push(path)
   closeSidebar()
-  studentsDropdown.value = false
-  enrollmentDropdown.value = false
-  adminDropdown.value = false
-  cardDropdown.value = false
 }
 
 const isActive = (path: string) => route.path === path
@@ -39,6 +35,16 @@ const isStudentsActive = computed(() => route.path.startsWith('/students'))
 const isEnrollmentActive = computed(() => route.path.startsWith('/enrollment'))
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
 const isCardActive = computed(() => route.path.startsWith('/cards'))
+
+// Auto-expand dropdowns when the route matches the section
+// and collapse them when navigating away from the section
+watch(() => route.path, (path) => {
+  studentsDropdown.value = path.startsWith('/students')
+  enrollmentDropdown.value = path.startsWith('/enrollment')
+  adminDropdown.value = path.startsWith('/admin')
+  cardDropdown.value = path.startsWith('/cards')
+  evalDropdown.value = path.startsWith('/evaluation')
+}, { immediate: true })
 
 const onStudentsClick = () => {
   studentsDropdown.value = !studentsDropdown.value

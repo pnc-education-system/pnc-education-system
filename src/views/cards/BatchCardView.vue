@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useStudentsStore } from '@/stores/students'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 import { Download, Printer, Search } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -93,10 +94,13 @@ function viewStudentCards(studentId: string) {
   router.push(`/cards/id-card?studentId=${studentId}`)
 }
 
+const { start: startPolling } = usePolling(() => studentsStore.fetchAll(), 10_000)
+
 onMounted(async () => {
   if (!students.value.length) {
     await studentsStore.fetchAll()
   }
+  startPolling()
 })
 </script>
 

@@ -4,6 +4,7 @@ defineOptions({ name: 'TemplateManageView' })
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 import { cardsApi, type CardTemplate } from '@/services/api/cards'
 import { Plus, Pencil, Trash2, Check, X, CreditCard, Loader2, AlertCircle } from 'lucide-vue-next'
 
@@ -164,7 +165,12 @@ function formatLayoutJson(json: any): string {
   return JSON.stringify(json, null, 2).slice(0, 120) + '...'
 }
 
-onMounted(loadTemplates)
+const { start: startPolling } = usePolling(loadTemplates, 10_000)
+
+onMounted(() => {
+  loadTemplates()
+  startPolling()
+})
 </script>
 
 <template>

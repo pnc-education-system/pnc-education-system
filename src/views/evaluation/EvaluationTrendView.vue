@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { evaluationApi, type EvaluationHistoryResponse, type EvaluationHistoryItem } from '@/services/api/evaluation'
 import { useStudentsStore } from '@/stores/students'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 import type { Student } from '@/types'
 import {
   BarChart3,
@@ -278,6 +279,12 @@ watch(() => route.params.studentId, (newId) => {
   }
 })
 
+const { start: startPolling } = usePolling(() => {
+  if (route.params.studentId) {
+    fetchHistory()
+  }
+}, 10_000)
+
 onMounted(async () => {
   // Pre-load students for search
   if (studentsStore.students.length === 0) {
@@ -286,6 +293,7 @@ onMounted(async () => {
     } catch { /* ignore */ }
   }
   fetchHistory()
+  startPolling()
 })
 </script>
 

@@ -6,6 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentsStore } from '@/stores/students'
 import { useI18n } from 'vue-i18n'
+import { usePolling } from '@/composables/usePolling'
 import type { User } from '@/types'
 import { reportsApi, type ReportSummary, type DashboardAggregateData } from '@/services/api/reports'
 import { cardsApi, type CardStats } from '@/services/api/cards'
@@ -56,12 +57,12 @@ const allBatches = ref<Array<{ id: number; name: string; year: number }>>([])
 // ─── Summary stat cards (extracted for clean template rendering) ───
 const summaryStats = computed(() => [
   { label: t('dashboard.total'), value: summary.value?.total_students ?? studentsStore.totalStudents, sub: t('dashboard.all_students'), icon: Users, color: '#3B82F6', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-  { label: 'CARDS GENERATED', value: summary.value?.total_cards ?? cardStats.value?.total_generated ?? '—', sub: (cardStats.value?.total_templates ?? '—') + ' templates', icon: CreditCard, color: '#10B981', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-  { label: 'EVALUATIONS', value: (summary.value?.total_evaluations ?? evalTemplatesCount.value) || '—', sub: evalTemplatesCount.value > 0 ? evalTemplatesCount.value + ' forms' : 'total evaluations', icon: ClipboardCheck, color: '#8B5CF6', bg: 'bg-purple-50 dark:bg-purple-500/10' },
-  { label: 'RECORDS', value: (summary.value?.total_records ?? recordsCount.value) || '—', sub: recordsCount.value > 0 ? 'student records' : 'total records', icon: FileText, color: '#F59E0B', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+  { label: t('dashboard.cards_generated'), value: summary.value?.total_cards ?? cardStats.value?.total_generated ?? '—', sub: t('dashboard.templates_count', { count: cardStats.value?.total_templates ?? '—' }), icon: CreditCard, color: '#10B981', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+  { label: t('dashboard.evaluations'), value: (summary.value?.total_evaluations ?? evalTemplatesCount.value) || '—', sub: evalTemplatesCount.value > 0 ? t('dashboard.eval_forms', { count: evalTemplatesCount.value }) : t('dashboard.total_evaluations'), icon: ClipboardCheck, color: '#8B5CF6', bg: 'bg-purple-50 dark:bg-purple-500/10' },
+  { label: t('dashboard.records'), value: (summary.value?.total_records ?? recordsCount.value) || '—', sub: recordsCount.value > 0 ? t('dashboard.student_records') : t('dashboard.total_records'), icon: FileText, color: '#F59E0B', bg: 'bg-amber-50 dark:bg-amber-500/10' },
 ])
 
-onMounted(async () => {
+async function refreshDashboard() {
   if (authStore.user) {
     user.value = authStore.user
   } else {
@@ -115,6 +116,13 @@ onMounted(async () => {
 
   // Mark when data was last refreshed
   lastUpdated.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const { start: startPolling } = usePolling(refreshDashboard, 10_000)
+
+onMounted(async () => {
+  await refreshDashboard()
+  startPolling()
 })
 
 
@@ -263,9 +271,9 @@ const doughnutChartData = computed(() => {
     approved: t('dashboard.approved_students'),
     enrolled: t('dashboard.enrolled_students'),
     inactive: t('dashboard.inactive_students'),
-    rejected: 'Rejected',
-    graduated: 'Graduated',
-    dropped: 'Dropped',
+    rejected: t('dashboard.rejected'),
+    graduated: t('dashboard.graduated_status'),
+    dropped: t('dashboard.dropped_status'),
   }
   const statusColors: Record<string, string> = {
     pending: '#F59E0B',
@@ -330,7 +338,7 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
       padding: 10,
       cornerRadius: 8,
       callbacks: {
-        label: (ctx) => `${ctx.parsed} students`,
+        label: (ctx) => t('dashboard.students_tooltip', { count: ctx.parsed }),
       },
     },
   },
@@ -452,8 +460,8 @@ const doughnutChartOptions: ChartOptions<'doughnut'> = {
               <Activity :size="14" class="text-white" />
             </div>
             <div>
-              <h2 class="text-sm font-semibold text-[#111827] dark:text-white">{{ t('dashboard.title') }} by Status</h2>
-              <p class="text-[11px] text-[#6B7280] dark:text-gray-400">Status distribution</p>
+              <h2 class="text-sm font-semibold text-[#111827] dark:text-white">{{ t('dashboard.status_by_status') }}</h2>
+              <p class="text-[11px] text-[#6B7280] dark:text-gray-400">{{ t('dashboard.status_distribution') }}</p>
             </div>
           </div>
           <span class="text-[9px] font-semibold tracking-[0.08em] uppercase text-[#9CA3AF] dark:text-gray-500 bg-[#F8FAFC] dark:bg-white/[0.04] px-2 py-1 rounded-lg border border-[#E5E7EB] dark:border-gray-700 flex items-center gap-1 transition-all duration-200 hover:border-purple-200 dark:hover:border-purple-800 cursor-default">

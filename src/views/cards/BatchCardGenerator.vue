@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { cardsApi, type CardStudent, type CardTemplate } from '@/services/api/cards'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 import StudentCard from '@/components/cards/StudentCard.vue'
 import { resolvePhotoUrl, getInitials } from '@/utils/photoUrl'
 import html2canvas from 'html2canvas-pro'
@@ -441,9 +442,15 @@ function removePhoto(index: number) {
   photoFiles.value.splice(index, 1)
 }
 
+const { start: startPolling } = usePolling(async () => {
+  await fetchBatches()
+  await fetchCardTemplates()
+}, 10_000)
+
 onMounted(async () => {
   await fetchBatches()
   await fetchCardTemplates()
+  startPolling()
 })
 </script>
 

@@ -7,6 +7,7 @@ import { useStudentsStore } from '@/stores/students'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { useI18n } from 'vue-i18n'
+import { usePolling } from '@/composables/usePolling'
 import type { StudentStatus, Student } from '@/types'
 import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selectionBatches'
 import { studentsApi } from '@/services/api'
@@ -167,6 +168,14 @@ const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 onMounted(() => {
   loadBatches()
   loadStudents(parseOptionalNumber(route.query.page) ?? 1)
+})
+
+const { start: startPolling } = usePolling(() => {
+  loadStudents(store.currentPage)
+}, 10_000)
+
+onMounted(() => {
+  startPolling()
 })
 function toggleSelectAll() {
   if (isAllSelected.value) {

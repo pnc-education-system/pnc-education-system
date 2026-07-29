@@ -9,7 +9,9 @@ import { selectionBatchesApi, type SelectionBatch } from '@/services/api/selecti
 import { getCachedBatches, prefetchBatches, getFetchPromise } from '@/utils/batchesCache'
 import axiosInstance from '@/services/axios'
 import { reportsApi } from '@/services/api/reports'
+import { evaluationApi, type StudentEvaluation } from '@/services/api/evaluation'
 import { useToast } from '@/composables/useToast'
+import { usePolling } from '@/composables/usePolling'
 import * as XLSX from 'xlsx'
 import { generatePDFFromElement } from '@/utils/pdfGenerator'
 import {
@@ -144,15 +146,58 @@ async function fetchReportData(type: ReportType): Promise<ReportRow[]> {
             'Card Generated': s.photoPath ? 'Yes' : 'Pending',
             'Province': s.province || '—',
           }))
-      case 'evaluation':
-        return sourceStudents.map(s => ({
-          'Student ID': s.studentIdNo,
-          'Full Name': s.fullName,
-          'Batch': s.selectionBatchName || '—',
-          'Status': s.status.charAt(0).toUpperCase() + s.status.slice(1),
-          'Evaluation Score': '—',
-          'Last Updated': s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : '—',
-        }))
+      case 'evaluation': {
+        // Fetch the latest evaluation for each student in batches of 15
+        const evalMap = new Map<string, StudentEvaluation | null>()
+        const BATCH_SIZE = 15
+        const studentIds = sourceStudents.map(s => s.id)
+
+        for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
+          const batch = studentIds.slice(i, i + BATCH_SIZE)
+          const results = await Promise.allSettled(
+            batch.map(async (studentId) => {
+              try {
+                const evals = await evaluationApi.getByStudent(Number(studentId))
+                // Sort by submitted_at descending and take the latest
+                const sorted = [...evals].sort((a, b) => {
+                  const dateA = a.submitted_at ? new Date(a.submitted_at).getTime() : 0
+                  const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0
+                  return dateB - dateA
+                })
+                return { studentId, latest: sorted[0] ?? null }
+              } catch (err) {
+                console.warn(`[Reports] Failed to fetch evaluation for student #${studentId}:`, err)
+                return { studentId, latest: null }
+              }
+            })
+          )
+          for (const r of results) {
+            if (r.status === 'fulfilled') {
+              evalMap.set(r.value.studentId, r.value.latest)
+            } else {
+              console.warn('[Reports] Batch evaluation fetch rejected:', r.reason)
+            }
+          }
+
+          // Update progress based on batch completion
+          progress.value = 10 + Math.round(((i + BATCH_SIZE) / studentIds.length) * 25)
+        }
+
+        return sourceStudents.map(s => {
+          const latest = evalMap.get(s.id)
+          return {
+            'Student ID': s.studentIdNo,
+            'Full Name': s.fullName,
+            'Batch': s.selectionBatchName || '—',
+            'Status': s.status.charAt(0).toUpperCase() + s.status.slice(1),
+            'Evaluation Score': latest ? `${latest.total_score}` : '—',
+            'Evaluation Period': latest?.evaluation_period || '—',
+            'Submitted Date': latest?.submitted_at
+              ? new Date(latest.submitted_at).toLocaleDateString()
+              : '—',
+          }
+        })
+      }
       default:
         return []
     }
@@ -414,12 +459,17 @@ async function loadBatches() {
   }
 }
 
-onMounted(async () => {
+async function refreshReportsData() {
   await loadBatches()
-  if (studentsStore.students.length === 0) {
-    await studentsStore.fetchAll()
-  }
+  await studentsStore.fetchAll()
   studentsCount.value = studentsStore.totalStudents || 0
+}
+
+const { start: startPolling } = usePolling(refreshReportsData, 10_000)
+
+onMounted(async () => {
+  await refreshReportsData()
+  startPolling()
 })
 
 onUnmounted(() => {
