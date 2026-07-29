@@ -142,10 +142,12 @@ const enrollmentNote = computed(() => {
 })
 
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function formatDateFull(dateStr: string): string {
+  if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',

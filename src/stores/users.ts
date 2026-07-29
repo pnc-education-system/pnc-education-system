@@ -12,7 +12,7 @@ function mapBackendUser(backend: BackendUser): AdminUser {
     roleId: backend.role ? String(backend.role.id) : '',
     roleName: backend.role?.name || 'Unknown',
     status: backend.is_active ? 'active' : 'inactive',
-    createdAt: backend.created_at,
+    createdAt: backend.created_at ?? '',
     lastLogin: backend.last_login_at ?? undefined,
   }
 }

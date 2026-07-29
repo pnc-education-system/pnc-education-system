@@ -68,6 +68,7 @@ function toDisplayRecord(log: ImportLog): DisplayRecord {
 
 // ─── Helpers ─────────────────────────────────────────────
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '—'
   const date = new Date(dateStr.replace(' ', 'T'))
   return date.toLocaleDateString('en-US', {
     month: 'short',
@@ -77,6 +78,7 @@ function formatDate(dateStr: string): string {
 }
 
 function formatTime(dateStr: string): string {
+  if (!dateStr) return '—'
   const date = new Date(dateStr.replace(' ', 'T'))
   return date.toLocaleTimeString('en-US', {
     hour: '2-digit',

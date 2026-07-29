@@ -137,6 +137,7 @@ async function loadStudent() {
 
   loading.value = true
   error.value = null
+  student.value = null
   try {
     const found = studentsStore.getById(id) ?? null
     if (found) {
@@ -176,21 +177,6 @@ watch(() => route.params.id, () => {
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function getStatusStyle(status: string): { bg: string; text: string; ring: string } {
-  const styles: Record<string, { bg: string; text: string; ring: string }> = {
-    pending:   { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-600 dark:text-gray-300', ring: 'ring-gray-200 dark:ring-gray-600' },
-    rejected:  { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-500 dark:text-gray-400', ring: 'ring-gray-200 dark:ring-gray-600' },
-    enrolled:  { bg: 'bg-slate-100 dark:bg-slate-700/50', text: 'text-slate-700 dark:text-slate-300', ring: 'ring-slate-200 dark:ring-slate-600' },
-    graduated: { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-600 dark:text-gray-300', ring: 'ring-gray-200 dark:ring-gray-600' },
-    dropped:   { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-500 dark:text-gray-400', ring: 'ring-gray-200 dark:ring-gray-600' },
-  }
-  return (styles[status] ?? styles.pending)!
-}
-
-const statusLabels: Record<string, string> = {
-  pending: 'Pending', rejected: 'Rejected', enrolled: 'Enrolled', graduated: 'Graduated', dropped: 'Dropped',
 }
 
 function goBack() { router.push('/students') }
@@ -368,12 +354,6 @@ onUnmounted(() => {
                     <span class="text-gray-200 dark:text-gray-600">·</span>
                     <span class="text-sm text-gray-400 dark:text-gray-400">Intake {{ student.intakeYear || '2025' }}</span>
                   </div>
-                </div>
-                <div class="flex-shrink-0">
-                  <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold ring-1 transition-all duration-200" :class="[getStatusStyle(student.status).bg, getStatusStyle(student.status).text, getStatusStyle(student.status).ring]">
-                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                    {{ statusLabels[student.status] || student.status }}
-                  </span>
                 </div>
               </div>
             </div>
