@@ -258,6 +258,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
     group: 'Students',
     permissions: [
       { key: 'students.view', label: 'View Students' },
+      { key: 'students.create', label: 'Create Students' },
       { key: 'students.edit', label: 'Edit Students' },
       { key: 'students.import', label: 'Import Students' },
     ],

@@ -137,9 +137,7 @@ export const cardsApi = {
 
   /** Generate batch cards for a selection batch */
   async batchGenerate(request: BatchCardRequest): Promise<BatchCardResponse> {
-    console.log('batchGenerate called with:', request)
     const { data } = await axiosInstance.post('/cards/batch', request)
-    console.log('batchGenerate response:', data)
     return data as BatchCardResponse
   },
 

@@ -106,11 +106,6 @@ async function handleLogin() {
   try {
     const response = await authApi.login(form.value)
 
-    localStorage.setItem('access_token', response.access_token)
-    localStorage.setItem('refresh_token', response.refresh_token)
-    localStorage.setItem('user', JSON.stringify(response.user))
-    localStorage.setItem('permissions', JSON.stringify(response.permissions))
-
     authStore.setToken(response.access_token)
     authStore.setRefreshToken(response.refresh_token)
     authStore.setUser(response.user)

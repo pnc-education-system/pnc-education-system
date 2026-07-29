@@ -65,9 +65,6 @@ const summaryStats = computed(() => [
 async function refreshDashboard() {
   if (authStore.user) {
     user.value = authStore.user
-  } else {
-    const userData = localStorage.getItem('user')
-    if (userData) user.value = JSON.parse(userData)
   }
 
   // Fetch student stats for dashboard
@@ -118,7 +115,7 @@ async function refreshDashboard() {
   lastUpdated.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-const { start: startPolling } = usePolling(refreshDashboard, 10_000)
+const { start: startPolling } = usePolling(refreshDashboard, 60_000)
 
 onMounted(async () => {
   await refreshDashboard()

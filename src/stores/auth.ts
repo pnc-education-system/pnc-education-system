@@ -59,7 +59,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setUser = (userData: User | null) => {
     user.value = userData
-    saveToStorage('auth_user', userData)
   }
 
   const setPermissions = (perms: string[]) => {
@@ -120,13 +119,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
   const initSession = async () => {
     if (!token.value) return
-    const cachedUser = loadFromStorage<User | null>('auth_user', null)
-    if (cachedUser) user.value = cachedUser
-
-    if (user.value && permissions.value.length > 0) {
-      fetchProfile()
-      return
-    }
 
     await fetchProfile()
   }
@@ -171,7 +163,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('permissions')
-    saveToStorage('auth_user', null)
   }
 
   const logout = () => {

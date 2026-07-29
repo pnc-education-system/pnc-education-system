@@ -67,9 +67,7 @@ export const recordsApi = {
     } catch (error: any) {
       if (error?.response?.status === 422) {
         const responseData = error.response.data
-        console.error('[recordsApi.create] Server error:', JSON.stringify(responseData, null, 2))
-        console.error('[recordsApi.create] Sent body:', JSON.stringify(body))
-        throw new Error(responseData?.error?.message || responseData?.message || JSON.stringify(responseData))
+        throw new Error(responseData?.error?.message || responseData?.message || 'Validation failed')
       }
       throw error
     }
@@ -103,15 +101,6 @@ export const recordsApi = {
   },
 
   async uploadAttachment(studentId: number, payload: { student_id: number; record_id?: number | null; file: File }): Promise<StudentAttachment> {
-    // Log file details for debugging
-    console.log('[uploadAttachment] File details:', {
-      name: payload.file?.name,
-      type: payload.file?.type,
-      size: payload.file?.size,
-      studentId,
-      recordId: payload.record_id,
-    })
-
     const formData = new FormData()
     formData.append('student_id', String(payload.student_id))
     if (payload.record_id != null) {
@@ -143,26 +132,19 @@ export const recordsApi = {
       if (error?.response?.status === 422) {
         const resp = error.response.data
 
-        // Log FULL response for debugging
-        console.error('[uploadAttachment] Full 422 response:', JSON.stringify(resp, null, 2))
-
-        // Try to get the most specific error message possible
-        // Middleware returns: { error: { code: 422, message: "...", errors: { file: ["File too large"] } } }
+        // Extract the most specific error message from the response
         const fieldErrors = resp?.error?.errors
         const firstFieldMsg = fieldErrors && Object.values(fieldErrors).flat()[0]
 
-        // Also check root-level errors (unwrapped format)
         const rootErrors = resp?.errors
         const firstRootMsg = rootErrors && Object.values(rootErrors).flat()[0]
 
         const msg =
-          firstFieldMsg ||          // Most specific: "Unsupported file type." or "File too large."
-          firstRootMsg ||           // Fallback: root-level field errors
-          resp?.error?.message ||   // Envelope message: "The given data was invalid."
-          resp?.message ||          // Laravel default message
+          firstFieldMsg ||
+          firstRootMsg ||
+          resp?.error?.message ||
+          resp?.message ||
           'Validation failed'
-
-        console.error('[uploadAttachment] Extracted error message:', msg)
 
         const enhanced = new Error(msg)
         enhanced.name = 'ValidationError'

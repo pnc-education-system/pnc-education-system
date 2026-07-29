@@ -32,7 +32,7 @@ const store = useEnrollmentsStore()
 const authStore = useAuthStore()
 const { showSuccessToast, showErrorToast } = useToast()
 
-const { start: startPolling } = usePolling(() => store.fetchAll(), 10_000)
+const { start: startPolling } = usePolling(() => store.fetchAll(), 60_000)
 
 onMounted(() => {
   store.fetchAll()

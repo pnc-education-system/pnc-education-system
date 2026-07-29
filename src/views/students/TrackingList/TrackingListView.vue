@@ -172,7 +172,7 @@ onMounted(() => {
 
 const { start: startPolling } = usePolling(() => {
   loadStudents(store.currentPage)
-}, 10_000)
+}, 60_000)
 
 onMounted(() => {
   startPolling()
