@@ -9,7 +9,7 @@ function mapBackendRole(backend: BackendRole): Role {
     description: backend.description || '',
     permissions: backend.permissions?.map((p) => p.slug) || [],
     userCount: backend.users_count || 0,
-    createdAt: backend.created_at,
+    createdAt: backend.created_at ?? '',
   }
 }
 

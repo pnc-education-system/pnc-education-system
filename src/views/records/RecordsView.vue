@@ -288,6 +288,7 @@ watch([categoryFilter, searchQuery, sortBy], () => {
 
 // ── Helpers ──
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
@@ -352,6 +353,7 @@ const timelineGroups = computed(() => {
 })
 
 function formatDateOnly(dateStr: string): string {
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -361,6 +363,7 @@ function formatDateOnly(dateStr: string): string {
 }
 
 function formatTimeOnly(dateStr: string): string {
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
   return d.toLocaleTimeString('en-US', {
     hour: '2-digit',

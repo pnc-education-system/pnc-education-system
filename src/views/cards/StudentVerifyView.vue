@@ -35,6 +35,7 @@ const loading = ref(true)
 const error = ref('')
 const valid = ref(false)
 const cardVisible = ref(false)
+const redirecting = ref(false)
 
 const mounted = ref(false)
 
@@ -104,17 +105,19 @@ async function fetchStudent() {
       }
     }
 
-    // Animate card in after a tiny delay
+    // If user is logged in, navigate directly to profile page with a smooth redirect state
+    if (authStore.isAuthenticated && student.value && student.value.id > 0) {
+      redirecting.value = true
+      // Small pause so the redirecting state renders before navigation
+      await nextTick()
+      router.push(`/students/${student.value!.id}/profile`)
+      return
+    }
+
+    // For unauthenticated users, animate card in after a tiny delay
     setTimeout(() => {
       cardVisible.value = true
     }, 100)
-
-    // If user is logged in, redirect to student profile page
-    if (authStore.isAuthenticated && student.value && student.value.id > 0) {
-      setTimeout(() => {
-        router.push(`/students/${student.value!.id}/profile`)
-      }, 500)
-    }
   } catch (err: unknown) {
     // Fallback: try to use data embedded in the QR code URL query params
     if (qrFallbackData.value) {
@@ -184,9 +187,29 @@ const initials = computed(() => {
         <p class="text-sm text-gray-400">{{ t('student_verify.loading') }}</p>
       </div>
 
+      <!-- Redirecting (smooth transition to profile page) -->
+      <div
+        v-if="redirecting"
+        class="flex flex-col items-center justify-center py-16 transition-all duration-500 ease-out"
+        :class="{ 'opacity-100 translate-y-0': redirecting, 'opacity-0 translate-y-6': !redirecting }"
+      >
+        <div class="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <svg class="w-8 h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Verified!</p>
+        <p class="text-xs text-gray-400 mt-1.5">Redirecting to profile page...</p>
+        <div class="mt-4 flex items-center gap-1.5">
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style="animation-delay: 0ms"></div>
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style="animation-delay: 150ms"></div>
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style="animation-delay: 300ms"></div>
+        </div>
+      </div>
+
       <!-- Student Card Display -->
       <div
-        v-if="!loading && valid && student"
+        v-if="!loading && !redirecting && valid && student"
         class="transition-all duration-500 ease-out"
         :class="cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
       >
