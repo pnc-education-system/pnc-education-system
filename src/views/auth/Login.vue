@@ -2,7 +2,7 @@
 defineOptions({ name: 'LoginPage' })
 
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
@@ -22,6 +22,7 @@ const loginSigningIn = computed(() => t('login.signing_in'))
 const loginSecurityNote = computed(() => t('login.security_note'))
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const form = ref<LoginCredentials>({
@@ -54,10 +55,24 @@ function validateForm(): boolean {
   return valid
 }
 
+interface BackendErrorPayload {
+  message?: string
+  errors?: Record<string, string[]>
+}
+
+interface BackendErrorResponse {
+  error?: BackendErrorPayload
+  message?: string
+  errors?: Record<string, string[]>
+}
+
 function getFriendlyErrorMessage(err: unknown): string {
-  const apiErr = err as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } }
+  const apiErr = err as { response?: { status?: number; data?: unknown } }
   const status = apiErr.response?.status
-  const backendMessage = (apiErr.response?.data?.message || '').toLowerCase()
+  const body = (apiErr.response?.data ?? {}) as BackendErrorResponse
+
+  // Extract message from either envelope { error: { message } } or flat { message } format
+  const backendMessage = (body.error?.message || body.message || '').toLowerCase()
 
   if (status === 401) {
     if (backendMessage.includes('inactive')) {
@@ -67,11 +82,11 @@ function getFriendlyErrorMessage(err: unknown): string {
   }
 
   if (status === 422) {
-    const errors = apiErr.response?.data?.errors
-    if (errors) {
+    const unwrappedErrors = body.error?.errors || body.errors
+    if (unwrappedErrors) {
       fieldErrors.value = {
-        email: errors.email?.[0],
-        password: errors.password?.[0],
+        email: unwrappedErrors.email?.[0],
+        password: unwrappedErrors.password?.[0],
       }
     }
     return t('login.error.correct_fields')
@@ -91,18 +106,16 @@ async function handleLogin() {
   try {
     const response = await authApi.login(form.value)
 
-    localStorage.setItem('access_token', response.access_token)
-    localStorage.setItem('refresh_token', response.refresh_token)
-    localStorage.setItem('user', JSON.stringify(response.user))
-    localStorage.setItem('permissions', JSON.stringify(response.permissions))
-
     authStore.setToken(response.access_token)
     authStore.setRefreshToken(response.refresh_token)
     authStore.setUser(response.user)
     authStore.setPermissions(response.permissions)
 
-    router.push('/dashboard')
+    const redirectTo = (route.query.redirect as string) || '/dashboard'
+    router.push(redirectTo)
   } catch (err: unknown) {
+    // Log the full error details to help diagnose 401 issues
+    console.error('[Login] Request failed:', err)
     errorMessage.value = getFriendlyErrorMessage(err)
   } finally {
     isSubmitting.value = false
@@ -245,6 +258,7 @@ function clearFieldError(field: 'email' | 'password') {
             </svg>
             {{ isSubmitting ? loginSigningIn : loginSignIn }}
           </button>
+
           <div class="flex items-start gap-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 px-4 py-3.5 border border-blue-100 dark:border-blue-500/20">
             <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

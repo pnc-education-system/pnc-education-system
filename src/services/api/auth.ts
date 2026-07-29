@@ -26,12 +26,8 @@ export const authApi = {
     return data
   },
 
-  async resetPassword(payload: PasswordResetConfirm): Promise<PasswordResetResponse> {
+  async confirmPasswordReset(payload: PasswordResetConfirm): Promise<PasswordResetResponse> {
     const { data } = await axiosInstance.post<PasswordResetResponse>('/auth/password/reset/confirm', payload)
     return data
-  },
-
-  async confirmPasswordReset(payload: PasswordResetConfirm): Promise<PasswordResetResponse> {
-    return this.resetPassword(payload)
   },
 }

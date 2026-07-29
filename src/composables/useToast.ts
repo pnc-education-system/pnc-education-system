@@ -6,6 +6,7 @@ export interface Toast {
   type: 'success' | 'error'
   title: string
 }
+
 const toasts = ref<Toast[]>([])
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
@@ -22,10 +23,13 @@ export function useToast() {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
     toasts.value.push({ id, message: msg, type, title })
-    toastTimers.set(id, setTimeout(() => {
-      removeToast(id)
-    }, 3500))
 
+    toastTimers.set(
+      id,
+      setTimeout(() => {
+        removeToast(id)
+      }, 3500),
+    )
     nextTick(() => {
       const container = document.getElementById('toast-container')
       if (container) {

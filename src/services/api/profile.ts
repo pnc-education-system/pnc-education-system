@@ -7,9 +7,8 @@ export interface UpdateProfilePayload {
 }
 
 export const profileApi = {
-  async updateProfile(payload: UpdateProfilePayload): Promise<ApiResponse<{ user: any }>> {
+  async updateProfile(payload: UpdateProfilePayload): Promise<ApiResponse<{ user: Record<string, unknown> }>> {
     const { data } = await axiosInstance.put('/auth/profile', payload)
     return data
   },
 }
-

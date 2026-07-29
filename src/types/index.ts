@@ -29,6 +29,7 @@ export interface AdminUser {
   lastLogin?: string
   avatar?: string
 }
+
 export interface Role {
   id: string
   name: string
@@ -49,6 +50,7 @@ export interface ApiResponse<T> {
   data?: T
   errors?: Record<string, string[]>
 }
+
 export interface BackendUser {
   id: number
   role_id: number | null
@@ -60,6 +62,7 @@ export interface BackendUser {
   updated_at: string
   role?: BackendRole | null
 }
+
 export interface BackendRole {
   id: number
   name: string
@@ -84,6 +87,11 @@ export interface PasswordResetRequest {
   email: string
 }
 
+export interface ProfileResponse {
+  user: User
+  permissions: string[]
+}
+
 export interface PasswordResetConfirm {
   email: string
   reset_token: string
@@ -96,8 +104,6 @@ export interface PasswordResetResponse {
   message: string
 }
 
-export type ProfileResponse = AuthResponse
-
 export interface PaginatedData<T> {
   data: T[]
   current_page: number
@@ -105,6 +111,139 @@ export interface PaginatedData<T> {
   per_page: number
   total: number
 }
+export type EnrollmentStatus = 'pending' | 'approved' | 'enrolled' | 'rejected'
+
+export interface BackendEnrollment {
+  id: number
+  student_name: string
+  student_id: string
+  program: string
+  batch: string
+  academic_year: string
+  status: EnrollmentStatus
+  submitted_at: string
+  processed_at: string | null
+  processed_by: string | null
+  notes: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Enrollment {
+  id: string
+  studentName: string
+  studentId: string
+  program: string
+  batch: string
+  academicYear: string
+  status: EnrollmentStatus
+  submittedAt: string
+  processedAt?: string
+  processedBy?: string
+  notes?: string
+}
+
+export interface CreateEnrollmentPayload {
+  student_name: string
+  student_id: string
+  program: string
+  batch: string
+  academic_year: string
+  notes?: string
+}
+
+export interface UpdateEnrollmentPayload {
+  student_name?: string
+  student_id?: string
+  program?: string
+  batch?: string
+  academic_year?: string
+  status?: EnrollmentStatus
+  notes?: string
+}
+
+// ── Student Types ──
+export type StudentStatus = 'pending' | 'approved' | 'enrolled' | 'rejected' | 'inactive' | 'graduated' | 'dropped'
+
+export interface BackendStudent {
+  id: number
+  student_id_no: string
+  full_name: string
+  gender: string
+  dob: string | null
+  province?: string
+  phone?: string
+  email?: string
+  high_school?: string
+  selection_batch_id?: number
+  selection_batch?: {
+    id: number
+    name: string
+  }
+  selection_batch_name?: string
+  enrollment_status: string
+  status: string
+  photo_path?: string
+  intake_year?: number
+  enrolled_at?: string
+  enrollment_note?: string
+  created_by?: number
+  created_at: string
+  updated_at: string
+}
+
+
+export interface StudentRecord {
+  id: number
+  student_id: number
+  title: string
+  description: string
+  record_type: 'academic' | 'disciplinary' | 'medical' | 'general'
+  recorded_by: number
+  recorded_at: string
+  created_at: string
+  updated_at: string
+  attachments: StudentAttachment[]
+}
+
+export interface StudentAttachment {
+  id: number
+  student_id: number
+  record_id: number | null
+  file_name: string
+  file_path: string
+  file_size: number
+  mime_type: string
+  uploaded_by: number
+  uploaded_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Student {
+  id: string
+  studentIdNo: string
+  fullName: string
+  gender: string
+  dob: string
+  province?: string
+  phone?: string
+  email?: string
+  highSchool?: string
+  program?: string
+  batch?: string
+  intakeYear?: string
+  selectionBatchId?: number
+  selectionBatchName?: string
+  photoPath?: string
+  status: StudentStatus
+  enrolledAt?: string
+  enrollmentNote?: string
+  createdAt: string
+  updatedAt: string
+  importLogId?: number
+}
+
 export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: 'Administration',
@@ -119,6 +258,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
     group: 'Students',
     permissions: [
       { key: 'students.view', label: 'View Students' },
+      { key: 'students.create', label: 'Create Students' },
       { key: 'students.edit', label: 'Edit Students' },
       { key: 'students.import', label: 'Import Students' },
     ],

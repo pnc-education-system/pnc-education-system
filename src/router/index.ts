@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-
+import { prefetchBatches } from '@/utils/batchesCache'
+//
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -25,6 +26,24 @@ const routes: RouteRecordRaw[] = [
     name: 'Dashboard',
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/enrollment',
+    name: 'Enrollment',
+    component: () => import('@/views/EnrollmentPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/enrollment/history',
+    name: 'ImportHistory',
+    component: () => import('@/views/enrollments/ImportHistoryView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
+  },
+  {
+    path: '/enrollment/views',
+    name: 'ImportViews',
+    component: () => import('@/views/enrollments/ImportViewsView.vue'),
+    meta: { requiresAuth: true, permission: 'enrollment.manage' },
   },
   {
     path: '/forbidden',
@@ -73,21 +92,53 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/students',
     name: 'Students',
-    component: () => import('@/views/students/StudentsView.vue'),
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
     meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/tracking',
+    name: 'StudentTracking',
+    component: () => import('@/views/students/TrackingList/TrackingListView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/new',
+    name: 'StudentCreate',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.create' },
+  },
+  {
+    path: '/imports',
+    name: 'Imports',
+    component: () => import('@/views/imports/ImportsView.vue'),
+    meta: { requiresAuth: true, permission: 'students.import' },
   },
   {
     path: '/users',
     redirect: '/admin/users',
   },
   {
-    path: '/roles',
-    redirect: '/admin/roles',
+    path: '/records',
+    name: 'Records',
+    component: () => import('@/views/records/RecordsView.vue'),
+    meta: { requiresAuth: true, permission: 'records.view' },
   },
   {
-    path: '/me',
-    name: 'Profile',
-    component: () => import('@/views/profile/ProfileView.vue'),
+    path: '/reports',
+    name: 'Reports',
+    component: () => import('@/views/reports/ReportsView.vue'),
+    meta: { requiresAuth: true, permission: 'reports.view' },
+  },
+  {
+    path: '/students/:id/edit',
+    name: 'StudentEdit',
+    component: () => import('@/views/students/StudentFormView.vue'),
+    meta: { requiresAuth: true, permission: 'students.edit' },
+  },
+  {
+    path: '/qr/scan',
+    name: 'QRScan',
+    component: () => import('@/views/qr/QRScanView.vue'),
     meta: { requiresAuth: true },
   },
   {
@@ -97,6 +148,71 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, permission: 'settings.manage' },
   },
 
+  {
+    path: '/cards',
+    redirect: '/cards/id-card',
+  },
+  {
+    path: '/cards/id-card',
+    name: 'CardIdCard',
+    component: () => import('@/views/cards/CardGeneratorView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+  {
+    path: '/cards/batch-card',
+    name: 'CardBatchCard',
+    component: () => import('@/views/cards/BatchCardGenerator.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+  {
+    path: '/cards/qr-verify',
+    name: 'CardQrVerify',
+    component: () => import('@/views/cards/QRVerifyView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+  {
+    path: '/cards/templates',
+    name: 'CardTemplates',
+    component: () => import('@/views/cards/TemplateManageView.vue'),
+    meta: { requiresAuth: true, permission: 'cards.generate' },
+  },
+
+  {
+    path: '/verify/:token',
+    name: 'StudentVerify',
+    component: () => import('@/views/cards/StudentVerifyView.vue'),
+    meta: { requiresAuth: false },
+  },
+{
+    path: '/students/profile',
+    name: 'StudentProfileList',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/:id/profile',
+    name: 'StudentProfile',
+    component: () => import('@/views/students/StudentProfilePage.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/evaluation/self',
+    name: 'SelfEvaluation',
+    component: () => import('@/views/evaluation/SelfEvaluation.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/evaluation/trend',
+    name: 'EvaluationTrendRoot',
+    component: () => import('@/views/evaluation/EvaluationTrendView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
+  {
+    path: '/students/:studentId/evaluations/trend',
+    name: 'EvaluationTrend',
+    component: () => import('@/views/evaluation/EvaluationTrendView.vue'),
+    meta: { requiresAuth: true, permission: 'students.view' },
+  },
   {
     path: '/',
     redirect: '/dashboard',
@@ -109,7 +225,7 @@ const router = createRouter({
   routes,
 })
 
-const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword']
+const publicRoutes = ['Login', 'ForgotPassword', 'ResetPassword', 'StudentVerify']
 router.beforeEach((to) => {
   const authStore = useAuthStore()
 
@@ -117,13 +233,20 @@ router.beforeEach((to) => {
     return { name: 'Login' }
   }
 
-  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string)) {
+  // Redirect authenticated users away from auth pages (login, forgot-password, etc.)
+  // but NOT from the public student verify page — that should work for everyone
+  if (authStore.isAuthenticated && publicRoutes.includes(to.name as string) && to.name !== 'StudentVerify') {
     return { name: 'Dashboard' }
   }
 
   const requiredPermission = (to.meta as { permission?: string }).permission
   if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
     return { name: 'Forbidden' }
+  }
+
+  // Pre-fetch selection batches so the dropdown is ready instantly
+  if (to.name === 'Enrollment' || to.name === 'ImportViews' || to.name === 'CardIdCard') {
+    prefetchBatches()
   }
 })
 
