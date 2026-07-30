@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useI18n } from 'vue-i18n'
-import { usePolling } from '@/composables/usePolling'
+
 import { recordsApi, type CreateStudentRecordPayload, type UpdateStudentRecordPayload } from '@/services/api/records'
 import { studentsApi } from '@/services/api/students'
 import { useAuthStore } from '@/stores/auth'
@@ -965,15 +965,9 @@ function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
-const { start: startPolling } = usePolling(async () => {
-  await loadStudents()
-  if (selectedStudentId.value) loadRecords()
-}, 10_000)
-
 onMounted(async () => {
   await loadStudents()
   if (selectedStudentId.value) loadRecords()
-  startPolling()
 })
 </script>
 
